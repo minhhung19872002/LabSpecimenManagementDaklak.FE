@@ -54,7 +54,7 @@ interface ProductRow {
   productName: string;
   productType: ProductType;
   unitId: string;
-  availableUnits: UnitOption[];
+  unitName: string;
   quantity: number;
 }
 
@@ -124,22 +124,12 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
       ? "Tìm kiếm sản phẩm hoặc thiết bị..."
       : "Tìm kiếm sản phẩm...";
 
-  const getAvailableUnits = useCallback(
-    (product: ProductDto): UnitOption[] => {
-      const units: UnitOption[] = [
-        { id: product.baseUnitId, name: product.baseUnitName || "ĐVT gốc" },
-      ];
-      if (product.unitConversions) {
-        for (const uc of product.unitConversions) {
-          if (uc.convertedUnitId !== product.baseUnitId) {
-            units.push({
-              id: uc.convertedUnitId,
-              name: uc.convertedUnitName || "ĐVT quy đổi",
-            });
-          }
-        }
+  const getConsumptionUnit = useCallback(
+    (product: ProductDto): UnitOption => {
+      if (product.volumeUnitId && product.volumeUnitName) {
+        return { id: product.volumeUnitId, name: product.volumeUnitName };
       }
-      return units;
+      return { id: product.baseUnitId, name: product.baseUnitName || "" };
     },
     []
   );
@@ -190,15 +180,16 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
                 });
               } else {
                 const product = productMap.get(item.productId!);
+                const unit = product
+                  ? getConsumptionUnit(product)
+                  : { id: item.unitId!, name: item.unitName || "" };
                 pRows.push({
                   key: crypto.randomUUID(),
                   productId: item.productId!,
                   productName: item.productName || "",
                   productType: item.productType as ProductType,
-                  unitId: item.unitId!,
-                  availableUnits: product
-                    ? getAvailableUnits(product)
-                    : [{ id: item.unitId!, name: item.unitName || "" }],
+                  unitId: unit.id,
+                  unitName: unit.name,
                   quantity: item.quantity,
                 });
               }
@@ -222,15 +213,16 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
               });
             } else {
               const product = productMap.get(item.productId!);
+              const unit = product
+                ? getConsumptionUnit(product)
+                : { id: item.unitId!, name: item.unitName || "" };
               pRows.push({
                 key: crypto.randomUUID(),
                 productId: item.productId!,
                 productName: item.productName || "",
                 productType: item.productType!,
-                unitId: item.unitId!,
-                availableUnits: product
-                  ? getAvailableUnits(product)
-                  : [{ id: item.unitId!, name: item.unitName || "" }],
+                unitId: unit.id,
+                unitName: unit.name,
                 quantity: item.quantity,
               });
             }
@@ -317,7 +309,7 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
         return;
       }
 
-      const availableUnits = getAvailableUnits(product);
+      const unit = getConsumptionUnit(product);
       setProductRows((prev) => [
         ...prev,
         {
@@ -325,15 +317,15 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
           productId: product.id,
           productName: product.name,
           productType: product.productType,
-          unitId: product.baseUnitId,
-          availableUnits,
+          unitId: unit.id,
+          unitName: unit.name,
           quantity: 0,
         },
       ]);
     }
 
     setSelectedItemId(undefined);
-  }, [selectedItemId, equipments, products, equipmentRows, productRows, getAvailableUnits]);
+  }, [selectedItemId, equipments, products, equipmentRows, productRows, getConsumptionUnit]);
 
   const handleRemoveProduct = useCallback((key: string) => {
     setProductRows((prev) => prev.filter((r) => r.key !== key));
@@ -341,12 +333,6 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
 
   const handleRemoveEquipment = useCallback((key: string) => {
     setEquipmentRows((prev) => prev.filter((r) => r.key !== key));
-  }, []);
-
-  const handleUnitChange = useCallback((key: string, unitId: string) => {
-    setProductRows((prev) =>
-      prev.map((r) => (r.key === key ? { ...r, unitId } : r))
-    );
   }, []);
 
   const handleProductQuantityChange = useCallback(
@@ -387,7 +373,7 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
         productName: r.productName,
         productType: r.productType,
         unitId: r.unitId,
-        unitName: r.availableUnits.find((u) => u.id === r.unitId)?.name,
+        unitName: r.unitName,
         quantity: r.quantity,
       })),
       ...equipmentRows.map((r) => ({
@@ -434,20 +420,9 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
     },
     {
       title: "Đơn vị",
-      key: "unitId",
+      dataIndex: "unitName",
+      key: "unitName",
       width: 150,
-      render: (_, record) => (
-        <Select
-          value={record.unitId}
-          onChange={(v) => handleUnitChange(record.key, v)}
-          options={record.availableUnits.map((u) => ({
-            value: u.id,
-            label: u.name,
-          }))}
-          style={{ width: "100%" }}
-          size="small"
-        />
-      ),
     },
     {
       title: "Số lượng",
