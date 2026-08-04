@@ -70,6 +70,19 @@ export interface PagedResult<T> {
   totalCount: number;
 }
 
+export interface RoleWarehouseDto {
+  id: string;
+  roleId: string;
+  warehouseId: string;
+  warehouseName: string;
+  warehouseCode: string;
+  warehouseLevel: number;
+}
+
+export interface AssignRoleWarehousesInput {
+  warehouseIds: string[];
+}
+
 // ============ API Service ============
 
 const BASE_URL = '/api/app/role-management';
@@ -173,6 +186,17 @@ const roleManagementService = {
       params: { filter }
     });
     return response.data;
+  },
+
+  // ============ Warehouse Assignments ============
+
+  getRoleWarehouses: async (roleId: string): Promise<RoleWarehouseDto[]> => {
+    const response = await api.get<RoleWarehouseDto[]>(`${BASE_URL}/${roleId}/warehouses`);
+    return response.data;
+  },
+
+  assignRoleWarehouses: async (roleId: string, data: AssignRoleWarehousesInput): Promise<void> => {
+    await api.put(`${BASE_URL}/${roleId}/warehouses`, data);
   },
 };
 

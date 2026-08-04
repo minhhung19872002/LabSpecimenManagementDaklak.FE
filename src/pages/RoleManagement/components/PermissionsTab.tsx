@@ -14,7 +14,7 @@ import {
   Card,
 } from "antd";
 import "../RoleManagementDetail.css";
-import { SaveOutlined, CheckOutlined } from "@ant-design/icons";
+import { SaveOutlined, CheckOutlined, ShopOutlined } from "@ant-design/icons";
 import { PermissionGroupDto } from "../../../services/roleManagementService";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
@@ -27,6 +27,8 @@ interface PermissionsTabProps {
   saving: boolean;
   onSave: (permissions: string[]) => Promise<boolean>;
   isStatic?: boolean;
+  warehouseCount?: { assigned: number; total: number };
+  onOpenWarehouseModal?: () => void;
 }
 
 const PermissionsTab: React.FC<PermissionsTabProps> = ({
@@ -35,6 +37,8 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   saving,
   onSave,
   isStatic = false,
+  warehouseCount,
+  onOpenWarehouseModal,
 }) => {
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
     new Set(),
@@ -270,29 +274,61 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
         </div>
       ),
       children: (
-        <Row gutter={[16, 8]}>
-          {group.permissions.map((perm) => (
-            <Col key={perm.name} xs={24} sm={12} md={8}>
-              <Checkbox
-                checked={selectedPermissions.has(perm.name)}
-                onChange={(e) =>
-                  handlePermissionChange(perm.name, e.target.checked)
-                }
-                disabled={isStatic || !canEdit}
-                style={{ width: "100%" }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: selectedPermissions.has(perm.name) ? 500 : 400,
-                  }}
+        <div>
+          <Row gutter={[16, 8]}>
+            {group.permissions.map((perm) => (
+              <Col key={perm.name} xs={24} sm={12} md={8}>
+                <Checkbox
+                  checked={selectedPermissions.has(perm.name)}
+                  onChange={(e) =>
+                    handlePermissionChange(perm.name, e.target.checked)
+                  }
+                  disabled={isStatic || !canEdit}
+                  style={{ width: "100%" }}
                 >
-                  {perm.displayName}
-                </Text>
-              </Checkbox>
-            </Col>
-          ))}
-        </Row>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: selectedPermissions.has(perm.name) ? 500 : 400,
+                    }}
+                  >
+                    {perm.displayName}
+                  </Text>
+                </Checkbox>
+              </Col>
+            ))}
+          </Row>
+          {group.name === "Products" && warehouseCount && onOpenWarehouseModal && (
+            <div
+              style={{
+                marginTop: 16,
+                paddingTop: 12,
+                borderTop: "1px dashed #d9d9d9",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <ShopOutlined />
+              <Text strong>Cấp quyền theo Kho</Text>
+              <Badge
+                count={`${warehouseCount.assigned}/${warehouseCount.total}`}
+                style={{
+                  backgroundColor:
+                    warehouseCount.assigned > 0 ? "#1890ff" : "#d9d9d9",
+                  fontSize: 12,
+                }}
+              />
+              <Button
+                size="small"
+                onClick={onOpenWarehouseModal}
+                disabled={isStatic || !canEdit}
+              >
+                Chọn kho
+              </Button>
+            </div>
+          )}
+        </div>
       ),
     };
   };
@@ -430,7 +466,7 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     }
 
     return items;
-  }, [otherGroups, masterDataGroups, selectedPermissions, isStatic, canEdit]);
+  }, [otherGroups, masterDataGroups, selectedPermissions, isStatic, canEdit, warehouseCount]);
 
   // Early return AFTER all hooks to prevent "Rendered fewer hooks than expected" error
   if (loading) {

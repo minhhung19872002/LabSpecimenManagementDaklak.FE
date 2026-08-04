@@ -1229,6 +1229,13 @@ export const warehouseService = {
     const response = await api.post<number>(`${WAREHOUSE_URL}/batch-toggle-active`, { ids, isActive });
     return response.data;
   },
+  getActiveForUser: async (): Promise<WarehouseDto[]> => {
+    const response = await api.get<{ items: WarehouseDto[] } | WarehouseDto[]>(`${WAREHOUSE_URL}/active-for-me`);
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return (response.data as { items: WarehouseDto[] }).items;
+  },
 };
 
 // Batch operation DTOs

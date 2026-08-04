@@ -91,6 +91,20 @@ export interface UpdateUserPermissionsInput {
   permissions: string[];
 }
 
+// Warehouse DTOs
+export interface UserWarehouseDto {
+  id: string;
+  userId: string;
+  warehouseId: string;
+  warehouseName: string;
+  warehouseCode: string;
+  warehouseLevel: number;
+}
+
+export interface AssignUserWarehousesInput {
+  warehouseIds: string[];
+}
+
 // Role DTOs
 export interface UserRoleDto {
   id: string;
@@ -181,6 +195,15 @@ export const employeeService = {
   },
   removeRoleFromUser: async (id: string, roleName: string) => {
     await api.delete(`${BASE_URL}/${id}/roles/${encodeURIComponent(roleName)}`);
+  },
+
+  // Warehouse assignments
+  getUserWarehouses: async (id: string): Promise<UserWarehouseDto[]> => {
+    const response = await api.get<UserWarehouseDto[]>(`${BASE_URL}/${id}/warehouses`);
+    return response.data;
+  },
+  assignUserWarehouses: async (id: string, data: AssignUserWarehousesInput) => {
+    await api.put(`${BASE_URL}/${id}/warehouses`, data);
   },
 };
 

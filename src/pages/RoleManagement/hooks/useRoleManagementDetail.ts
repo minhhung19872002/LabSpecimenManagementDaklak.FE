@@ -4,7 +4,9 @@ import roleManagementService, {
   RoleDetailDto,
   RoleUserDto,
   PermissionGroupDto,
+  RoleWarehouseDto,
 } from '../../../services/roleManagementService';
+import { warehouseService } from '../../../services/masterDataService';
 
 export interface UsersLocalParams {
   filter: string;
@@ -22,6 +24,9 @@ interface UseRoleManagementDetailReturn {
   permissionGroups: PermissionGroupDto[];
   availableUsers: RoleUserDto[];
   availableUsersLoading: boolean;
+  roleWarehouses: RoleWarehouseDto[];
+  warehousesLoading: boolean;
+  totalWarehouseCount: number;
   refresh: () => Promise<void>;
   refreshUsers: () => Promise<void>;
   handleUsersSearch: (value: string) => void;
@@ -30,6 +35,7 @@ interface UseRoleManagementDetailReturn {
   handleSearchAvailableUsers: (filter: string) => Promise<void>;
   handleSavePermissions: (permissions: string[]) => Promise<boolean>;
   handleUpdateRole: (name: string) => Promise<boolean>;
+  handleSaveRoleWarehouses: (warehouseIds: string[]) => Promise<boolean>;
 }
 
 const DEFAULT_USERS_PARAMS: UsersLocalParams = {
@@ -47,6 +53,9 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroupDto[]>([]);
   const [availableUsers, setAvailableUsers] = useState<RoleUserDto[]>([]);
   const [availableUsersLoading, setAvailableUsersLoading] = useState(false);
+  const [roleWarehouses, setRoleWarehouses] = useState<RoleWarehouseDto[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(false);
+  const [totalWarehouseCount, setTotalWarehouseCount] = useState(0);
 
   // Local filtering and pagination
   const filteredUsers = useMemo(() => {
@@ -123,9 +132,29 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     }
   }, [roleDetail?.name]);
 
+  const fetchRoleWarehouses = useCallback(async () => {
+    if (!roleId) return;
+    setWarehousesLoading(true);
+    try {
+      const [data, allWarehouses] = await Promise.all([
+        roleManagementService.getRoleWarehouses(roleId),
+        warehouseService.getActive(),
+      ]);
+      if (data && Array.isArray(data)) {
+        setRoleWarehouses(data);
+      }
+      setTotalWarehouseCount(allWarehouses.filter(w => !w.isDefault).length);
+    } catch (error: unknown) {
+      console.error('Error fetching role warehouses:', error);
+    } finally {
+      setWarehousesLoading(false);
+    }
+  }, [roleId]);
+
   useEffect(() => {
     fetchRoleDetail();
-  }, [fetchRoleDetail]);
+    fetchRoleWarehouses();
+  }, [fetchRoleDetail, fetchRoleWarehouses]);
 
   useEffect(() => {
     if (roleId) {
@@ -232,6 +261,24 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     }
   }, [roleId, roleDetail, fetchRoleDetail]);
 
+  const handleSaveRoleWarehouses = useCallback(async (warehouseIds: string[]): Promise<boolean> => {
+    if (!roleId) return false;
+    setSaving(true);
+    try {
+      await roleManagementService.assignRoleWarehouses(roleId, { warehouseIds });
+      message.success('Lưu phân quyền kho thành công');
+      await fetchRoleWarehouses();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error saving role warehouses:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu phân quyền kho';
+      message.error(errorMessage);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [roleId, fetchRoleWarehouses]);
+
   return {
     roleDetail,
     loading,
@@ -244,6 +291,9 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     permissionGroups,
     availableUsers,
     availableUsersLoading,
+    roleWarehouses,
+    warehousesLoading,
+    totalWarehouseCount,
     refresh,
     refreshUsers,
     handleUsersSearch,
@@ -252,6 +302,7 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     handleSearchAvailableUsers,
     handleSavePermissions,
     handleUpdateRole,
+    handleSaveRoleWarehouses,
   };
 };
 

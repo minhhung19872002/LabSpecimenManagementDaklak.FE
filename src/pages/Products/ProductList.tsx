@@ -111,12 +111,16 @@ const ProductList: React.FC = () => {
     const loadWarehouses = async () => {
       setWarehouseLoading(true);
       try {
-        const list = await warehouseService.getActive();
+        const list = await warehouseService.getActiveForUser();
         setWarehouses(list);
-        const roots = list.filter((w) => w.level === 0).sort((a, b) => a.name.localeCompare(b.name, "vi"));
-        if (roots.length > 0 && !warehouseId) {
-          setWarehouseId(roots[0].id);
-
+        if (!warehouseId && list.length > 0) {
+          const defaultWh = list.find((w) => w.isDefault);
+          if (defaultWh) {
+            setWarehouseId(defaultWh.id);
+          } else {
+            const roots = list.filter((w) => w.level === 0).sort((a, b) => a.name.localeCompare(b.name, "vi"));
+            if (roots.length > 0) setWarehouseId(roots[0].id);
+          }
         }
       } catch {
         // ignore

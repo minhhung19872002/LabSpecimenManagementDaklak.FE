@@ -15,6 +15,7 @@ import { useEmployeeDetail } from "./hooks";
 import UserInfoTab from "./components/UserInfoTab";
 import UserPermissionsTab from "./components/UserPermissionsTab";
 import UserRolesTab from "./components/UserRolesTab";
+import WarehouseSelectionModal from "../../components/common/WarehouseSelectionModal";
 import { PATH_ROUTES } from "../../constants/routes";
 import "./EmployeeDetail.css";
 
@@ -32,13 +33,17 @@ const EmployeeDetail: React.FC = () => {
     rolesLoading,
     permissionGroups,
     userRoles,
+    userWarehouses,
+    totalWarehouseCount,
     handleUpdateEmployee,
     handleSavePermissions,
     handleAddRole,
     handleRemoveRole: _handleRemoveRole,
+    handleSaveWarehouses,
   } = useEmployeeDetail(id || "");
 
   const [activeTab, setActiveTab] = useState<string>("info");
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
 
   if (loading && !employee) {
     return (
@@ -118,12 +123,27 @@ const EmployeeDetail: React.FC = () => {
       )}
 
       {activeTab === "permissions" && (
-        <UserPermissionsTab
-          permissionGroups={permissionGroups}
-          loading={permissionsLoading}
-          saving={saving}
-          onSave={handleSavePermissions}
-        />
+        <>
+          <UserPermissionsTab
+            permissionGroups={permissionGroups}
+            loading={permissionsLoading}
+            saving={saving}
+            onSave={handleSavePermissions}
+            warehouseCount={{
+              assigned: userWarehouses.length,
+              total: totalWarehouseCount,
+            }}
+            onOpenWarehouseModal={() => setWarehouseModalOpen(true)}
+          />
+          <WarehouseSelectionModal
+            open={warehouseModalOpen}
+            onClose={() => setWarehouseModalOpen(false)}
+            ownerName={employee?.fullName || ""}
+            assignedWarehouseIds={userWarehouses.map((w) => w.warehouseId)}
+            onSave={handleSaveWarehouses}
+            saving={saving}
+          />
+        </>
       )}
 
       {activeTab === "roles" && (
@@ -134,6 +154,7 @@ const EmployeeDetail: React.FC = () => {
           onAddRole={handleAddRole}
         />
       )}
+
     </div>
   );
 };

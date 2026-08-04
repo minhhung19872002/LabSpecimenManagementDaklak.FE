@@ -1,0 +1,78 @@
+/* Hide switcher — tree is always fully expanded */
+.warehouse-tree .ant-tree-switcher {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+}
+
+/* === Node layout === */
+.warehouse-tree .ant-tree-treenode {
+  padding: 0 !important;
+  margin: 0 !important;
+  align-items: stretch !important;
+}
+.warehouse-tree .ant-tree-list-holder-inner {
+  gap: 0 !important;
+}
+.warehouse-tree .ant-tree-node-content-wrapper,
+.warehouse-tree .ant-tree-checkbox {
+  align-self: center;
+}
+.warehouse-tree .ant-tree-node-content-wrapper {
+  padding: 4px 4px !important;
+}
+
+/* === Indent & tree lines === */
+.warehouse-tree .ant-tree-indent {
+  align-self: stretch !important;
+  display: flex !important;
+}
+.warehouse-tree .ant-tree-indent-unit {
+  position: relative;
+  align-self: stretch;
+  width: 28px !important;
+}
+
+/* Vertical line — full height by default (│) */
+.warehouse-tree .ant-tree-indent-unit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background-color: #d9d9d9;
+  z-index: 1;
+}
+
+/* Horizontal connector — extends from spine to node */
+.warehouse-tree .ant-tree-indent-unit:last-child::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  right: 0;
+  height: 1px;
+  background-color: #d9d9d9;
+  z-index: 1;
+}
+
+/* Parent was last child → no more parent-level siblings to connect,
+   hide the first indent-unit line for deeper nodes (level 2+). */
+.warehouse-tree .ant-tree-treenode.parent-is-last .ant-tree-indent-unit:first-child:not(:last-child)::before {
+  display: none;
+}
+
+/* Ancestor subtree done at intermediate depths → hide vertical spine.
+   Excludes first-child (handled by parent-is-last) to avoid the off-by-one
+   when roots have no connector lines. */
+.warehouse-tree .ant-tree-indent-unit-end:not(:last-child):not(:first-child)::before {
+  display: none;
+}
+
+/* Last child → └ shape: vertical line stops at center of the row */
+.warehouse-tree .ant-tree-treenode.is-last-child .ant-tree-indent-unit:last-child::before {
+  bottom: 50%;
+}

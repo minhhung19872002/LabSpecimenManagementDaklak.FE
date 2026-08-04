@@ -13,6 +13,7 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRoleManagementDetail } from "./hooks";
 import { UserListTab, PermissionsTab } from "./components";
+import WarehouseSelectionModal from "../../components/common/WarehouseSelectionModal";
 import { PATH_ROUTES } from "../../constants/routes";
 import "./RoleManagementDetail.css";
 
@@ -33,14 +34,18 @@ const RoleManagementDetail: React.FC = () => {
     permissionGroups,
     availableUsers,
     availableUsersLoading,
+    roleWarehouses,
+    totalWarehouseCount,
     handleUsersSearch,
     handleAddUser,
     handleRemoveUser,
     handleSearchAvailableUsers,
     handleSavePermissions,
+    handleSaveRoleWarehouses,
   } = useRoleManagementDetail(id || "");
 
   const [activeTab, setActiveTab] = useState<string>("users");
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
 
   if (loading && !roleDetail) {
     return (
@@ -113,13 +118,28 @@ const RoleManagementDetail: React.FC = () => {
           onSearchAvailableUsers={handleSearchAvailableUsers}
         />
       ) : (
-        <PermissionsTab
-          permissionGroups={permissionGroups}
-          loading={permissionsLoading}
-          saving={saving}
-          onSave={handleSavePermissions}
-          isStatic={roleDetail.isStatic}
-        />
+        <>
+          <PermissionsTab
+            permissionGroups={permissionGroups}
+            loading={permissionsLoading}
+            saving={saving}
+            onSave={handleSavePermissions}
+            isStatic={roleDetail.isStatic}
+            warehouseCount={{
+              assigned: roleWarehouses.length,
+              total: totalWarehouseCount,
+            }}
+            onOpenWarehouseModal={() => setWarehouseModalOpen(true)}
+          />
+          <WarehouseSelectionModal
+            open={warehouseModalOpen}
+            onClose={() => setWarehouseModalOpen(false)}
+            ownerName={roleDetail.name}
+            assignedWarehouseIds={roleWarehouses.map((w) => w.warehouseId)}
+            onSave={handleSaveRoleWarehouses}
+            saving={saving}
+          />
+        </>
       )}
     </div>
   );

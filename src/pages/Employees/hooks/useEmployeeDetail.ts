@@ -5,7 +5,9 @@ import employeeService, {
   UpdateEmployeeDto,
   PermissionGroupDto,
   UserRoleDto,
+  UserWarehouseDto,
 } from '../../../services/employeeService';
+import { warehouseService } from '../../../services/masterDataService';
 
 interface UseEmployeeDetailReturn {
   employee: EmployeeDto | null;
@@ -13,13 +15,17 @@ interface UseEmployeeDetailReturn {
   saving: boolean;
   permissionsLoading: boolean;
   rolesLoading: boolean;
+  warehousesLoading: boolean;
+  totalWarehouseCount: number;
   permissionGroups: PermissionGroupDto[];
   userRoles: UserRoleDto[];
+  userWarehouses: UserWarehouseDto[];
   refresh: () => Promise<void>;
   handleUpdateEmployee: (data: UpdateEmployeeDto) => Promise<boolean>;
   handleSavePermissions: (permissions: string[]) => Promise<boolean>;
   handleAddRole: (roleName: string) => Promise<boolean>;
   handleRemoveRole: (roleName: string) => Promise<boolean>;
+  handleSaveWarehouses: (warehouseIds: string[]) => Promise<boolean>;
 }
 
 export const useEmployeeDetail = (employeeId: string): UseEmployeeDetailReturn => {
@@ -28,8 +34,11 @@ export const useEmployeeDetail = (employeeId: string): UseEmployeeDetailReturn =
   const [saving, setSaving] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
   const [rolesLoading, setRolesLoading] = useState(false);
+  const [warehousesLoading, setWarehousesLoading] = useState(false);
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroupDto[]>([]);
   const [userRoles, setUserRoles] = useState<UserRoleDto[]>([]);
+  const [userWarehouses, setUserWarehouses] = useState<UserWarehouseDto[]>([]);
+  const [totalWarehouseCount, setTotalWarehouseCount] = useState(0);
 
   const fetchEmployee = useCallback(async () => {
     if (!employeeId) return;
@@ -77,15 +86,36 @@ export const useEmployeeDetail = (employeeId: string): UseEmployeeDetailReturn =
     }
   }, [employeeId]);
 
+  const fetchWarehouses = useCallback(async () => {
+    if (!employeeId) return;
+    setWarehousesLoading(true);
+    try {
+      const [data, allWarehouses] = await Promise.all([
+        employeeService.getUserWarehouses(employeeId),
+        warehouseService.getActive(),
+      ]);
+      if (data && Array.isArray(data)) {
+        setUserWarehouses(data);
+      }
+      setTotalWarehouseCount(allWarehouses.filter(w => !w.isDefault).length);
+    } catch (error: unknown) {
+      console.error('Error fetching user warehouses:', error);
+      message.error('Không thể tải phân quyền kho');
+    } finally {
+      setWarehousesLoading(false);
+    }
+  }, [employeeId]);
+
   useEffect(() => {
     fetchEmployee();
     fetchPermissions();
     fetchRoles();
-  }, [fetchEmployee, fetchPermissions, fetchRoles]);
+    fetchWarehouses();
+  }, [fetchEmployee, fetchPermissions, fetchRoles, fetchWarehouses]);
 
   const refresh = useCallback(async () => {
-    await Promise.all([fetchEmployee(), fetchPermissions(), fetchRoles()]);
-  }, [fetchEmployee, fetchPermissions, fetchRoles]);
+    await Promise.all([fetchEmployee(), fetchPermissions(), fetchRoles(), fetchWarehouses()]);
+  }, [fetchEmployee, fetchPermissions, fetchRoles, fetchWarehouses]);
 
   const handleUpdateEmployee = useCallback(async (data: UpdateEmployeeDto): Promise<boolean> => {
     if (!employeeId) return false;
@@ -159,19 +189,41 @@ export const useEmployeeDetail = (employeeId: string): UseEmployeeDetailReturn =
     }
   }, [employeeId, fetchRoles, fetchEmployee]);
 
+  const handleSaveWarehouses = useCallback(async (warehouseIds: string[]): Promise<boolean> => {
+    if (!employeeId) return false;
+    setSaving(true);
+    try {
+      await employeeService.assignUserWarehouses(employeeId, { warehouseIds });
+      message.success('Lưu phân quyền kho thành công');
+      await fetchWarehouses();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error saving warehouse assignments:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu phân quyền kho';
+      message.error(errorMessage);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [employeeId, fetchWarehouses]);
+
   return {
     employee,
     loading,
     saving,
     permissionsLoading,
     rolesLoading,
+    warehousesLoading,
+    totalWarehouseCount,
     permissionGroups,
     userRoles,
+    userWarehouses,
     refresh,
     handleUpdateEmployee,
     handleSavePermissions,
     handleAddRole,
     handleRemoveRole,
+    handleSaveWarehouses,
   };
 };
 
