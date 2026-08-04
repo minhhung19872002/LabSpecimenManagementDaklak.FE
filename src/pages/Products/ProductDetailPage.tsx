@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { message } from "antd";
+import { Button, message } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   productService,
   ProductDetailDto,
   ProductImportHistoryDto,
+  ProductTypeLabels,
 } from "../../services/productService";
 import { PATH_ROUTES } from "../../constants/routes";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import ProductDetailView from "./ProductDetail/ProductDetailView";
+import "../../styles/ListCard.css";
+import "./ProductDetail.css";
 
 type DateRange = [dayjs.Dayjs | null, dayjs.Dayjs | null] | null;
 
@@ -89,26 +93,35 @@ const ProductDetailPage: React.FC = () => {
     []
   );
 
-  const handleBack = useCallback(() => {
-    navigate(PATH_ROUTES.products.index);
-  }, [navigate]);
+  const typeLabel = detail ? ProductTypeLabels[detail.productType] || "" : "";
+  const pageTitle = warehouseName
+    ? `${warehouseName} - Chi tiết ${typeLabel.toLowerCase()}`
+    : `Chi tiết ${typeLabel.toLowerCase()}`;
 
   return (
-    <ProductDetailView
-      detail={detail}
-      detailLoading={detailLoading}
-      warehouseName={warehouseName}
-      historyItems={historyItems}
-      historyTotal={historyTotal}
-      historyLoading={historyLoading}
-      historyPage={historyPage}
-      historyPageSize={historyPageSize}
-      dateRange={dateRange}
-      onDateRangeChange={handleDateRangeChange}
-      onHistoryPageChange={handleHistoryPageChange}
-      onReceiptClick={handleReceiptClick}
-      onBack={handleBack}
-    />
+    <div className="product-detail">
+      <div className="back-button-bar">
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(PATH_ROUTES.products.index)}>
+          Quay lại
+        </Button>
+      </div>
+
+      <ProductDetailView
+        productId={id!}
+        detail={detail}
+        detailLoading={detailLoading}
+        pageTitle={pageTitle}
+        historyItems={historyItems}
+        historyTotal={historyTotal}
+        historyLoading={historyLoading}
+        historyPage={historyPage}
+        historyPageSize={historyPageSize}
+        dateRange={dateRange}
+        onDateRangeChange={handleDateRangeChange}
+        onHistoryPageChange={handleHistoryPageChange}
+        onReceiptClick={handleReceiptClick}
+      />
+    </div>
   );
 };
 

@@ -290,6 +290,26 @@ export interface GetProductImportHistoryInput {
   warehouseId?: string;
 }
 
+export interface ProductUsageLogItemDto {
+  sampleCode: string;
+  sampleName: string;
+  sampleMatrix?: string;
+  indicatorName: string;
+  testMethodName: string;
+  technicianName?: string;
+  result?: string;
+  resultSubmissionDate?: string;
+  consumptionAmount?: number;
+  consumptionUnitName?: string;
+}
+
+export interface GetProductUsageLogParams {
+  dateFrom?: string;
+  dateTo?: string;
+  skipCount?: number;
+  maxResultCount?: number;
+}
+
 interface PagedResult<T> {
   items: T[];
   totalCount: number;
@@ -381,6 +401,17 @@ export const productService = {
     if (params.limit) apiParams.Limit = params.limit;
     if (params.search) apiParams.Search = params.search;
     const response = await api.get<PagedResult<ProductSourceDto>>(`${BASE_URL}/${productId}/sources`, { params: apiParams });
+    return response.data;
+  },
+
+  getUsageLog: async (
+    id: string,
+    params: GetProductUsageLogParams = {}
+  ): Promise<PagedResult<ProductUsageLogItemDto>> => {
+    const response = await api.get<PagedResult<ProductUsageLogItemDto>>(
+      `${BASE_URL}/${id}/usage-log`,
+      { params }
+    );
     return response.data;
   },
 

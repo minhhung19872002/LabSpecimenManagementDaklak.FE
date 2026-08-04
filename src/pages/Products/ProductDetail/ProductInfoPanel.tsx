@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Row, Col, Spin } from "antd";
+import { Row, Col, Spin } from "antd";
 import DOMPurify from "dompurify";
 import { ProductDetailDto } from "../../../services/productService";
 import { IndicatorName } from "../../../components/common";
@@ -9,15 +9,12 @@ export interface ProductInfoPanelProps {
   loading?: boolean;
 }
 
-const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ fontWeight: 500, fontSize: 14, color: "rgba(0,0,0,0.85)", marginBottom: 4 }}>
-    {children}
-  </div>
-);
-
-const SectionValue: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ fontSize: 14, color: "rgba(0,0,0,0.65)", marginBottom: 16 }}>
-    {children}
+const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <div className="detail-item">
+    <span className="detail-item-label">{label}</span>
+    <span className="detail-item-value">
+      {value != null && value !== "" ? value : "-"}
+    </span>
   </div>
 );
 
@@ -25,66 +22,64 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) 
   const qtyUnit = detail?.packagingUnitName || detail?.baseUnitName || "";
 
   return (
-    <Card className="list-card" title="Thông tin chung">
+    <div className="detail-section">
+      <div className="detail-section-title">Thông tin chung</div>
       <Spin spinning={!!loading}>
-        <div style={{ padding: "4px 24px 16px" }}>
-          {detail && (
-            <>
-              <SectionLabel>Tên vật tư/ hóa chất</SectionLabel>
-              <SectionValue>
-                {detail.formattedName ? (
+        {detail && (
+          <>
+            <DetailItem
+              label="Tên vật tư/ hóa chất"
+              value={
+                detail.formattedName ? (
                   <IndicatorName name={detail.name} formattedName={detail.formattedName} />
                 ) : (
-                  detail.name || "-"
-                )}
-              </SectionValue>
+                  detail.name
+                )
+              }
+            />
 
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <SectionLabel>Mã nhận dạng</SectionLabel>
-                  <SectionValue>{detail.identificationCode || "-"}</SectionValue>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <SectionLabel>CAS</SectionLabel>
-                  <SectionValue>{detail.casNumber || "-"}</SectionValue>
-                </Col>
-              </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <DetailItem label="Mã nhận dạng" value={detail.identificationCode} />
+              </Col>
+              <Col span={12}>
+                <DetailItem label="CAS" value={detail.casNumber} />
+              </Col>
+            </Row>
 
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <SectionLabel>Số lượng tồn kho</SectionLabel>
-                  <SectionValue>
-                    {(detail.warehouseAvailableQuantity ?? 0).toLocaleString("vi-VN")} {qtyUnit}
-                  </SectionValue>
+            <Row gutter={16}>
+              <Col span={12}>
+                <DetailItem
+                  label="Số lượng tồn kho"
+                  value={`${(detail.warehouseAvailableQuantity ?? 0).toLocaleString("vi-VN")} ${qtyUnit}`}
+                />
+              </Col>
+              {detail.consumableImportedQuantity > 0 && detail.volumeUnitName && (
+                <Col span={12}>
+                  <DetailItem
+                    label="Số lượng tồn kho (Đơn vị)"
+                    value={`${detail.consumableImportedQuantity.toLocaleString("vi-VN")} ${detail.volumeUnitName}`}
+                  />
                 </Col>
-                {detail.consumableImportedQuantity > 0 && detail.volumeUnitName && (
-                  <Col xs={24} sm={12}>
-                    <SectionLabel>Số lượng tồn kho (Đơn vị)</SectionLabel>
-                    <SectionValue>
-                      {detail.consumableImportedQuantity.toLocaleString("vi-VN")} {detail.volumeUnitName}
-                    </SectionValue>
-                  </Col>
-                )}
-              </Row>
+              )}
+            </Row>
 
-              <SectionLabel>Điều kiện bảo quản</SectionLabel>
-              <SectionValue>
-                {detail.formattedStorageConditions ? (
+            <DetailItem
+              label="Điều kiện bảo quản"
+              value={
+                detail.formattedStorageConditions ? (
                   <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(detail.formattedStorageConditions) }} />
                 ) : (
-                  detail.storageConditions || "-"
-                )}
-              </SectionValue>
+                  detail.storageConditions
+                )
+              }
+            />
 
-              <SectionLabel>Cấu hình kỹ thuật</SectionLabel>
-              <SectionValue>
-                {detail.mainTechnicalSpecs || "-"}
-              </SectionValue>
-            </>
-          )}
-        </div>
+            <DetailItem label="Cấu hình kỹ thuật" value={detail.mainTechnicalSpecs} />
+          </>
+        )}
       </Spin>
-    </Card>
+    </div>
   );
 };
 

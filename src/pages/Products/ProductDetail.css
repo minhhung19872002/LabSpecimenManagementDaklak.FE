@@ -1,0 +1,126 @@
+.product-detail {
+  padding: 0;
+}
+
+@media (min-width: 992px) {
+  .product-detail {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 991px) {
+  .product-detail .ant-card {
+    border: none;
+    border-radius: 0;
+  }
+
+  .product-detail .ant-card-bordered {
+    border: none;
+  }
+}
+
+/* Card body padding */
+.product-detail .list-card > .ant-card-body {
+  padding: 24px;
+}
+
+@media (max-width: 991px) and (min-width: 577px) {
+  .product-detail .list-card > .ant-card-body {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .product-detail .list-card > .ant-card-body {
+    padding: 12px;
+  }
+}
+
+/* Card header flex */
+.product-detail .list-card > .ant-card-head {
+  height: auto;
+  min-height: 54px;
+  padding: 12px 16px;
+}
+
+.product-detail .ant-card-head-title {
+  white-space: normal;
+  line-height: 1.5;
+}
+
+/* Back button area */
+.product-detail .back-button-bar {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (max-width: 991px) {
+  .product-detail .back-button-bar {
+    margin-bottom: 12px;
+    padding: 0 12px;
+  }
+}
+
+/* Detail sections */
+.product-detail .detail-section {
+  background: #fafafa;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.product-detail .detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.product-detail .detail-section-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Detail items */
+.product-detail .detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.product-detail .detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.product-detail .detail-item-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.product-detail .detail-item-value {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+  word-break: break-word;
+}
+
+/* Tabs styling */
+.product-detail .ant-tabs-nav {
+  margin-bottom: 16px;
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+  .product-detail .detail-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 991px) {
+  .product-detail .detail-left-col {
+    margin-bottom: 16px;
+  }
+}

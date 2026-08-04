@@ -17,7 +17,7 @@ const ImportHistoryToolbar: React.FC<ImportHistoryToolbarProps> = ({
 }) => {
   return (
     <Space wrap>
-      <span style={{ color: "#fff", fontWeight: 500 }}>Ngày nhập kho:</span>
+      <span style={{ fontWeight: 500 }}>Ngày nhập kho:</span>
       <RangePicker
         format="DD/MM/YYYY"
         value={dateRange}
