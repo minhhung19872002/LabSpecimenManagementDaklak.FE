@@ -8,6 +8,7 @@ import {
   Col,
   Tooltip,
   Card,
+  Checkbox,
   message,
 } from "antd";
 import Icon from "../../../../components/common/Icon";
@@ -34,6 +35,7 @@ interface AddMethodToIndicatorModalProps {
       unit: string;
       formattedUnit: string;
       unitPrice: number;
+      isSubcontract: boolean;
     }[]
   ) => void;
   onCancel: () => void;
@@ -46,6 +48,7 @@ interface MethodRow {
   unit: string;
   formattedUnit: string;
   unitPrice: number;
+  isSubcontract: boolean;
 }
 
 function generateId(): string {
@@ -68,6 +71,7 @@ const createEmptyRow = (): MethodRow => ({
   unit: "",
   formattedUnit: "",
   unitPrice: 0,
+  isSubcontract: false,
 });
 
 const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
@@ -218,6 +222,7 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
       unit: string;
       formattedUnit: string;
       unitPrice: number;
+      isSubcontract: boolean;
     }[] = [];
     const addedKeys = new Set<string>();
 
@@ -253,6 +258,7 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
         unit: row.unit,
         formattedUnit: row.formattedUnit,
         unitPrice: row.unitPrice,
+        isSubcontract: row.isSubcontract,
       });
     });
 
@@ -395,7 +401,22 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
                   addonAfter="đ"
                 />
               </Col>
-              <Col flex="32px">
+              <Col flex="0 0 32px" style={{ display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "stretch" }}>
+                <Tooltip title="Hợp đồng phụ">
+                  <Checkbox
+                    checked={row.isSubcontract}
+                    onChange={(e) => {
+                      setRows((prev) => {
+                        const updated = [...prev];
+                        updated[rowIndex] = { ...updated[rowIndex], isSubcontract: e.target.checked };
+                        return updated;
+                      });
+                    }}
+                    style={{ transform: "scale(1.3)" }}
+                  />
+                </Tooltip>
+              </Col>
+              <Col flex="0 0 32px" style={{ display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "stretch" }}>
                 {rows.length > 1 && (
                   <Tooltip title="Xóa dòng">
                     <Icon
@@ -405,7 +426,6 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
                         fontSize: 16,
                         color: "#CF1322",
                         cursor: "pointer",
-                        marginTop: 8,
                       }}
                     />
                   </Tooltip>

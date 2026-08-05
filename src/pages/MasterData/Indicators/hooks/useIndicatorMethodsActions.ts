@@ -99,6 +99,7 @@ export const useIndicatorMethodsActions = ({
         unit: string;
         formattedUnit: string;
         unitPrice: number;
+        isSubcontract: boolean;
       }[]
     ) => {
       if (!addMethodTarget) return;
@@ -115,6 +116,7 @@ export const useIndicatorMethodsActions = ({
             unitPrice: number;
             unit?: string;
             formattedUnit?: string;
+            isSubcontract?: boolean;
           }[]
         >();
 
@@ -126,6 +128,7 @@ export const useIndicatorMethodsActions = ({
             unitPrice: row.unitPrice,
             unit: row.unit || undefined,
             formattedUnit: row.formattedUnit || undefined,
+            isSubcontract: row.isSubcontract,
           });
           groupedByTestMethod.set(row.testMethodId, existing);
         }
@@ -199,6 +202,7 @@ export const useIndicatorMethodsActions = ({
       formattedUnit: string;
       newTestMethodId?: string;
       newSpecimenTypeId?: string;
+      isSubcontract: boolean;
     }) => {
       if (!editingMethod) return;
 
@@ -214,6 +218,7 @@ export const useIndicatorMethodsActions = ({
             formattedUnit: data.formattedUnit || undefined,
             newTestMethodId: data.newTestMethodId,
             newSpecimenTypeId: data.newSpecimenTypeId,
+            isSubcontract: data.isSubcontract,
           }
         );
         message.success("Cập nhật phương pháp thành công!");

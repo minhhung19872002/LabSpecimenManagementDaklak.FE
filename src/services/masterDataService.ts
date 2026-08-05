@@ -158,7 +158,7 @@ export interface TestMethodWithIndicatorsDto extends TestMethodDto {
 }
 
 export interface AddIndicatorsToTestMethodDto {
-  indicators: { indicatorId: string; specimenTypeId: string; unitPrice: number; unit?: string; formattedUnit?: string }[];
+  indicators: { indicatorId: string; specimenTypeId: string; unitPrice: number; unit?: string; formattedUnit?: string; isSubcontract?: boolean }[];
 }
 
 // Standard
@@ -415,6 +415,7 @@ export interface IndicatorMethodDto {
   specimenTypeName?: string;
   unit?: string;
   formattedUnit?: string;
+  isSubcontract: boolean;
 }
 
 export interface IndicatorWithMethodsDto {
@@ -693,7 +694,7 @@ export const testMethodService = {
     testMethodId: string,
     indicatorId: string,
     specimenTypeId: string | undefined,
-    data: { unitPrice: number; unit?: string; formattedUnit?: string; newTestMethodId?: string; newSpecimenTypeId?: string }
+    data: { unitPrice: number; unit?: string; formattedUnit?: string; newTestMethodId?: string; newSpecimenTypeId?: string; isSubcontract?: boolean }
   ): Promise<TestMethodIndicatorDto> => {
     const params = specimenTypeId ? { specimenTypeId } : {};
     const response = await api.put<TestMethodIndicatorDto>(

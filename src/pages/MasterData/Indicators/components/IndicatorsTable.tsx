@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
-import { Table, Button, Space, Checkbox, Spin, Tag, Typography, Tooltip, Popconfirm, Empty, Input, Select, Row, Col } from "antd";
+import { Table, Button, Space, Checkbox, Spin, Tag, Typography, Tooltip, Popconfirm, Empty, Input, Select, Row, Col, Badge } from "antd";
 import {
   DeleteOutlined,
   StopOutlined,
@@ -118,6 +118,14 @@ const getMethodColumns = (
       key: "unitPrice",
       width: 120,
       render: (_, record) => formatCurrency(record.unitPrice),
+    },
+    {
+      title: "HĐ phụ",
+      key: "isSubcontract",
+      width: 70,
+      align: "center" as const,
+      render: (_, record) =>
+        record.isSubcontract ? <Badge status="processing" text="Có" /> : null,
     },
     {
       title: "Trạng thái",
