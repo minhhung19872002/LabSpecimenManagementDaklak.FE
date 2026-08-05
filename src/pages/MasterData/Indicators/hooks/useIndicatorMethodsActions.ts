@@ -180,6 +180,8 @@ export const useIndicatorMethodsActions = ({
                         equipmentId: c.equipmentId,
                         unitId: c.unitId,
                         quantity: c.quantity,
+                        estimatedSamplesPerYear: c.estimatedSamplesPerYear ?? undefined,
+                        avgConsumptionPerSample: c.avgConsumptionPerSample ?? undefined,
                       })),
                     }
                   );
