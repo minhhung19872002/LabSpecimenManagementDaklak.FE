@@ -162,6 +162,11 @@ export interface IndicatorGroupImportPreviewItem {
   unitPrice: number;
   isNewMethodLink: boolean;
   isSubcontract: boolean;
+  // Change tracking (admin import)
+  isGroupChanged: boolean;
+  isIndicatorChanged: boolean;
+  isSubIndicatorChanged: boolean;
+  isMethodLinkChanged: boolean;
   // Validation
   isValid: boolean;
   errors: string[];
@@ -183,6 +188,29 @@ export interface IndicatorGroupImportPreviewDto {
   newMethodLinks: number;
   updateMethodLinks: number;
   // Error file
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
+
+// ==================== Admin Indicator Name Import (simplified) ====================
+
+export interface AdminIndicatorNamePreviewItem {
+  rowNumber: number;
+  indicatorId: string;
+  groupName: string;
+  currentFormattedName: string;
+  newFormattedName: string;
+  isChanged: boolean;
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface AdminIndicatorNamePreviewDto {
+  totalRows: number;
+  changedRows: number;
+  unchangedRows: number;
+  errorRows: number;
+  items: AdminIndicatorNamePreviewItem[];
   errorFileBase64?: string;
   errorFileName?: string;
 }
@@ -388,6 +416,27 @@ export const importService = {
    */
   downloadIndicatorGroupTemplate: async (): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/indicator-groups/template`);
+    return response.data;
+  },
+
+  // ==================== Admin Indicator Name Import (simplified) ====================
+
+  downloadAdminIndicatorGroupTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/indicator-groups/admin-template`);
+    return response.data;
+  },
+
+  previewAdminIndicatorGroups: async (file: File): Promise<AdminIndicatorNamePreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<AdminIndicatorNamePreviewDto>(`${BASE_URL}/indicator-groups/admin-preview`, formData);
+    return response.data;
+  },
+
+  importAdminIndicatorGroups: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/indicator-groups/admin`, formData);
     return response.data;
   },
 

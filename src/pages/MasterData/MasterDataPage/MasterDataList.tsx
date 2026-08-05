@@ -372,6 +372,28 @@ const MasterDataList: React.FC = () => {
                   >
                     Thêm chỉ tiêu
                   </Button>
+                  {authService.isAdmin() && (
+                    <>
+                      <Button
+                        icon={<DownloadOutlined />}
+                        onClick={() =>
+                          indicatorsRef.current?.handleDownloadAdminTemplate()
+                        }
+                        style={{ borderColor: "#faad14", color: "#faad14" }}
+                      >
+                        Tải template (Admin)
+                      </Button>
+                      <Button
+                        icon={<UploadOutlined />}
+                        onClick={() =>
+                          indicatorsRef.current?.handleAdminImport()
+                        }
+                        style={{ borderColor: "#faad14", color: "#faad14" }}
+                      >
+                        Nhập danh sách (Admin)
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
 

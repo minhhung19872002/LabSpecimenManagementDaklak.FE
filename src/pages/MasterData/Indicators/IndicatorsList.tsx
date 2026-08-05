@@ -12,6 +12,7 @@ import {
   ImportIndicatorModal,
   ImportGroupModal,
   ImportIndicatorGroupModal,
+  AdminImportNameModal,
   AddMethodToIndicatorModal,
   EditMethodModal,
 } from "./components";
@@ -108,6 +109,16 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handlePreviewIndicatorGroupImport,
     handleConfirmIndicatorGroupImport,
     handleResetIndicatorGroupImport,
+    // Admin import (ID-based)
+    adminImportModalOpen,
+    setAdminImportModalOpen,
+    adminImportFileList,
+    setAdminImportFileList,
+    adminImportPreview,
+    handleDownloadAdminTemplate,
+    handlePreviewAdminImport,
+    handleConfirmAdminImport,
+    handleResetAdminImport,
   } = useIndicatorsActions({
     indicators,
     selectedRowKeys,
@@ -183,6 +194,8 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handleCreateGroup: () => handleCreateGroup(groupForm),
     handleDownloadTemplate: handleDownloadIndicatorGroupTemplate,
     handleImport: () => setImportIndicatorGroupModalOpen(true),
+    handleDownloadAdminTemplate,
+    handleAdminImport: () => setAdminImportModalOpen(true),
   }));
 
   return (
@@ -307,6 +320,22 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
           setImportIndicatorGroupFileList([]);
         }}
         onReset={handleResetIndicatorGroupImport}
+      />
+
+      {/* Admin Import tên chỉ tiêu (simplified) */}
+      <AdminImportNameModal
+        open={adminImportModalOpen}
+        loading={modalLoading}
+        fileList={adminImportFileList}
+        previewData={adminImportPreview}
+        onFileListChange={setAdminImportFileList}
+        onPreview={handlePreviewAdminImport}
+        onConfirm={handleConfirmAdminImport}
+        onCancel={() => {
+          setAdminImportModalOpen(false);
+          handleResetAdminImport();
+        }}
+        onReset={handleResetAdminImport}
       />
 
       {/* Add Method to Indicator Modal */}
