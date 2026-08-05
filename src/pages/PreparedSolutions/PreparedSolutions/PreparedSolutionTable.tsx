@@ -53,7 +53,7 @@ const DaysRemainingText: React.FC<{ row: PreparedSolutionBatchDto }> = ({ row })
       </Typography.Text>
     );
   }
-  const textType = daysRemaining < 14 ? "warning" : "secondary";
+  const textType = daysRemaining < 30 ? "warning" : "secondary";
   return (
     <Typography.Text type={textType} style={{ fontSize: 11 }}>
       còn {daysRemaining} ngày
@@ -241,9 +241,19 @@ const PreparedSolutionTable: React.FC<PreparedSolutionTableProps> = ({
       loading={loading}
       size="small"
       scroll={{ x: "max-content" }}
-      onRow={(row: PreparedSolutionBatchDto) => ({
-        style: { backgroundColor: ROW_BG[row.computedStatus] },
-      })}
+      onRow={(row: PreparedSolutionBatchDto) => {
+        let bg = ROW_BG[row.computedStatus];
+        if (
+          !bg &&
+          row.expiryDate &&
+          row.daysRemaining < 30 &&
+          row.computedStatus !== PreparedSolutionStatus.Empty &&
+          row.computedStatus !== PreparedSolutionStatus.Processed
+        ) {
+          bg = "#fff1f0";
+        }
+        return { style: { backgroundColor: bg } };
+      }}
       expandable={{
         expandedRowRender: (row: PreparedSolutionBatchDto) => (
           <IngredientExpandRow ingredients={row.ingredients} />
