@@ -12,6 +12,7 @@ import {
   AutoComplete,
   Checkbox,
   Card,
+  Tag,
 } from "antd";
 import {
   PlusOutlined,
@@ -688,12 +689,17 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                           borderBottom: "1px solid #f0f0f0",
                           display: "flex",
                           justifyContent: "space-between",
+                          alignItems: "center",
                           gap: 8,
+                          background: method.isSubcontract ? "#e6f4ff" : undefined,
                         }}
                       >
                         <span
                           style={{
                             flex: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
                           }}
                         >
                           {!isSubIndicator && "- "}
@@ -701,6 +707,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                             name={indicator.name}
                             formattedName={indicator.formattedName}
                           />
+                          {method.isSubcontract && (
+                            <Tag color="orange" style={{ fontSize: 10, lineHeight: "16px", padding: "0 4px", margin: 0 }}>
+                              HĐ phụ
+                            </Tag>
+                          )}
                         </span>
                         {!isSubIndicator && (
                           <span style={{ color: "#1890ff", fontSize: 12 }}>
@@ -749,15 +760,22 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                                   borderBottom: "1px solid #f0f0f0",
                                   display: "flex",
                                   justifyContent: "space-between",
+                                  alignItems: "center",
                                   gap: 8,
+                                  background: method.isSubcontract ? "#e6f4ff" : undefined,
                                 }}
                               >
-                                <span>
+                                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                   {!isSubIndicator && "- "}
                                   <IndicatorName
                                     name={indicator.name}
                                     formattedName={indicator.formattedName}
                                   />
+                                  {method.isSubcontract && (
+                                    <Tag color="orange" style={{ fontSize: 10, lineHeight: "16px", padding: "0 4px", margin: 0 }}>
+                                      HĐ phụ
+                                    </Tag>
+                                  )}
                                 </span>
                                 {!isSubIndicator && (
                                   <span
