@@ -1048,6 +1048,7 @@ export const useTestRequestFormActions = ({
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
                 sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(methodKey),
+                isSubcontract: method?.isSubcontract || false,
               };
             })
           : sample.indicatorIds.map((indId) => {

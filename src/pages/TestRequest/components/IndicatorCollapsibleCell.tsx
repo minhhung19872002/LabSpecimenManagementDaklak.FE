@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Typography } from "antd";
+import { Tag, Typography } from "antd";
 import { UpOutlined, DownOutlined } from "@ant-design/icons";
 import { IndicatorImageDto } from "../../../types/testRequest";
 import {
@@ -180,7 +180,7 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
           marginBottom: 4,
           padding: "8px 12px",
           paddingLeft: isSubIndicator ? 28 : 12,
-          background: isSubIndicator ? "#f5f5f5" : "#FAFAFA",
+          background: ind.isSubcontract ? "#e6f4ff" : isSubIndicator ? "#f5f5f5" : "#FAFAFA",
           borderRadius: 8,
           position: "relative",
         }}
@@ -251,6 +251,11 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
               - {ind.unitPrice?.toLocaleString("vi-VN")}đ
             </Text>
           ) : null}
+          {ind.isSubcontract && (
+            <Tag color="orange" style={{ fontSize: 10, lineHeight: "16px", padding: "0 4px", margin: 0 }}>
+              HĐ phụ
+            </Tag>
+          )}
           {isTestRequestCancelled ? (
             <StatusTag
               color="error"

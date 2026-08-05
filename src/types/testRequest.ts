@@ -294,6 +294,8 @@ export interface TestRequestSampleIndicatorDto {
   parentIndicatorId?: string;
   /** Đã gửi đến QLKT (true = đã gửi, không thể gửi lại) */
   isSentToQLKT?: boolean;
+  /** Hợp đồng phụ (từ TestMethodIndicator.IsSubcontract) */
+  isSubcontract?: boolean;
 }
 
 export interface CreateTestRequestSampleIndicatorDto {
@@ -308,6 +310,7 @@ export interface CreateTestRequestSampleIndicatorDto {
   transferDate?: string;
   requestDate?: string;
   sentToDepartment?: boolean;
+  isSubcontract?: boolean;
 }
 
 export interface UpdateTestRequestSampleIndicatorDto {
@@ -323,6 +326,7 @@ export interface UpdateTestRequestSampleIndicatorDto {
   transferDate?: string;
   requestDate?: string;
   sentToDepartment?: boolean;
+  isSubcontract?: boolean;
 }
 
 // Attachment DTO for sample images
