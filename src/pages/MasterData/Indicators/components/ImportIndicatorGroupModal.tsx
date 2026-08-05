@@ -230,6 +230,15 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
       ),
     },
     {
+      title: "HĐ phụ",
+      dataIndex: "isSubcontract",
+      key: "isSubcontract",
+      width: 80,
+      render: (value: boolean) => (
+        <Tag color={value ? "orange" : "default"}>{value ? "Y" : "N"}</Tag>
+      ),
+    },
+    {
       title: "Trạng thái",
       key: "status",
       width: 80,

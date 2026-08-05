@@ -9,6 +9,7 @@ import {
   Tooltip,
   Card,
   Badge,
+  Checkbox,
   message,
 } from "antd";
 import Icon from "../../../../components/common/Icon";
@@ -40,6 +41,7 @@ interface AddMethodToIndicatorModalProps {
       formattedUnit: string;
       unitPrice: number;
       pendingConsumption: PendingConsumptionItem[];
+      isSubcontract: boolean;
     }[]
   ) => void;
   onCancel: () => void;
@@ -61,6 +63,7 @@ interface MethodRow {
   unit: string;
   formattedUnit: string;
   unitPrice: number;
+  isSubcontract: boolean;
 }
 
 function generateId(): string {
@@ -83,6 +86,7 @@ const createEmptyRow = (): MethodRow => ({
   unit: "",
   formattedUnit: "",
   unitPrice: 0,
+  isSubcontract: false,
 });
 
 const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
@@ -237,6 +241,7 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
       formattedUnit: string;
       unitPrice: number;
       pendingConsumption: PendingConsumptionItem[];
+      isSubcontract: boolean;
     }[] = [];
     const addedKeys = new Set<string>();
 
@@ -273,6 +278,7 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
         formattedUnit: row.formattedUnit,
         unitPrice: row.unitPrice,
         pendingConsumption: pendingConsumptionMap?.get(row.id) || [],
+        isSubcontract: row.isSubcontract,
       });
     });
 
@@ -446,7 +452,22 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
                   })()}
                 </Col>
               )}
-              <Col flex="32px">
+              <Col flex="0 0 32px" style={{ display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "stretch" }}>
+                <Tooltip title="Hợp đồng phụ">
+                  <Checkbox
+                    checked={row.isSubcontract}
+                    onChange={(e) => {
+                      setRows((prev) => {
+                        const updated = [...prev];
+                        updated[rowIndex] = { ...updated[rowIndex], isSubcontract: e.target.checked };
+                        return updated;
+                      });
+                    }}
+                    style={{ transform: "scale(1.3)" }}
+                  />
+                </Tooltip>
+              </Col>
+              <Col flex="0 0 32px" style={{ display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "stretch" }}>
                 {rows.length > 1 && (
                   <Tooltip title="Xóa dòng">
                     <Icon
@@ -456,7 +477,6 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
                         fontSize: 16,
                         color: "#CF1322",
                         cursor: "pointer",
-                        marginTop: 8,
                       }}
                     />
                   </Tooltip>

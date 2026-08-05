@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Form, InputNumber, Select } from "antd";
+import { Modal, Form, InputNumber, Select, Checkbox } from "antd";
 import {
   IndicatorMethodDto,
   SpecimenTypeDto,
@@ -22,6 +22,7 @@ interface EditMethodModalProps {
     formattedUnit: string;
     newTestMethodId?: string;
     newSpecimenTypeId?: string;
+    isSubcontract: boolean;
   }) => void;
   onCancel: () => void;
 }
@@ -43,6 +44,7 @@ const EditMethodModal: React.FC<EditMethodModalProps> = ({
   const [unit, setUnit] = useState("");
   const [selectedTestMethodId, setSelectedTestMethodId] = useState<string | undefined>();
   const [selectedSpecimenTypeId, setSelectedSpecimenTypeId] = useState<string | undefined>();
+  const [isSubcontract, setIsSubcontract] = useState(false);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ const EditMethodModal: React.FC<EditMethodModalProps> = ({
       setUnit(record.unit || "");
       setSelectedTestMethodId(record.testMethodId);
       setSelectedSpecimenTypeId(record.specimenTypeId);
+      setIsSubcontract(record.isSubcontract ?? false);
       setDuplicateError(null);
     }
   }, [open, record, form]);
@@ -114,10 +117,12 @@ const EditMethodModal: React.FC<EditMethodModalProps> = ({
         formattedUnit: string;
         newTestMethodId?: string;
         newSpecimenTypeId?: string;
+        isSubcontract: boolean;
       } = {
         unitPrice: values.unitPrice,
         unit,
         formattedUnit,
+        isSubcontract,
       };
 
       // Only send new IDs if changed
@@ -202,6 +207,14 @@ const EditMethodModal: React.FC<EditMethodModalProps> = ({
             placeholder="Nhập đơn vị tính"
           />
         </Form.Item>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <span>Hợp đồng phụ</span>
+          <Checkbox
+            checked={isSubcontract}
+            onChange={(e) => setIsSubcontract(e.target.checked)}
+          />
+        </div>
 
         <Form.Item
           name="unitPrice"

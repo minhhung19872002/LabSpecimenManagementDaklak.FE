@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useRef, useCallback } from "react";
-import { Button, Checkbox, DatePicker, InputNumber, Tooltip } from "antd";
+import { Button, Checkbox, DatePicker, InputNumber, Tag, Tooltip } from "antd";
 import {
   CloseOutlined,
   LockOutlined,
@@ -61,6 +61,7 @@ interface IndicatorRowProps {
   indicator: IndicatorDto | undefined;
   methodName: string; // NEW: Phương pháp thử
   methodFormattedName?: string; // NEW: Phương pháp thử có định dạng HTML
+  isSubcontract?: boolean;
   unitPrice: number; // NEW: Giá từ TestMethodIndicator
   isFree?: boolean; // Miễn phí do combo kim loại nặng
   isChecked: boolean;
@@ -93,6 +94,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   indicator,
   methodName,
   methodFormattedName,
+  isSubcontract,
   unitPrice,
   isFree,
   isChecked,
@@ -185,6 +187,11 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             formattedName={indicator.formattedName}
           />
         </TruncateTooltip>
+        {isSubcontract && (
+          <Tag color="orange" style={{ fontSize: 12, lineHeight: "20px", padding: "0 6px", margin: 0, flexShrink: 0 }}>
+            HĐ phụ
+          </Tag>
+        )}
         {statusLabel && (
           <StatusTag
             color={statusColor}
@@ -196,20 +203,20 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
       </div>
       {/* Method name - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (
-        <TruncateTooltip
-          title={methodName}
-          style={{
-            width: 120,
-            flexShrink: 0,
-            fontSize: 12,
-            color: canDelete ? "#1890ff" : "#999",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <IndicatorName name={methodName} formattedName={methodFormattedName} />
-        </TruncateTooltip>
+        <div style={{ width: 120, flexShrink: 0, overflow: "hidden" }}>
+          <TruncateTooltip
+            title={methodName}
+            style={{
+              fontSize: 12,
+              color: canDelete ? "#1890ff" : "#999",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <IndicatorName name={methodName} formattedName={methodFormattedName} />
+          </TruncateTooltip>
+        </div>
       )}
       {/* Đơn giá - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (

@@ -388,6 +388,7 @@ export const useTestRequestFormData = () => {
               specimenTypeId: ind.specimenTypeId,
               specimenTypeCode: ind.specimenTypeCode,
               specimenTypeName: ind.specimenTypeName,
+              isSubcontract: ind.isSubcontract,
             });
           }
         });
