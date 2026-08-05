@@ -161,6 +161,7 @@ export interface IndicatorGroupImportPreviewItem {
   unit?: string;
   unitPrice: number;
   isNewMethodLink: boolean;
+  isSubcontract: boolean;
   // Validation
   isValid: boolean;
   errors: string[];
