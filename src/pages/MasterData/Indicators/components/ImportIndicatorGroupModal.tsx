@@ -111,9 +111,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
           <span>{text}</span>
           {record.isNewIndicatorGroup ? (
             <Tag color="green">Mới</Tag>
-          ) : (
-            <Tag color="blue">Cập nhật</Tag>
-          )}
+          ) : <Tag color="blue">Cập nhật</Tag>}
         </Space>
       ),
     },
@@ -159,9 +157,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
           )}
           {record.isNewIndicator ? (
             <Tag color="green">Mới</Tag>
-          ) : (
-            <Tag color="orange">Cập nhật</Tag>
-          )}
+          ) : <Tag color="orange">Cập nhật</Tag>}
         </Space>
       ),
     },
@@ -187,9 +183,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
             )}
             {record.isNewSubIndicator ? (
               <Tag color="green">Mới</Tag>
-            ) : (
-              <Tag color="orange">Cập nhật</Tag>
-            )}
+            ) : <Tag color="orange">Cập nhật</Tag>}
           </Space>
         );
       },
@@ -207,9 +201,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
             !record.isSpecimenTypeInvalid &&
             (record.isNewMethodLink ? (
               <Tag color="green">Liên kết mới</Tag>
-            ) : (
-              <Tag color="blue">Liên kết cập nhật</Tag>
-            ))}
+            ) : <Tag color="blue">Liên kết cập nhật</Tag>)}
         </Space>
       ),
     },

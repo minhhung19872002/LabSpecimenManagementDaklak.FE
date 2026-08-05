@@ -12,7 +12,7 @@ import {
   UpdateIndicatorWithSubsDto,
 } from "../../../../services/masterDataService";
 import { importService } from "../../../../services/importService";
-import type { IndicatorGroupImportPreviewDto } from "../../../../services/importService";
+import type { IndicatorGroupImportPreviewDto, AdminIndicatorNamePreviewDto } from "../../../../services/importService";
 import {
   IndicatorGroupDto,
   IndicatorDto,
@@ -67,6 +67,12 @@ export const useIndicatorsActions = ({
   const [importIndicatorGroupFileList, setImportIndicatorGroupFileList] = useState<UploadFile[]>([]);
   const [importIndicatorGroupPreview, setImportIndicatorGroupPreview] =
     useState<IndicatorGroupImportPreviewDto | null>(null);
+
+  // State cho admin import (ID-based)
+  const [adminImportModalOpen, setAdminImportModalOpen] = useState(false);
+  const [adminImportFileList, setAdminImportFileList] = useState<UploadFile[]>([]);
+  const [adminImportPreview, setAdminImportPreview] =
+    useState<AdminIndicatorNamePreviewDto | null>(null);
 
   // Handle Group CRUD
   const handleCreateGroup = (groupForm: UseFormReturn<IndicatorGroupFormData>) => {
@@ -533,6 +539,84 @@ export const useIndicatorsActions = ({
     setImportIndicatorGroupPreview(null);
   };
 
+  // Admin import handlers
+  const handleDownloadAdminTemplate = async () => {
+    try {
+      const blob = await importService.downloadAdminIndicatorGroupTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "AdminTemplate_NhomChiTieu.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể tải template admin"));
+    }
+  };
+
+  const handlePreviewAdminImport = async () => {
+    if (adminImportFileList.length === 0) {
+      message.error("Vui lòng chọn file Excel");
+      return;
+    }
+
+    const file = adminImportFileList[0].originFileObj;
+    if (!file) {
+      message.error("File không hợp lệ");
+      return;
+    }
+
+    try {
+      setModalLoading(true);
+      const result = await importService.previewAdminIndicatorGroups(file);
+      setAdminImportPreview(result);
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể đọc file Excel"));
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleConfirmAdminImport = async () => {
+    if (adminImportFileList.length === 0) {
+      message.error("Vui lòng chọn file Excel");
+      return;
+    }
+
+    const file = adminImportFileList[0].originFileObj;
+    if (!file) {
+      message.error("File không hợp lệ");
+      return;
+    }
+
+    try {
+      setModalLoading(true);
+      const result = await importService.importAdminIndicatorGroups(file);
+
+      if (result.success) {
+        message.success(result.message || `[Admin] Import thành công ${result.importedRows} dòng!`);
+        setAdminImportModalOpen(false);
+        setAdminImportFileList([]);
+        setAdminImportPreview(null);
+        fetchData();
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Import không thành công");
+      }
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể import dữ liệu"));
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleResetAdminImport = () => {
+    setAdminImportFileList([]);
+    setAdminImportPreview(null);
+  };
+
   return {
     // Modal states
     groupModalOpen,
@@ -589,5 +673,15 @@ export const useIndicatorsActions = ({
     handlePreviewIndicatorGroupImport,
     handleConfirmIndicatorGroupImport,
     handleResetIndicatorGroupImport,
+    // Admin import (ID-based)
+    adminImportModalOpen,
+    setAdminImportModalOpen,
+    adminImportFileList,
+    setAdminImportFileList,
+    adminImportPreview,
+    handleDownloadAdminTemplate,
+    handlePreviewAdminImport,
+    handleConfirmAdminImport,
+    handleResetAdminImport,
   };
 };
