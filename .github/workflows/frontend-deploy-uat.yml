@@ -1,32 +1,92 @@
 name: Deploy Frontend to UAT
 
+# UAT chuyen tu GCP VM (136.110.9.243) sang VPS 45.119.83.83 ngay 2026-08-05.
+# May moi chi co 1 vCPU / 2GB -> KHONG build tren VM duoc nua.
+# Actions build image + push GHCR, VM chi pull.
+#
+# LUU Y: VITE_API_BASE_URL duoc nhung vao bundle luc BUILD, khong doi duoc luc chay.
+# Doi domain API -> phai sua o day va build lai.
+
 on:
-  push:
-    branches:
-      - develop
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'Dockerfile'
-      - 'nginx.conf'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/frontend-deploy-uat.yml'
-  workflow_dispatch:
+    push:
+        branches: [develop]
+        paths:
+            - "src/**"
+            - "public/**"
+            - "Dockerfile"
+            - "nginx.conf"
+            - "package.json"
+            - "package-lock.json"
+            - "vite.config.*"
+            - ".github/workflows/frontend-deploy-uat.yml"
+    workflow_dispatch:
 
 concurrency:
-  group: deploy-frontend-uat
-  cancel-in-progress: false
+    group: deploy-frontend-uat
+    cancel-in-progress: false
+
+env:
+    REGISTRY: ghcr.io
+    IMAGE_BASE: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy frontend via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          command_timeout: 15m
-          script: frontend
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: docker/setup-buildx-action@v3
+
+            - name: Dang nhap GHCR
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build + push frontend
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  push: true
+                  build-args: |
+                      VITE_API_BASE_URL=https://api-uat.tihelab.vn
+                      VITE_APP_NAME=Lab Specimen Management System
+                      VITE_NODE_ENV=production
+                  tags: |
+                      ${{ env.IMAGE_BASE }}/starlab-frontend:uat
+                      ${{ env.IMAGE_BASE }}/starlab-frontend:${{ github.sha }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            - name: Deploy len VM
+              env:
+                  VM_HOST: ${{ secrets.VM_HOST }}
+                  VM_USER: ${{ secrets.VM_USER }}
+                  VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+                  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  mkdir -p ~/.ssh
+                  echo "$VM_SSH_KEY" > ~/.ssh/deploy_key
+                  chmod 600 ~/.ssh/deploy_key
+                  ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+                  echo "$GHCR_TOKEN" | ssh -i ~/.ssh/deploy_key \
+                    -o BatchMode=yes -o ConnectTimeout=20 \
+                    "$VM_USER@$VM_HOST" frontend
+
+            - name: Kiem tra sau deploy
+              run: |
+                  for i in $(seq 1 10); do
+                    code=$(curl -s -o /dev/null -w '%{http_code}' https://uat.tihelab.vn/ || echo 000)
+                    echo "lan $i: $code"
+                    if [ "$code" = 200 ]; then exit 0; fi
+                    sleep 10
+                  done
+                  echo "uat.tihelab.vn khong tra ve 200 sau 100s"
+                  exit 1
