@@ -2035,6 +2035,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 methodFormattedName={
                                   method?.testMethodFormattedName
                                 }
+                                isSubcontract={method?.isSubcontract}
                                 unitPrice={getEffectivePrice(
                                   parentKey,
                                   method?.unitPrice || 0,
@@ -2109,6 +2110,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               methodFormattedName={
                                 method?.testMethodFormattedName
                               }
+                              isSubcontract={method?.isSubcontract}
                               unitPrice={getEffectivePrice(
                                 key,
                                 method?.unitPrice || 0,
@@ -2194,6 +2196,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       methodFormattedName={
                                         method?.testMethodFormattedName
                                       }
+                                      isSubcontract={method?.isSubcontract}
                                       unitPrice={getEffectivePrice(
                                         key,
                                         method?.unitPrice || 0,

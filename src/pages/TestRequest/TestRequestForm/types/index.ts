@@ -25,6 +25,7 @@ export interface IndicatorMethodInfo {
   specimenTypeId?: string;
   specimenTypeCode?: string;
   specimenTypeName?: string;
+  isSubcontract?: boolean;
 }
 
 export const PENDING_TEST_METHOD_ID = "null";

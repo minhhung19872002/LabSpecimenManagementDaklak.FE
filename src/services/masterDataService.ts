@@ -151,6 +151,7 @@ export interface TestMethodIndicatorDto {
   specimenTypeName?: string;   // Tên nền mẫu
   unit?: string;               // Đơn vị tính
   formattedUnit?: string;      // Đơn vị tính có định dạng HTML
+  isSubcontract: boolean;
 }
 
 export interface TestMethodWithIndicatorsDto extends TestMethodDto {
