@@ -41,44 +41,25 @@ const PreparedSolutionWarningBanner: React.FC<PreparedSolutionWarningBannerProps
   if (items.length === 0) return null;
 
   const description = (
-    <div style={{ maxHeight: 120, overflowY: "auto", marginTop: 4 }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <tbody>
-          {items.map((item) => {
-            const reason = getReason(item);
-            return (
-              <tr key={item.id}>
-                <td
-                  style={{
-                    width: 140,
-                    paddingRight: 16,
-                    color: "#595959",
-                    fontSize: 12,
-                    whiteSpace: "nowrap",
-                    verticalAlign: "middle",
-                    paddingTop: 3,
-                    paddingBottom: 3,
-                  }}
-                >
-                  {item.lotCode}
-                </td>
-                <td style={{ verticalAlign: "middle", paddingTop: 3, paddingBottom: 3 }}>
-                  <Typography.Text style={{ fontSize: 13 }}>
-                    {item.solutionProductName}
-                  </Typography.Text>
-                  {reason.text && (
-                    <Typography.Text
-                      style={{ color: reason.color, fontSize: 13, marginLeft: 8 }}
-                    >
-                      · {reason.text}
-                    </Typography.Text>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div style={{ maxHeight: 120, overflowY: "auto", marginTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
+      {items.map((item) => {
+        const reason = getReason(item);
+        return (
+          <div key={item.id} style={{ lineHeight: "20px" }}>
+            <Typography.Text style={{ fontSize: 12, color: "#595959" }}>
+              {item.lotCode}
+            </Typography.Text>
+            <Typography.Text style={{ fontSize: 13, marginLeft: 8 }}>
+              {item.solutionProductName}
+            </Typography.Text>
+            {reason.text && (
+              <Typography.Text style={{ color: reason.color, fontSize: 13, marginLeft: 8 }}>
+                · {reason.text}
+              </Typography.Text>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 
