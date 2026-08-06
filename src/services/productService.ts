@@ -300,6 +300,8 @@ export interface ProductUsageLogItemDto {
   technicianName?: string;
   result?: string;
   resultSubmissionDate?: string;
+  consumableStockBefore?: number;
+  consumableStockUnitName?: string;
   consumptionAmount?: number;
   consumptionUnitName?: string;
 }

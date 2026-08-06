@@ -131,6 +131,16 @@ const UsageHistoryTab: React.FC<UsageHistoryTabProps> = ({ productId }) => {
       render: (v) => (v ? dayjs(v).format("DD/MM/YYYY - HH:mm") : "—"),
     },
     {
+      title: "Tồn kho hiện tại",
+      dataIndex: "consumableStockBefore",
+      width: 150,
+      align: "right",
+      render: (_, record) =>
+        record.consumableStockBefore != null
+          ? `${record.consumableStockBefore.toLocaleString("vi-VN")} ${record.consumableStockUnitName || ""}`.trim()
+          : "—",
+    },
+    {
       title: "Tiêu hao",
       dataIndex: "consumptionAmount",
       width: 120,
