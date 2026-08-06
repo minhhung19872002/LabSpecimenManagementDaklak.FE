@@ -134,7 +134,7 @@ export const getProductColumns = (
         }
 
         const consumableAmount = Math.round(decPart * record.volumePerUnit);
-        return `${intPart} ${storageUnit} / ${consumableAmount} ${record.volumeUnitName}`;
+        return `${intPart} ${storageUnit} - ${consumableAmount} ${record.volumeUnitName}`;
       },
     });
   }

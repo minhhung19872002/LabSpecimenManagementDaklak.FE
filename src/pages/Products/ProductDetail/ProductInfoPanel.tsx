@@ -51,7 +51,16 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) 
               <Col span={12}>
                 <DetailItem
                   label="Số lượng tồn kho"
-                  value={`${(detail.warehouseAvailableQuantity ?? 0).toLocaleString("vi-VN")} ${qtyUnit}`}
+                  value={(() => {
+                    const qty = detail.warehouseAvailableQuantity ?? 0;
+                    const intPart = Math.floor(qty);
+                    const decPart = qty - intPart;
+                    if (decPart === 0 || !detail.volumePerUnit || !detail.volumeUnitName) {
+                      return `${qty.toLocaleString("vi-VN")} ${qtyUnit}`;
+                    }
+                    const consumableAmount = Math.round(decPart * detail.volumePerUnit);
+                    return `${intPart} ${qtyUnit} - ${consumableAmount} ${detail.volumeUnitName}`;
+                  })()}
                 />
               </Col>
               {detail.consumableImportedQuantity > 0 && detail.volumeUnitName && (

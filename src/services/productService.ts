@@ -259,6 +259,7 @@ export interface ProductDetailDto {
   packagingUnitName?: string;
   packagingQuantity?: number;
   consumableImportedQuantity: number;
+  volumePerUnit?: number;
   volumeUnitName?: string;
 }
 
