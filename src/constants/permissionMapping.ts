@@ -437,6 +437,9 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   // WarehouseImportReceipts
   '/warehouse-imports': [PERMISSIONS.WarehouseImportReceipts.Default],
 
+  // MaterialReceipts
+  '/material-receipts': [VIRTUAL_PERMISSIONS.AnyAuthenticated],
+
   // Equipments
   '/equipments': [PERMISSIONS.Equipments.Default],
 
@@ -649,6 +652,7 @@ export const MENU_PERMISSION_MAP = {
   'supplementary-tasks': [VIRTUAL_PERMISSIONS.AnyAuthenticated],
   stockAdjustments: [PERMISSIONS.StockAdjustments.Default],
   warehouseImports: [PERMISSIONS.WarehouseImportReceipts.Default],
+  materialReceipts: [VIRTUAL_PERMISSIONS.AnyAuthenticated],
   equipments: [PERMISSIONS.Equipments.Default],
   subcontractors: [PERMISSIONS.Subcontractors.Default],
   masterData: [

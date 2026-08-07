@@ -186,6 +186,11 @@ const ProductList = Loadable(
   lazy(() => import("./pages/Products/ProductList")),
 );
 
+// Material Receipts - Mẫu nhận vật tư
+const MaterialReceiptList = Loadable(
+  lazy(() => import("./pages/MaterialReceipts/MaterialReceiptList")),
+);
+
 // Prepared Solutions
 const PreparedSolutionList = Loadable(
   lazy(() => import("./pages/PreparedSolutions/PreparedSolutionListPage")),
@@ -400,6 +405,9 @@ function App() {
             path="warehouse-imports/edit/:id"
             element={<WarehouseImportForm />}
           />
+
+          {/* Material Receipts - Mẫu nhận vật tư */}
+          <Route path="material-receipts" element={<MaterialReceiptList />} />
 
           {/* Equipments - Quản lý thiết bị */}
           <Route path="equipments" element={<EquipmentList />} />

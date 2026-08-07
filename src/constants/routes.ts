@@ -105,6 +105,8 @@ export const PATH_ROUTES = {
     edit: (id: string) => `/warehouse-imports/edit/${id}`,
   },
 
+  materialReceipts: '/material-receipts',
+
   equipments: '/equipments',
 
   suppliersManagement: '/suppliers-management',
