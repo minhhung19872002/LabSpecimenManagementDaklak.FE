@@ -3,8 +3,6 @@ import { Table, AutoComplete, Input, Select, Tag, Row, Col, Pagination, DatePick
 import {
   SearchOutlined,
   SortAscendingOutlined,
-  CaretRightOutlined,
-  CaretDownOutlined,
   SendOutlined,
   StopOutlined,
 } from '@ant-design/icons';
@@ -376,74 +374,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       if (record._rowType === 'contract' || record._rowType === 'sample') return { colSpan: 0 };
       return {};
     };
-    const firstSpan = (record: DisplayRow) => {
-      if (record._rowType === 'contract' || record._rowType === 'sample')
-        return { colSpan: visibleLeafCount };
-      return {};
-    };
-
     const leafColumns: ColumnsType<DisplayRow> = [];
-
-    if (isVisible('stt')) {
-      leafColumns.push({
-        title: 'STT',
-        key: 'stt',
-        width: 60,
-        fixed: 'left',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.contractRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleCode', {
-        title: 'Mã số mẫu',
-        dataIndex: 'sampleCode',
-        key: 'sampleCode',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleName', {
-        title: 'Tên mẫu',
-        dataIndex: 'sampleName',
-        key: 'sampleName',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleQuantity', {
-        title: 'Lượng mẫu gửi',
-        dataIndex: 'sampleQuantity',
-        key: 'sampleQuantity',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleStatusText', {
-        title: 'Tình trạng mẫu',
-        dataIndex: 'sampleStatusText',
-        key: 'sampleStatusText',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('transferDate', {
-        title: 'Ngày nhận mẫu',
-        dataIndex: 'transferDate',
-        key: 'transferDate',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.transferDateRowSpan),
-        render: (date: string) => {
-          const formatted = formatDate(date);
-          return (
-            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
-          );
-        },
-      });
-    }
 
     if (isVisible('indicatorName')) {
       leafColumns.push({

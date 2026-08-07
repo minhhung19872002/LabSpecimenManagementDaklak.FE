@@ -537,7 +537,7 @@ export async function setLastSyncTimestamp(timestamp: Date): Promise<void> {
 
 export async function getDeviceId(): Promise<string> {
   const db = await getDB();
-  let metadata = await db.get('syncMetadata', 'deviceId');
+  const metadata = await db.get('syncMetadata', 'deviceId');
 
   if (!metadata) {
     const deviceId = generateUUID();

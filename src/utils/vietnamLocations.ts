@@ -32,7 +32,7 @@ export interface Ward {
 
 // Cache for provinces and wards to avoid repeated async calls
 let cachedProvinces: Province[] | null = null;
-let cachedWardsMap: Map<string, Ward[]> = new Map();
+const cachedWardsMap: Map<string, Ward[]> = new Map();
 let cachedAllWards: Ward[] | null = null;
 
 /**

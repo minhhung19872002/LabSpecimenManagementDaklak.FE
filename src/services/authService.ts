@@ -1,6 +1,7 @@
 import { api } from './api';
 import { STORAGE_KEYS } from '../constants';
 import { VIRTUAL_PERMISSIONS } from '../constants/permissionMapping';
+import { SUPPORTER_CACHE_KEY } from '../hooks/useSupporterStatus';
 
 const AUTH_URL = '/api/v1/auth';
 
@@ -322,6 +323,7 @@ export const authService = {
     localStorage.removeItem(STORAGE_KEYS.LAB_TECH_MANAGER_REMINDER_LAST_SHOWN); // Clear LabTechManager work reminder state on logout
     localStorage.removeItem(STORAGE_KEYS.LAB_TECHNICIAN_REMINDER_LAST_SHOWN); // Clear LabTechnician work reminder state on logout
     localStorage.removeItem(STORAGE_KEYS.QUALITY_MANAGER_REMINDER_LAST_SHOWN); // Clear QualityManager work reminder state on logout
+    localStorage.removeItem(SUPPORTER_CACHE_KEY);
     window.location.href = '/login';
   },
 

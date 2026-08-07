@@ -3,7 +3,7 @@ import { laboratoryTaskService } from '../services/laboratoryTaskService';
 import { STORAGE_KEYS } from '../constants';
 
 // Cache key for localStorage (persists across reloads, unlike sessionStorage)
-const SUPPORTER_CACHE_KEY = 'user_is_supporter';
+export const SUPPORTER_CACHE_KEY = 'user_is_supporter';
 
 /**
  * Hook to check if current user is a supporter for any incomplete task

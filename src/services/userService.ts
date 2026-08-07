@@ -114,7 +114,7 @@ export const userService = {
     const response = await api.get<{ items: UserLookupDto[] }>('/api/v1/users/lookup/search', {
       params: { filter },
     });
-    return response.data.items;
+    return response.data?.items ?? [];
   },
 
   /**
@@ -134,7 +134,7 @@ export const userService = {
    */
   getLookupByIds: async (ids: string[]): Promise<UserLookupDto[]> => {
     const response = await api.post<{ items: UserLookupDto[] }>('/api/v1/users/lookup/by-ids', ids);
-    return response.data.items;
+    return response.data?.items ?? [];
   },
 
   /**

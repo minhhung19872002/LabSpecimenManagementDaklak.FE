@@ -928,7 +928,7 @@ export const laboratoryService = {
     if (Array.isArray(response.data)) {
       return response.data;
     }
-    return response.data.items || [];
+    return response.data?.items || [];
   },
   get: async (id: string): Promise<LaboratoryDto> => {
     const response = await api.get<LaboratoryDto>(`${LABORATORY_URL}/${id}`);
@@ -950,7 +950,7 @@ export const laboratoryService = {
     if (Array.isArray(response.data)) {
       return response.data;
     }
-    return response.data.items || [];
+    return response.data?.items || [];
   },
 };
 

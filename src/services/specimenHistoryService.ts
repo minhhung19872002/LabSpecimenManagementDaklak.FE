@@ -42,7 +42,7 @@ export const specimenHistoryService = {
 
   getBySpecimen: async (specimenId: string): Promise<SpecimenHistoryDto[]> => {
     const response = await api.get<{ items: SpecimenHistoryDto[] }>(`${BASE_URL}/by-specimen/${specimenId}`);
-    return response.data.items;
+    return response.data?.items ?? [];
   },
 
   create: async (data: CreateSpecimenHistoryDto): Promise<SpecimenHistoryDto> => {
