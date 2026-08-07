@@ -20,6 +20,7 @@ export interface AuditLogDto {
   httpStatusCode?: number;
   comments?: string;
   actions?: AuditLogActionDto[];
+  exceptions?: string;
   entityChanges?: EntityChangeDto[];
 }
 

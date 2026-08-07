@@ -1,4 +1,4 @@
-import { Modal, Descriptions, Typography, Table, Tag } from "antd";
+import { Modal, Descriptions, Typography, Table, Tag, Collapse } from "antd";
 import dayjs from "dayjs";
 import { AuditLogDto } from "../../../services/auditLogService";
 import { getHttpMethodTag, getStatusCodeTag } from "../columns";
@@ -63,6 +63,22 @@ const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
           </Text>
         </Descriptions.Item>
       </Descriptions>
+
+      {log.exceptions && (
+        <Collapse
+          size="small"
+          style={{ marginBottom: 16 }}
+          items={[{
+            key: "exceptions",
+            label: <Text type="danger">Chi tiết lỗi</Text>,
+            children: (
+              <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 300, overflow: "auto", margin: 0, fontSize: 12 }}>
+                {log.exceptions}
+              </pre>
+            ),
+          }]}
+        />
+      )}
 
       {log.entityChanges && log.entityChanges.length > 0 && (
         <>
