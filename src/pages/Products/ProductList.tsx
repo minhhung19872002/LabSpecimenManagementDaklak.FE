@@ -203,6 +203,16 @@ const ProductList: React.FC = () => {
           title="Quản lý danh sách vật tư"
           extra={
             <Space>
+              <Button
+                onClick={() => {
+                  const url = warehouseId
+                    ? `${PATH_ROUTES.stockAdjustments.create}?warehouseId=${warehouseId}`
+                    : PATH_ROUTES.stockAdjustments.create;
+                  window.open(url, "_blank");
+                }}
+              >
+                Kiểm kê kho
+              </Button>
               {canCreateGoodsReceipt && (
                 selectedRowKeys.length > 0 ? (
                   <Button

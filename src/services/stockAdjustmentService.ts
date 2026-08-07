@@ -6,13 +6,13 @@ export enum StockAdjustmentStatus {
 }
 
 export const STOCK_ADJUSTMENT_STATUS_OPTIONS = [
-  { value: StockAdjustmentStatus.Draft, label: "Lưu tạm" },
-  { value: StockAdjustmentStatus.Confirmed, label: "Đã chỉnh tồn kho" },
+  { value: StockAdjustmentStatus.Draft, label: "Nháp" },
+  { value: StockAdjustmentStatus.Confirmed, label: "Đã kiểm kê" },
 ];
 
 export const StockAdjustmentStatusLabels: Record<number, string> = {
-  [StockAdjustmentStatus.Draft]: "Lưu tạm",
-  [StockAdjustmentStatus.Confirmed]: "Đã chỉnh tồn kho",
+  [StockAdjustmentStatus.Draft]: "Nháp",
+  [StockAdjustmentStatus.Confirmed]: "Đã kiểm kê",
 };
 
 export const StockAdjustmentStatusColors: Record<number, string> = {
@@ -26,6 +26,8 @@ export interface StockAdjustmentListDto {
   creatorName?: string;
   status: StockAdjustmentStatus;
   creationTime: string;
+  inventoryDate: string;
+  inventoryUserName?: string;
 }
 
 export interface StockAdjustmentItemDto {
@@ -37,21 +39,33 @@ export interface StockAdjustmentItemDto {
   quantityBefore: number;
   actualQuantity: number;
   adjustmentQuantity: number;
+  warehouseId?: string;
+  warehouseName?: string;
+  actualUnitId?: string;
+  actualUnitName?: string;
+  reason?: string;
+  expectedStock?: number;
 }
 
 export interface StockAdjustmentDto extends StockAdjustmentListDto {
   notes?: string;
+  inventoryUserId?: string;
   items: StockAdjustmentItemDto[];
 }
 
 export interface CreateUpdateStockAdjustmentDto {
   notes?: string;
+  inventoryDate?: string;
   items: CreateUpdateStockAdjustmentItemDto[];
 }
 
 export interface CreateUpdateStockAdjustmentItemDto {
   productId: string;
   actualQuantity: number;
+  warehouseId?: string;
+  actualUnitId?: string;
+  reason?: string;
+  expectedStock?: number;
 }
 
 export interface ConfirmPreviewItemDto {

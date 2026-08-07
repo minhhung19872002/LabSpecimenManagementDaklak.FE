@@ -433,6 +433,9 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
 
   // StockAdjustments
   '/stock-adjustments': [PERMISSIONS.StockAdjustments.Default],
+  '/stock-adjustments/create': [PERMISSIONS.StockAdjustments.Create],
+  '/stock-adjustments/:id': [PERMISSIONS.StockAdjustments.Default],
+  '/stock-adjustments/edit/:id': [PERMISSIONS.StockAdjustments.Edit],
 
   // WarehouseImportReceipts
   '/warehouse-imports': [PERMISSIONS.WarehouseImportReceipts.Default],

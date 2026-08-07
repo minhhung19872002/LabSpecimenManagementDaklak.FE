@@ -98,6 +98,8 @@ export interface ProductDto {
   earliestLotNotes?: string;
   totalConsumedQuantity: number;
   storageTotalConsumedQuantity: number;
+  theoreticalConsumption: number;
+  expectedStockConsumable: number;
   creationTime: string;
   attachments: ProductAttachmentDto[];
   unitConversions: ProductUnitConversionDto[];

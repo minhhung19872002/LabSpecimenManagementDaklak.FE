@@ -161,6 +161,12 @@ const GoodsReceiptDetail = Loadable(
 const StockAdjustmentList = Loadable(
   lazy(() => import("./pages/StockAdjustments/StockAdjustmentList")),
 );
+const StockInventoryForm = Loadable(
+  lazy(() => import("./pages/StockAdjustments/StockInventoryForm")),
+);
+const StockAdjustmentDetail = Loadable(
+  lazy(() => import("./pages/StockAdjustments/StockAdjustmentDetail")),
+);
 
 // Warehouse Imports - Quản lý nhập kho
 const WarehouseImportList = Loadable(
@@ -390,6 +396,9 @@ function App() {
 
           {/* Stock Adjustments - Điều chỉnh tồn kho */}
           <Route path="stock-adjustments" element={<StockAdjustmentList />} />
+          <Route path="stock-adjustments/create" element={<StockInventoryForm />} />
+          <Route path="stock-adjustments/:id" element={<StockAdjustmentDetail />} />
+          <Route path="stock-adjustments/edit/:id" element={<StockInventoryForm />} />
 
           {/* Warehouse Imports - Quản lý nhập kho */}
           <Route path="warehouse-imports" element={<WarehouseImportList />} />

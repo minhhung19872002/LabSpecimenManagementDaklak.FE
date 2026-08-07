@@ -19,6 +19,7 @@ import {
   EyeOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import {
   stockAdjustmentService,
@@ -30,12 +31,13 @@ import {
 } from "../../services/stockAdjustmentService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
-import StockAdjustmentModal from "./components/StockAdjustmentModal";
+import { PATH_ROUTES } from "../../constants/routes";
 import "../../styles/ListCard.css";
 
 const { RangePicker } = DatePicker;
 
 const StockAdjustmentList: React.FC = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<StockAdjustmentListDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -44,10 +46,6 @@ const StockAdjustmentList: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<StockAdjustmentStatus | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit" | "view">("create");
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   const canCreate = authService.hasPermission(PERMISSIONS.StockAdjustments.Create);
   const canEdit = authService.hasPermission(PERMISSIONS.StockAdjustments.Edit);
@@ -67,7 +65,7 @@ const StockAdjustmentList: React.FC = () => {
       setData(result.items || []);
       setTotalCount(result.totalCount || 0);
     } catch {
-      message.error("Không thể tải danh sách phiếu điều chỉnh");
+      message.error("Không thể tải danh sách phiếu kiểm kê");
     } finally {
       setLoading(false);
     }
@@ -78,15 +76,13 @@ const StockAdjustmentList: React.FC = () => {
   }, [fetchData]);
 
   const handleCreate = () => {
-    setModalMode("create");
-    setSelectedId(undefined);
-    setModalOpen(true);
+    navigate(PATH_ROUTES.stockAdjustments.create);
   };
 
   const handleView = (record: StockAdjustmentListDto) => {
-    setModalMode("view");
-    setSelectedId(record.id);
-    setModalOpen(true);
+    navigate(PATH_ROUTES.stockAdjustments.detail(record.id), {
+      state: { mode: "view" },
+    });
   };
 
   const handleEdit = (record: StockAdjustmentListDto) => {
@@ -94,9 +90,7 @@ const StockAdjustmentList: React.FC = () => {
       handleView(record);
       return;
     }
-    setModalMode("edit");
-    setSelectedId(record.id);
-    setModalOpen(true);
+    navigate(PATH_ROUTES.stockAdjustments.edit(record.id));
   };
 
   const handleDelete = async (id: string) => {
@@ -116,9 +110,21 @@ const StockAdjustmentList: React.FC = () => {
       render: (_: any, __: any, index: number) => (currentPage - 1) * pageSize + index + 1,
     },
     {
-      title: "ID phiếu điều chỉnh",
+      title: "ID phiếu kiểm kê",
       dataIndex: "code",
       width: 200,
+    },
+    {
+      title: "Ngày kiểm kê",
+      dataIndex: "inventoryDate",
+      width: 130,
+      render: (val: string) => val ? dayjs(val).format("DD/MM/YYYY") : "—",
+    },
+    {
+      title: "Nhân viên kiểm kê",
+      dataIndex: "inventoryUserName",
+      width: 180,
+      render: (val: string) => val || "—",
     },
     {
       title: "Người tạo phiếu",
@@ -144,31 +150,30 @@ const StockAdjustmentList: React.FC = () => {
     },
     {
       title: "",
-      width: 100,
+      width: 130,
       render: (_: any, record: StockAdjustmentListDto) => (
         <Space>
-          {record.status === StockAdjustmentStatus.Draft && canEdit ? (
+          <Tooltip title="Xem">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={(e) => { e.stopPropagation(); handleView(record); }}
+            />
+          </Tooltip>
+          {record.status === StockAdjustmentStatus.Draft && canEdit && (
             <Tooltip title="Sửa">
               <Button
                 type="text"
                 size="small"
                 icon={<EditOutlined />}
-                onClick={() => handleEdit(record)}
-              />
-            </Tooltip>
-          ) : (
-            <Tooltip title="Xem">
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => handleView(record)}
+                onClick={(e) => { e.stopPropagation(); handleEdit(record); }}
               />
             </Tooltip>
           )}
           {record.status === StockAdjustmentStatus.Draft && canDelete && (
             <Popconfirm
-              title="Xóa phiếu điều chỉnh?"
+              title="Xóa phiếu kiểm kê?"
               onConfirm={() => handleDelete(record.id)}
               okText="Xóa"
               cancelText="Hủy"
@@ -179,6 +184,7 @@ const StockAdjustmentList: React.FC = () => {
                   size="small"
                   danger
                   icon={<DeleteOutlined />}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </Tooltip>
             </Popconfirm>
@@ -192,11 +198,11 @@ const StockAdjustmentList: React.FC = () => {
     <div>
       <Card
         className="list-card"
-        title="Điều chỉnh tồn kho"
+        title="Điều chỉnh kho"
         extra={
           canCreate ? (
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              Tạo phiếu điều chỉnh
+              Tạo phiếu kiểm kê
             </Button>
           ) : undefined
         }
@@ -242,7 +248,11 @@ const StockAdjustmentList: React.FC = () => {
             columns={columns}
             rowKey="id"
             size="small"
-            scroll={{ x: 700 }}
+            scroll={{ x: 900 }}
+            onRow={(record) => ({
+              onDoubleClick: () => handleView(record),
+              style: { cursor: "pointer" },
+            })}
             pagination={{
               current: currentPage,
               pageSize,
@@ -257,14 +267,6 @@ const StockAdjustmentList: React.FC = () => {
           />
         </div>
       </Card>
-
-      <StockAdjustmentModal
-        open={modalOpen}
-        mode={modalMode}
-        adjustmentId={selectedId}
-        onClose={() => setModalOpen(false)}
-        onSuccess={fetchData}
-      />
     </div>
   );
 };

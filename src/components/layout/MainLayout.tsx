@@ -541,8 +541,8 @@ const MainLayout: React.FC = () => {
         {
           key: "stockAdjustments",
           icon: <Icon name="sliders" />,
-          label: menuLabel("Điều chỉnh tồn kho"),
-          onClick: () => navigate(PATH_ROUTES.stockAdjustments),
+          label: menuLabel("Điều chỉnh kho"),
+          onClick: () => navigate(PATH_ROUTES.stockAdjustments.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {

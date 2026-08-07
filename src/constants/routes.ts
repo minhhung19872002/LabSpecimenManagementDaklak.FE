@@ -96,7 +96,12 @@ export const PATH_ROUTES = {
     edit: (id: string) => `/goods-receipts/edit/${id}`,
   },
 
-  stockAdjustments: '/stock-adjustments',
+  stockAdjustments: {
+    index: '/stock-adjustments',
+    create: '/stock-adjustments/create',
+    detail: (id: string) => `/stock-adjustments/${id}`,
+    edit: (id: string) => `/stock-adjustments/edit/${id}`,
+  },
 
   warehouseImports: {
     index: '/warehouse-imports',

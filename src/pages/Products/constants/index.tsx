@@ -17,6 +17,8 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "earliestReceivedDate", title: "Ngày nhận", defaultVisible: true },
   { key: "availableQuantity", title: "Tồn kho", defaultVisible: true },
   { key: "storageAvailableQuantity", title: "Số lượng (đơn vị)", defaultVisible: true },
+  { key: "theoreticalConsumption", title: "Tiêu hao lý thuyết", defaultVisible: true },
+  { key: "expectedStockConsumable", title: "Tồn kho dự kiến", defaultVisible: true },
   { key: "usage", title: "Sử dụng", defaultVisible: true },
   { key: "earliestLotExpiryDate", title: "Hạn sử dụng", defaultVisible: true },
   { key: "storageConditions", title: "Điều kiện bảo quản", defaultVisible: true },
@@ -153,6 +155,63 @@ export const getProductColumns = (
         }
         const unitName = record.baseUnitName || "";
         return `${record.storageAvailableQuantity} ${unitName}`.trim();
+      },
+    });
+  }
+
+  if (visibleKeys.has("theoreticalConsumption")) {
+    columns.push({
+      title: "Tiêu hao lý thuyết",
+      dataIndex: "theoreticalConsumption",
+      key: "theoreticalConsumption",
+      width: 160,
+      align: "right" as const,
+      render: (qty: number, record: ProductDto) => {
+        if (!qty) return "-";
+        const unitName = record.volumeUnitName || record.baseUnitName || "";
+        return `${qty.toLocaleString("vi-VN")} ${unitName}`.trim();
+      },
+    });
+  }
+
+  if (visibleKeys.has("expectedStockConsumable")) {
+    columns.push({
+      title: "Tồn kho dự kiến",
+      dataIndex: "expectedStockConsumable",
+      key: "expectedStockConsumable",
+      width: 180,
+      align: "right" as const,
+      render: (_: number, record: ProductDto) => {
+        const expected = record.expectedStockConsumable;
+        if (!record.consumableImportedQuantity && !expected) return "-";
+
+        const storageUnit = record.packagingUnitName || "";
+        const volumeUnit = record.volumeUnitName || "";
+
+        if (record.volumePerUnit && record.volumePerUnit > 0 && volumeUnit) {
+          const volumeLine = `${expected.toLocaleString("vi-VN")} ${volumeUnit}`;
+          if (expected < 0) {
+            return (
+              <div style={{ color: "#ff4d4f" }}>
+                <div>{volumeLine}</div>
+              </div>
+            );
+          }
+          const expectedBase = expected / record.volumePerUnit;
+          const intPart = Math.floor(expectedBase);
+          const decPart = expectedBase - intPart;
+          const packagingLine = decPart === 0
+            ? `${expectedBase.toLocaleString("vi-VN")} ${storageUnit}`
+            : `${intPart.toLocaleString("vi-VN")} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN")} ${volumeUnit}`;
+          return (
+            <div>
+              <div>{packagingLine}</div>
+              <div style={{ fontSize: 12, color: "#888" }}>{volumeLine}</div>
+            </div>
+          );
+        }
+
+        return `${expected.toLocaleString("vi-VN")} ${storageUnit}`.trim();
       },
     });
   }
@@ -317,4 +376,4 @@ export const PRODUCT_TYPE_OPTIONS = [
   { value: ProductType.PreparedSolution, label: "Dung dịch pha" },
 ];
 
-export const COLUMN_VISIBILITY_KEY = "product-visible-columns-v2";
+export const COLUMN_VISIBILITY_KEY = "product-visible-columns-v3";
