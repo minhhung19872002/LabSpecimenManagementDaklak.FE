@@ -4,11 +4,15 @@ import dayjs from "dayjs";
 import {
   ProductDetailDto,
   ProductImportHistoryDto,
+  ProductMaterialReceiptHistoryDto,
 } from "../../../services/productService";
 import ProductInfoPanel from "./ProductInfoPanel";
 import ImportHistoryToolbar from "./ImportHistoryToolbar";
 import ImportHistoryTable from "./ImportHistoryTable";
 import UsageHistoryTab from "./UsageHistoryTab";
+import MaterialReceiptHistoryToolbar from "./MaterialReceiptHistoryToolbar";
+import MaterialReceiptHistoryTable from "./MaterialReceiptHistoryTable";
+import BarcodeListModal from "./BarcodeListModal";
 
 type DateRange = [dayjs.Dayjs | null, dayjs.Dayjs | null] | null;
 
@@ -26,6 +30,19 @@ export interface ProductDetailViewProps {
   onDateRangeChange: (dates: DateRange) => void;
   onHistoryPageChange: (page: number, pageSize: number) => void;
   onReceiptClick: (receiptId: string) => void;
+  warehouseName?: string;
+  materialHistoryItems: ProductMaterialReceiptHistoryDto[];
+  materialHistoryTotal: number;
+  materialHistoryLoading: boolean;
+  materialHistoryPage: number;
+  materialHistoryPageSize: number;
+  materialDateRange: DateRange;
+  selectedBarcodes: string[];
+  onMaterialDateRangeChange: (dates: DateRange) => void;
+  onMaterialHistoryPageChange: (page: number, pageSize: number) => void;
+  onMaterialReceiptClick: (receiptId: string) => void;
+  onBarcodeListClick: (barcodes: string[]) => void;
+  onBarcodeListClose: () => void;
 }
 
 const ProductDetailView: React.FC<ProductDetailViewProps> = ({
@@ -42,6 +59,19 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onDateRangeChange,
   onHistoryPageChange,
   onReceiptClick,
+  warehouseName,
+  materialHistoryItems,
+  materialHistoryTotal,
+  materialHistoryLoading,
+  materialHistoryPage,
+  materialHistoryPageSize,
+  materialDateRange,
+  selectedBarcodes,
+  onMaterialDateRangeChange,
+  onMaterialHistoryPageChange,
+  onMaterialReceiptClick,
+  onBarcodeListClick,
+  onBarcodeListClose,
 }) => {
   const tabItems = [
     {
@@ -72,6 +102,31 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         </div>
       ),
     },
+    {
+      key: "material-receipt-history",
+      label: "Lịch sử nhận vật tư",
+      children: (
+        <div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <MaterialReceiptHistoryToolbar
+              dateRange={materialDateRange}
+              onDateRangeChange={onMaterialDateRangeChange}
+            />
+          </div>
+          <MaterialReceiptHistoryTable
+            items={materialHistoryItems}
+            total={materialHistoryTotal}
+            loading={materialHistoryLoading}
+            page={materialHistoryPage}
+            pageSize={materialHistoryPageSize}
+            showWarehouse={!warehouseName}
+            onPageChange={onMaterialHistoryPageChange}
+            onReceiptClick={onMaterialReceiptClick}
+            onBarcodeListClick={onBarcodeListClick}
+          />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -84,6 +139,11 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <Tabs defaultActiveKey="usage-history" items={tabItems} />
         </Col>
       </Row>
+      <BarcodeListModal
+        open={selectedBarcodes.length > 0}
+        barcodes={selectedBarcodes}
+        onClose={onBarcodeListClose}
+      />
     </Card>
   );
 };

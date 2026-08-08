@@ -190,6 +190,14 @@ export const PERMISSIONS = {
     Confirm: `${P}.WarehouseImportReceipts.Confirm`,
   },
 
+  // MaterialReceipts (Phiếu nhận vật tư)
+  MaterialReceipts: {
+    Default: `${P}.MaterialReceipts`,
+    Create: `${P}.MaterialReceipts.Create`,
+    Confirm: `${P}.MaterialReceipts.Confirm`,
+    Delete: `${P}.MaterialReceipts.Delete`,
+  },
+
   // StockAdjustments (Điều chỉnh tồn kho)
   StockAdjustments: {
     Default: `${P}.StockAdjustments`,
@@ -441,7 +449,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   '/warehouse-imports': [PERMISSIONS.WarehouseImportReceipts.Default],
 
   // MaterialReceipts
-  '/material-receipts': [VIRTUAL_PERMISSIONS.AnyAuthenticated],
+  '/material-receipts': [PERMISSIONS.MaterialReceipts.Default],
 
   // Equipments
   '/equipments': [PERMISSIONS.Equipments.Default],
@@ -597,6 +605,12 @@ export const ACTION_PERMISSION_MAP = {
     create: PERMISSIONS.WarehouseImportReceipts.Create,
     confirm: PERMISSIONS.WarehouseImportReceipts.Confirm,
   },
+  materialReceipts: {
+    view: PERMISSIONS.MaterialReceipts.Default,
+    create: PERMISSIONS.MaterialReceipts.Create,
+    confirm: PERMISSIONS.MaterialReceipts.Confirm,
+    delete: PERMISSIONS.MaterialReceipts.Delete,
+  },
   equipments: {
     view: PERMISSIONS.Equipments.Default,
     create: PERMISSIONS.Equipments.Create,
@@ -655,7 +669,7 @@ export const MENU_PERMISSION_MAP = {
   'supplementary-tasks': [VIRTUAL_PERMISSIONS.AnyAuthenticated],
   stockAdjustments: [PERMISSIONS.StockAdjustments.Default],
   warehouseImports: [PERMISSIONS.WarehouseImportReceipts.Default],
-  materialReceipts: [VIRTUAL_PERMISSIONS.AnyAuthenticated],
+  materialReceipts: [PERMISSIONS.MaterialReceipts.Default],
   equipments: [PERMISSIONS.Equipments.Default],
   subcontractors: [PERMISSIONS.Subcontractors.Default],
   masterData: [

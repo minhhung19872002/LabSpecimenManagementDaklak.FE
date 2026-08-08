@@ -293,6 +293,34 @@ export interface GetProductImportHistoryInput {
   warehouseId?: string;
 }
 
+export interface ProductMaterialReceiptHistoryDto {
+  materialReceiptId: string;
+  receiptCode: string;
+  receiptDate: string;
+  receivingWarehouseId: string;
+  receivingWarehouseName?: string;
+  receivedQuantity: number;
+  unitName?: string;
+  manufacturerId?: string;
+  manufacturerName?: string;
+  lotNumber?: string;
+  lotExpiryDate?: string;
+  barcodes: string[];
+  stockBeforeBaseQuantity?: number | null;
+  stockAfterBaseQuantity?: number | null;
+  storageUnitName?: string;
+  consumableUnitName?: string;
+  volumePerUnit?: number;
+}
+
+export interface GetProductMaterialReceiptHistoryInput {
+  page?: number;
+  limit?: number;
+  fromDate?: string;
+  toDate?: string;
+  warehouseId?: string;
+}
+
 export interface ProductUsageLogItemDto {
   sampleCode: string;
   sampleName: string;
@@ -397,6 +425,23 @@ export const productService = {
     if (params.toDate) apiParams.ToDate = params.toDate;
     if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
     const response = await api.get<PagedResult<ProductImportHistoryDto>>(`${BASE_URL}/${id}/import-history`, { params: apiParams });
+    return response.data;
+  },
+
+  getMaterialReceiptHistory: async (
+    id: string,
+    params: GetProductMaterialReceiptHistoryInput = {}
+  ): Promise<PagedResult<ProductMaterialReceiptHistoryDto>> => {
+    const apiParams: Record<string, any> = {};
+    if (params.page) apiParams.Page = params.page;
+    if (params.limit) apiParams.Limit = params.limit;
+    if (params.fromDate) apiParams.FromDate = params.fromDate;
+    if (params.toDate) apiParams.ToDate = params.toDate;
+    if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
+    const response = await api.get<PagedResult<ProductMaterialReceiptHistoryDto>>(
+      `${BASE_URL}/${id}/material-receipt-history`,
+      { params: apiParams }
+    );
     return response.data;
   },
 

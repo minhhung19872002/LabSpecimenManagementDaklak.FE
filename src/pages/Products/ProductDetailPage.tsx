@@ -7,6 +7,7 @@ import {
   productService,
   ProductDetailDto,
   ProductImportHistoryDto,
+  ProductMaterialReceiptHistoryDto,
   ProductTypeLabels,
 } from "../../services/productService";
 import { PATH_ROUTES } from "../../constants/routes";
@@ -33,6 +34,13 @@ const ProductDetailPage: React.FC = () => {
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(10);
   const [dateRange, setDateRange] = useState<DateRange>(null);
+  const [materialHistoryItems, setMaterialHistoryItems] = useState<ProductMaterialReceiptHistoryDto[]>([]);
+  const [materialHistoryTotal, setMaterialHistoryTotal] = useState(0);
+  const [materialHistoryLoading, setMaterialHistoryLoading] = useState(false);
+  const [materialHistoryPage, setMaterialHistoryPage] = useState(1);
+  const [materialHistoryPageSize, setMaterialHistoryPageSize] = useState(10);
+  const [materialDateRange, setMaterialDateRange] = useState<DateRange>(null);
+  const [selectedBarcodes, setSelectedBarcodes] = useState<string[]>([]);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -68,6 +76,26 @@ const ProductDetailPage: React.FC = () => {
     }
   }, [id, historyPage, historyPageSize, dateRange, warehouseId]);
 
+  const loadMaterialHistory = useCallback(async () => {
+    if (!id) return;
+    setMaterialHistoryLoading(true);
+    try {
+      const data = await productService.getMaterialReceiptHistory(id, {
+        page: materialHistoryPage,
+        limit: materialHistoryPageSize,
+        fromDate: materialDateRange?.[0]?.format("YYYY-MM-DD"),
+        toDate: materialDateRange?.[1]?.format("YYYY-MM-DD"),
+        warehouseId,
+      });
+      setMaterialHistoryItems(data.items);
+      setMaterialHistoryTotal(data.totalCount);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không thể tải lịch sử nhận vật tư"));
+    } finally {
+      setMaterialHistoryLoading(false);
+    }
+  }, [id, materialHistoryPage, materialHistoryPageSize, materialDateRange, warehouseId]);
+
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
@@ -75,6 +103,10 @@ const ProductDetailPage: React.FC = () => {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+
+  useEffect(() => {
+    loadMaterialHistory();
+  }, [loadMaterialHistory]);
 
   const handleDateRangeChange = useCallback((dates: DateRange) => {
     setDateRange(dates);
@@ -86,12 +118,26 @@ const ProductDetailPage: React.FC = () => {
     setHistoryPageSize(pageSize);
   }, []);
 
+  const handleMaterialDateRangeChange = useCallback((dates: DateRange) => {
+    setMaterialDateRange(dates);
+    setMaterialHistoryPage(1);
+  }, []);
+
+  const handleMaterialHistoryPageChange = useCallback((page: number, pageSize: number) => {
+    setMaterialHistoryPage(page);
+    setMaterialHistoryPageSize(pageSize);
+  }, []);
+
   const handleReceiptClick = useCallback(
     (receiptId: string) => {
       window.open(PATH_ROUTES.warehouseImports.detail(receiptId), "_blank");
     },
     []
   );
+
+  const handleMaterialReceiptClick = useCallback((receiptId: string) => {
+    window.open(PATH_ROUTES.materialReceipts.detail(receiptId), "_blank");
+  }, []);
 
   const typeLabel = detail ? ProductTypeLabels[detail.productType] || "" : "";
   const pageTitle = warehouseName
@@ -120,6 +166,19 @@ const ProductDetailPage: React.FC = () => {
         onDateRangeChange={handleDateRangeChange}
         onHistoryPageChange={handleHistoryPageChange}
         onReceiptClick={handleReceiptClick}
+        warehouseName={warehouseName}
+        materialHistoryItems={materialHistoryItems}
+        materialHistoryTotal={materialHistoryTotal}
+        materialHistoryLoading={materialHistoryLoading}
+        materialHistoryPage={materialHistoryPage}
+        materialHistoryPageSize={materialHistoryPageSize}
+        materialDateRange={materialDateRange}
+        selectedBarcodes={selectedBarcodes}
+        onMaterialDateRangeChange={handleMaterialDateRangeChange}
+        onMaterialHistoryPageChange={handleMaterialHistoryPageChange}
+        onMaterialReceiptClick={handleMaterialReceiptClick}
+        onBarcodeListClick={setSelectedBarcodes}
+        onBarcodeListClose={() => setSelectedBarcodes([])}
       />
     </div>
   );

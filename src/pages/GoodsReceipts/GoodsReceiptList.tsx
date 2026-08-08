@@ -164,7 +164,7 @@ const GoodsReceiptList: React.FC = () => {
           return (
             <Card
               key={stat.key}
-              className={`dashboard-stat-card task-stat-clickable${isActive ? " task-stat-active" : ""}`}
+              className={`dashboard-stat-card goods-receipt-stat-clickable${isActive ? " goods-receipt-stat-active" : ""}`}
               bordered={false}
               onClick={() => handleStatCardClick(stat.filterValue)}
             >

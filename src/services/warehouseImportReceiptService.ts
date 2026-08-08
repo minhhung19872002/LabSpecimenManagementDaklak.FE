@@ -170,6 +170,7 @@ export interface WarehouseImportReceiptItemDto {
   originalPrice?: number;
   location?: string;
   equipmentIndex: number;
+  barcodeValues: string[];
 }
 
 export interface CreateUpdateWarehouseImportReceiptDto {

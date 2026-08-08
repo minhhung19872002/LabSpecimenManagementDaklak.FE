@@ -196,6 +196,12 @@ const ProductList = Loadable(
 const MaterialReceiptList = Loadable(
   lazy(() => import("./pages/MaterialReceipts/MaterialReceiptList")),
 );
+const MaterialReceiptForm = Loadable(
+  lazy(() => import("./pages/MaterialReceipts/MaterialReceiptForm")),
+);
+const MaterialReceiptDetail = Loadable(
+  lazy(() => import("./pages/MaterialReceipts/MaterialReceiptDetail")),
+);
 
 // Prepared Solutions
 const PreparedSolutionList = Loadable(
@@ -417,6 +423,12 @@ function App() {
 
           {/* Material Receipts - Mẫu nhận vật tư */}
           <Route path="material-receipts" element={<MaterialReceiptList />} />
+          <Route path="material-receipts/create" element={<MaterialReceiptForm />} />
+          <Route path="material-receipts/:id" element={<MaterialReceiptDetail />} />
+          <Route
+            path="material-receipts/edit/:id"
+            element={<MaterialReceiptForm />}
+          />
 
           {/* Equipments - Quản lý thiết bị */}
           <Route path="equipments" element={<EquipmentList />} />

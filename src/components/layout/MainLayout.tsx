@@ -556,7 +556,7 @@ const MainLayout: React.FC = () => {
           key: "materialReceipts",
           icon: <Icon name="receipt" />,
           label: menuLabel("Mẫu nhận vật tư"),
-          onClick: () => navigate(PATH_ROUTES.materialReceipts),
+          onClick: () => navigate(PATH_ROUTES.materialReceipts.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
       ],

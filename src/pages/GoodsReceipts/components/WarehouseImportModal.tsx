@@ -207,6 +207,16 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
         for (const item of nonEquipmentItems) {
           const product = productMap.get(item.productId);
           const matchedImportItems = importItemsMap.get(item.id) ?? [];
+          const persistedBarcodes = matchedImportItems.flatMap((importItem) => importItem.barcodeValues ?? []);
+          if (persistedBarcodes.length > 0) {
+            items.push({
+              item,
+              product,
+              barcodeCount: persistedBarcodes.length,
+              barcodeContents: persistedBarcodes,
+            });
+            continue;
+          }
           let count: number;
           if (matchedImportItems.length > 0 && product) {
             const total = matchedImportItems.reduce((sum, imp) => {
