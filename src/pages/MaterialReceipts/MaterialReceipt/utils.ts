@@ -79,7 +79,7 @@ export const resolveLineItemBaseQuantity = (
 export const buildLineItemFromProduct = (
   product: CentralWarehouseProductDto,
 ): MaterialReceiptLineItem => {
-  const defaultUnit = product.availableUnits.find((u) => u.isConsumable) ||
+  const defaultUnit = product.availableUnits.find((u) => !u.isConsumable) ||
     product.availableUnits[0];
   const defaultSku = product.skus.find(
     (sku) =>

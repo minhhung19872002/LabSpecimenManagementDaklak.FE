@@ -9,7 +9,7 @@ interface BarcodeListModalProps {
 }
 
 const BarcodeListModal: React.FC<BarcodeListModalProps> = ({ open, barcodes, onClose }) => (
-  <Modal title="Danh sách barcode" open={open} onCancel={onClose} footer={null} width={520}>
+  <Modal title="Danh sách barcode" open={open} onCancel={onClose} footer={null} width={720} centered styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}>
     <List
       bordered
       size="small"

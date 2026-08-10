@@ -111,11 +111,12 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
             }}
             style={{ width: "100%" }}
             placeholder="Chọn đơn vị"
-            options={record.availableUnits.map((u) => ({
-              value: u.unitId,
-              label:
-                u.unitName + (u.isConsumable ? " (tiêu hao)" : " (lưu kho)"),
-            }))}
+            options={record.availableUnits
+              .filter((u) => !u.isConsumable)
+              .map((u) => ({
+                value: u.unitId,
+                label: u.unitName,
+              }))}
           />
         );
       },
