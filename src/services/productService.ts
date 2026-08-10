@@ -299,6 +299,8 @@ export interface ProductMaterialReceiptHistoryDto {
   receiptDate: string;
   receivingWarehouseId: string;
   receivingWarehouseName?: string;
+  sourceWarehouseId?: string;
+  sourceWarehouseName?: string;
   receivedQuantity: number;
   unitName?: string;
   manufacturerId?: string;
