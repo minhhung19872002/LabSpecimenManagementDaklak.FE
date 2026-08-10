@@ -25,12 +25,14 @@ import {
   DashboardOverviewDto,
   DashboardRecentRequestDto,
   RevenueByCustomerDto,
+  RevenueByContactDto,
   MonthlyRevenueDto,
 } from "../../../services/dashboardService";
 import { QualityManagementTaskDto } from "../../../types/qualityManagement";
 import {
   getRecentRequestsColumns,
   getRevenueColumns,
+  getRevenueByContactColumns,
   formatCurrency,
 } from "../columns";
 import "../Dashboard.css";
@@ -57,14 +59,23 @@ interface DashboardContainerProps {
   revenueByCustomer: RevenueByCustomerDto[];
   monthlyRevenue: MonthlyRevenueDto[];
 
+  // Revenue by contact data
+  revenueByContact: RevenueByContactDto[];
+  selectedContact: string | null;
+  monthlyRevenueByContact: MonthlyRevenueDto[];
+  contactPersonNames: string[];
+
   // Loading states
   loadingPendingTasks: boolean;
   loadingRecentRequests: boolean;
   loadingRevenue: boolean;
   loadingMonthlyRevenue: boolean;
+  loadingRevenueByContact: boolean;
+  loadingMonthlyRevenueByContact: boolean;
 
   // Chart config
   chartConfig: any;
+  contactChartConfig: any;
 
   // Handlers
   onPeriodChange: (period: FilterPeriod) => void;
@@ -72,6 +83,7 @@ interface DashboardContainerProps {
   onRefresh: () => void;
   onRecentRequestsFilterChange: (value: string | undefined) => void;
   onSelectedCustomerChange: (value: string | null) => void;
+  onSelectedContactChange: (value: string | null) => void;
   onNavigateToQualityManagement: () => void;
   onNavigateToQualityManagementDetail: (id: string) => void;
   onNavigateToTestRequests: () => void;
@@ -153,20 +165,29 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
   recentRequests,
   revenueByCustomer,
   monthlyRevenue,
+  revenueByContact,
+  selectedContact,
+  monthlyRevenueByContact,
+  contactPersonNames,
   loadingPendingTasks,
   loadingRecentRequests,
   loadingRevenue,
   loadingMonthlyRevenue,
+  loadingRevenueByContact,
+  loadingMonthlyRevenueByContact,
   chartConfig,
+  contactChartConfig,
   onPeriodChange,
   onDateRangeChange,
   onSelectedCustomerChange,
+  onSelectedContactChange,
   onNavigateToQualityManagement,
   onNavigateToQualityManagementDetail,
   onNavigateToTestRequests,
 }) => {
   const recentRequestsColumns = getRecentRequestsColumns();
   const revenueColumns = getRevenueColumns();
+  const revenueByContactColumns = getRevenueByContactColumns();
 
   const allStats = getAllStats(overview);
 
@@ -405,6 +426,88 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
                   {selectedCustomer
                     ? "Không có dữ liệu doanh thu cho doanh nghiệp này"
                     : "Chọn một doanh nghiệp để xem biểu đồ"}
+                </div>
+              )}
+            </Spin>
+          </div>
+        </div>
+      </Card>
+
+      {/* Revenue by Contact Person Section */}
+      <Card
+        className="dashboard-revenue-card"
+        bordered={false}
+        title={
+          <div className="dashboard-revenue-header">
+            <span className="dashboard-revenue-title">
+              Báo cáo doanh thu theo Người liên hệ
+            </span>
+            <span className="dashboard-revenue-subtitle">
+              Top 10 người liên hệ có doanh thu cao nhất trong năm {new Date().getFullYear()}
+            </span>
+          </div>
+        }
+      >
+        <div className="dashboard-revenue-content">
+          {/* Contact Revenue Table - Left */}
+          <div className="dashboard-revenue-table">
+            <Spin spinning={loadingRevenueByContact}>
+              <Table
+                dataSource={revenueByContact}
+                columns={revenueByContactColumns}
+                rowKey="contactPerson"
+                size="small"
+                pagination={false}
+                scroll={{ x: 280 }}
+                onRow={(record) => ({
+                  onClick: () => onSelectedContactChange(record.contactPerson),
+                  style: {
+                    cursor: "pointer",
+                  },
+                })}
+                rowClassName={(record) =>
+                  selectedContact === record.contactPerson ? "selected-row" : ""
+                }
+              />
+            </Spin>
+          </div>
+
+          {/* Contact Revenue Chart - Right */}
+          <div className="dashboard-revenue-chart">
+            <div className="dashboard-revenue-chart-header">
+              <Select
+                placeholder="Chọn Người liên hệ"
+                style={{ width: 280 }}
+                value={selectedContact}
+                onChange={onSelectedContactChange}
+                options={contactPersonNames.map((name) => ({
+                  label: name,
+                  value: name,
+                }))}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              />
+            </div>
+            <Spin spinning={loadingMonthlyRevenueByContact}>
+              {monthlyRevenueByContact.length > 0 ? (
+                <Column {...contactChartConfig} height={300} />
+              ) : (
+                <div
+                  style={{
+                    height: 300,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#999",
+                  }}
+                >
+                  {selectedContact
+                    ? "Không có dữ liệu doanh thu cho người liên hệ này"
+                    : "Chọn một người liên hệ để xem biểu đồ"}
                 </div>
               )}
             </Spin>
