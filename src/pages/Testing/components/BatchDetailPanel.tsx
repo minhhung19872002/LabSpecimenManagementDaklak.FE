@@ -23,7 +23,6 @@ import {
   TestBatchStatus,
 } from "../../../types/testBatch";
 import EditBatchModal from "./EditBatchModal";
-import SubmitConsumptionModal from "./SubmitConsumptionModal";
 import BatchIndicatorTable, { type EditedValuesMap } from "./BatchIndicatorTable";
 import dayjs from "dayjs";
 
@@ -46,8 +45,7 @@ const BatchDetailPanel = React.memo<Props>(({
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [submitConsumptionModalOpen, setSubmitConsumptionModalOpen] = useState(false);
-  const [singleSubmitItemId, setSingleSubmitItemId] = useState<string | null>(null);
+  const [, setSubmitting] = useState(false);
   const editedValuesRef = useRef<EditedValuesMap>(new Map());
   const [resultOptions, setResultOptions] = useState<{ value: string; label: string }[]>([]);
 
@@ -91,7 +89,7 @@ const BatchDetailPanel = React.memo<Props>(({
     }, 500);
   }, [onBatchesChanged]);
 
-  const handleOpenSubmitConsumption = () => {
+  const handleOpenSubmitConsumption = async () => {
     if (!batchDetail) return;
     if (selectedItemIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất 1 chỉ tiêu để gửi");
@@ -131,10 +129,22 @@ const BatchDetailPanel = React.memo<Props>(({
       return;
     }
 
-    setSubmitConsumptionModalOpen(true);
+    setSubmitting(true);
+    try {
+      await testBatchService.submitItems(batchDetail.id, selectedItemIds);
+      message.success(`Gửi kết quả thành công (${selectedItemIds.length} chỉ tiêu)`);
+      setSelectedItemIds([]);
+      editedValuesRef.current.clear();
+      loadDetail(batchDetail.id);
+      onBatchesChanged();
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message || "Lỗi gửi kết quả");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleSubmitSingleItem = useCallback((itemId: string) => {
+  const handleSubmitSingleItem = useCallback(async (itemId: string) => {
     if (!batchDetail) return;
     const item = batchDetail.items.find((i) => i.id === itemId);
     if (!item) return;
@@ -152,9 +162,18 @@ const BatchDetailPanel = React.memo<Props>(({
       return;
     }
 
-    setSingleSubmitItemId(itemId);
-    setSubmitConsumptionModalOpen(true);
-  }, [batchDetail]);
+    setSubmitting(true);
+    try {
+      await testBatchService.submitItems(batchDetail.id, [itemId]);
+      message.success("Gửi kết quả thành công");
+      loadDetail(batchDetail.id);
+      onBatchesChanged();
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message || "Lỗi gửi kết quả");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [batchDetail, loadDetail, onBatchesChanged]);
 
   const handleCancel = async () => {
     if (!batchDetail) return;
@@ -315,39 +334,6 @@ const BatchDetailPanel = React.memo<Props>(({
         }}
       />
 
-      <SubmitConsumptionModal
-        open={submitConsumptionModalOpen}
-        contextLabel={`${batchDetail.code} - ${batchDetail.name}`}
-        itemCount={singleSubmitItemId ? 1 : selectedItemIds.length}
-        onFetchPreview={async () => {
-          const res = await testBatchService.getConsumptionPreview(batchDetail.id);
-          return res.data;
-        }}
-        onSubmitWithConsumption={async (lines) => {
-          await testBatchService.submitWithConsumption(batchDetail.id, {
-            itemIds: singleSubmitItemId ? [singleSubmitItemId] : selectedItemIds,
-            consumptionLines: lines,
-          });
-        }}
-        onSaveDraft={async (lines) => {
-          await testBatchService.saveConsumptionDraft(batchDetail.id, {
-            consumptionLines: lines,
-          });
-        }}
-        onClose={() => {
-          setSubmitConsumptionModalOpen(false);
-          setSingleSubmitItemId(null);
-        }}
-        onSubmitted={() => {
-          const wasSingle = !!singleSubmitItemId;
-          setSubmitConsumptionModalOpen(false);
-          setSingleSubmitItemId(null);
-          if (!wasSingle) setSelectedItemIds([]);
-          editedValuesRef.current.clear();
-          loadDetail(batchDetail.id);
-          onBatchesChanged();
-        }}
-      />
     </>
   );
 });

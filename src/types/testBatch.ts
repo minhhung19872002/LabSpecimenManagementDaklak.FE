@@ -184,48 +184,6 @@ export interface GetAvailableIndicatorsInput {
   maxResultCount?: number;
 }
 
-export interface ConsumptionPreviewLineDto {
-  consumptionId?: string;
-  productId?: string;
-  productName?: string;
-  productCode?: string;
-  productType?: number;
-  availableQuantity?: number;
-  equipmentId?: string;
-  equipmentName?: string;
-  unitId?: string;
-  unitName?: string;
-  storageAvailableQuantity?: number;
-  storageUnitName?: string;
-  recommendedQuantity: number;
-  actualQuantity: number;
-  isDeducted: boolean;
-  exceedsStock: boolean;
-}
-
-export interface ConsumptionPreviewDto {
-  isFirstSubmit: boolean;
-  lines: ConsumptionPreviewLineDto[];
-}
-
-export interface ConsumptionLineInputDto {
-  consumptionId?: string;
-  productId?: string;
-  equipmentId?: string;
-  unitId?: string;
-  recommendedQuantity: number;
-  actualQuantity: number;
-}
-
-export interface SubmitWithConsumptionDto {
-  itemIds: string[];
-  consumptionLines: ConsumptionLineInputDto[];
-}
-
-export interface SaveConsumptionDraftDto {
-  consumptionLines: ConsumptionLineInputDto[];
-}
-
 export interface AvailableIndicatorDto {
   id: string;
   laboratoryTaskId: string;

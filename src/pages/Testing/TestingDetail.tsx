@@ -16,7 +16,6 @@ import {
   IndicatorImageDto,
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
-import SubmitConsumptionModal from "./components/SubmitConsumptionModal";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 import { usePageTitleOverride } from "../../hooks/usePageTitle";
 import { TestRequestStatus } from "../../types/testRequest";
@@ -228,30 +227,8 @@ const TestingDetail: React.FC = () => {
     indicatorName: "",
   });
 
-  // Consumption modal for direct single-indicator submit
-  const [consumptionModal, setConsumptionModal] = useState<{
-    open: boolean;
-    indicatorId: string;
-    indicatorName: string;
-  }>({ open: false, indicatorId: "", indicatorName: "" });
-  const pendingSubmitRef = useRef<{
-    sampleId: string;
-    editedResult: SaveIndicatorResultDto | undefined;
-    resultValue: string;
-    testDate: string;
-  } | null>(null);
-
-  // Consumption modal for bulk submit (nhiều chỉ tiêu trong 1 mẫu)
-  const [bulkConsumptionModal, setBulkConsumptionModal] = useState<{
-    open: boolean;
-    sampleId: string;
-    count: number;
-  }>({ open: false, sampleId: "", count: 0 });
-  const bulkPendingRef = useRef<{
-    sampleId: string;
-    validIndicators: { indicatorId: string; testDate: string }[];
-    selectedResults: SaveIndicatorResultDto[];
-  } | null>(null);
+  const [, setSubmittingIndicatorId] = useState<string | null>(null);
+  const [, setBulkSubmitting] = useState(false);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -554,33 +531,34 @@ const TestingDetail: React.FC = () => {
       validIndicatorIds.includes(r.indicatorId)
     );
 
-    // Lưu context và mở consumption modal (không submit trực tiếp)
-    bulkPendingRef.current = { sampleId, validIndicators, selectedResults };
-    setBulkConsumptionModal({ open: true, sampleId, count: validIndicators.length });
-  }, [id, detail, selectedIndicators]);
-
-  const handleBulkConsumptionModalSubmitted = useCallback(async () => {
-    const pending = bulkPendingRef.current;
-    setBulkConsumptionModal({ open: false, sampleId: "", count: 0 });
-    bulkPendingRef.current = null;
-
-    if (!pending) return;
-
-    const submittedIds = pending.validIndicators.map((v) => v.indicatorId);
-    updateIndicatorsOptimistically(submittedIds, {
-      testingStatus: IndicatorTestingStatus.PendingApproval,
-      submitDate: new Date().toISOString(),
-      canSubmit: false,
-    });
-
-    setSelectedIndicators((prev) => {
-      const newMap = new Map(prev);
-      newMap.set(pending.sampleId, []);
-      return newMap;
-    });
-
-    await reloadData();
-  }, [updateIndicatorsOptimistically, reloadData]);
+    setBulkSubmitting(true);
+    try {
+      if (selectedResults.length > 0) {
+        await testingService.saveResults(id, { results: selectedResults });
+      }
+      await testingService.submitResults(id, {
+        sampleId,
+        indicators: validIndicators,
+      });
+      const submittedIds = validIndicators.map((v) => v.indicatorId);
+      updateIndicatorsOptimistically(submittedIds, {
+        testingStatus: IndicatorTestingStatus.PendingApproval,
+        submitDate: new Date().toISOString(),
+        canSubmit: false,
+      });
+      setSelectedIndicators((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(sampleId, []);
+        return newMap;
+      });
+      message.success(`Gửi kết quả thành công (${validIndicators.length} chỉ tiêu)`);
+      await reloadData();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Lỗi gửi kết quả"));
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }, [id, detail, selectedIndicators, updateIndicatorsOptimistically, reloadData]);
 
   const handleImagesChange = useCallback((
     sampleId: string,
@@ -619,7 +597,7 @@ const TestingDetail: React.FC = () => {
     message.success("Đã báo không thể thử nghiệm thành công");
   }, [closeCannotTestModal, reloadData]);
 
-  const handleSubmitSingleIndicator = useCallback((indicatorId: string) => {
+  const handleSubmitSingleIndicator = useCallback(async (indicatorId: string) => {
     if (!id || !detail) return;
 
     let sampleId: string | null = null;
@@ -660,29 +638,29 @@ const TestingDetail: React.FC = () => {
       return;
     }
 
-    // Store context for when modal confirms
-    pendingSubmitRef.current = { sampleId, editedResult, resultValue, testDate };
-    setConsumptionModal({ open: true, indicatorId, indicatorName: indicator.indicatorName || "" });
-  }, [id, detail]);
-
-  const handleConsumptionModalSubmitted = useCallback(async () => {
-    const { indicatorId } = consumptionModal;
-    const pending = pendingSubmitRef.current;
-    setConsumptionModal({ open: false, indicatorId: "", indicatorName: "" });
-    pendingSubmitRef.current = null;
-
-    if (!pending) return;
-    const { resultValue } = pending;
-
-    updateIndicatorsOptimistically([indicatorId], {
-      testingStatus: IndicatorTestingStatus.PendingApproval,
-      submitDate: new Date().toISOString(),
-      canSubmit: false,
-      result: resultValue,
-    });
-
-    await reloadData();
-  }, [consumptionModal, updateIndicatorsOptimistically, reloadData]);
+    setSubmittingIndicatorId(indicatorId);
+    try {
+      if (editedResult) {
+        await testingService.saveResults(id, { results: [editedResult] });
+      }
+      await testingService.submitResults(id, {
+        sampleId,
+        indicators: [{ indicatorId, testDate }],
+      });
+      updateIndicatorsOptimistically([indicatorId], {
+        testingStatus: IndicatorTestingStatus.PendingApproval,
+        submitDate: new Date().toISOString(),
+        canSubmit: false,
+        result: resultValue,
+      });
+      message.success("Gửi kết quả thành công");
+      await reloadData();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Lỗi gửi kết quả"));
+    } finally {
+      setSubmittingIndicatorId(null);
+    }
+  }, [id, detail, updateIndicatorsOptimistically, reloadData]);
 
   const handleUploadIndicatorImages = useCallback(async (
     indicatorId: string,
@@ -1101,68 +1079,6 @@ const TestingDetail: React.FC = () => {
         onBulkMethodConfirm={handleBulkMethodConfirm}
       />
 
-      {consumptionModal.open && id && (
-        <SubmitConsumptionModal
-          open={consumptionModal.open}
-          contextLabel={consumptionModal.indicatorName}
-          itemCount={1}
-          onFetchPreview={() =>
-            testingService.getIndicatorConsumptionPreview(id, consumptionModal.indicatorId)
-          }
-          onSubmitWithConsumption={async (lines) => {
-            const pending = pendingSubmitRef.current;
-            if (!pending) return;
-            if (pending.editedResult) {
-              await testingService.saveResults(id, { results: [pending.editedResult] });
-            }
-            await testingService.submitIndicatorWithConsumption(id, {
-              indicatorId: consumptionModal.indicatorId,
-              testDate: pending.testDate,
-              consumptionLines: lines,
-            });
-          }}
-          onSaveDraft={async (lines) => {
-            await testingService.saveIndicatorConsumptionDraft(id, {
-              indicatorId: consumptionModal.indicatorId,
-              consumptionLines: lines,
-            });
-          }}
-          onClose={() => {
-            setConsumptionModal({ open: false, indicatorId: "", indicatorName: "" });
-            pendingSubmitRef.current = null;
-          }}
-          onSubmitted={handleConsumptionModalSubmitted}
-        />
-      )}
-
-      {bulkConsumptionModal.open && id && (
-        <SubmitConsumptionModal
-          open={bulkConsumptionModal.open}
-          contextLabel={`${bulkConsumptionModal.count} chỉ tiêu`}
-          itemCount={bulkConsumptionModal.count}
-          onFetchPreview={async () => {
-            const indicatorIds = bulkPendingRef.current?.validIndicators.map((v) => v.indicatorId) ?? [];
-            return testingService.getBulkIndicatorConsumptionPreview(id, indicatorIds);
-          }}
-          onSubmitWithConsumption={async (lines) => {
-            const pending = bulkPendingRef.current;
-            if (!pending) return;
-            if (pending.selectedResults.length > 0) {
-              await testingService.saveResults(id, { results: pending.selectedResults });
-            }
-            await testingService.submitBulkIndicatorsWithConsumption(id, {
-              sampleId: pending.sampleId,
-              indicators: pending.validIndicators,
-              consumptionLines: lines,
-            });
-          }}
-          onClose={() => {
-            setBulkConsumptionModal({ open: false, sampleId: "", count: 0 });
-            bulkPendingRef.current = null;
-          }}
-          onSubmitted={handleBulkConsumptionModalSubmitted}
-        />
-      )}
     </>
   );
 };

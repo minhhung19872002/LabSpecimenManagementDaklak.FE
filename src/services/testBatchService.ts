@@ -8,9 +8,6 @@ import {
   ConfirmConsumptionDto,
   GetAvailableIndicatorsInput,
   AvailableIndicatorDto,
-  ConsumptionPreviewDto,
-  SubmitWithConsumptionDto,
-  SaveConsumptionDraftDto,
 } from '../types/testBatch';
 
 const BASE_URL = '/api/v1/test-batches';
@@ -66,15 +63,6 @@ const testBatchService = {
 
   confirmConsumption: (id: string, data: ConfirmConsumptionDto) =>
     api.post<TestBatchDto>(`${BASE_URL}/${id}/confirm-consumption`, data),
-
-  getConsumptionPreview: (id: string) =>
-    api.get<ConsumptionPreviewDto>(`${BASE_URL}/${id}/consumption-preview`),
-
-  submitWithConsumption: (id: string, data: SubmitWithConsumptionDto) =>
-    api.post<TestBatchDto>(`${BASE_URL}/${id}/submit-with-consumption`, data),
-
-  saveConsumptionDraft: (id: string, data: SaveConsumptionDraftDto) =>
-    api.post<TestBatchDto>(`${BASE_URL}/${id}/save-consumption-draft`, data),
 
   cancel: (id: string) =>
     api.post<TestBatchDto>(`${BASE_URL}/${id}/cancel`),
