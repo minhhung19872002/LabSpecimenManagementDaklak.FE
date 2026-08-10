@@ -13,7 +13,6 @@ interface MaterialReceiptHistoryTableProps {
   loading: boolean;
   page: number;
   pageSize: number;
-  showWarehouse: boolean;
   onPageChange: (page: number, pageSize: number) => void;
   onReceiptClick: (receiptId: string) => void;
   onBarcodeListClick: (barcodes: string[]) => void;
@@ -28,7 +27,6 @@ const MaterialReceiptHistoryTable: React.FC<MaterialReceiptHistoryTableProps> = 
   loading,
   page,
   pageSize,
-  showWarehouse,
   onPageChange,
   onReceiptClick,
   onBarcodeListClick,
@@ -76,13 +74,13 @@ const MaterialReceiptHistoryTable: React.FC<MaterialReceiptHistoryTableProps> = 
         return <Button type="link" size="small" onClick={() => onBarcodeListClick(barcodes)}>{barcodes.length} barcode</Button>;
       },
     },
-    ...(showWarehouse ? [{
+    {
       title: "Kho nhận",
       dataIndex: "receivingWarehouseName",
       width: 150,
       ellipsis: true,
       render: displayText,
-    } as ColumnsType<ProductMaterialReceiptHistoryDto>[number]] : []),
+    },
     {
       title: "Tồn trước nhập",
       width: 155,

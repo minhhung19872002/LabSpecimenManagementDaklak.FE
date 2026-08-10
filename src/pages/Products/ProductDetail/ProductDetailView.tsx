@@ -119,7 +119,6 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             loading={materialHistoryLoading}
             page={materialHistoryPage}
             pageSize={materialHistoryPageSize}
-            showWarehouse={!warehouseName}
             onPageChange={onMaterialHistoryPageChange}
             onReceiptClick={onMaterialReceiptClick}
             onBarcodeListClick={onBarcodeListClick}
