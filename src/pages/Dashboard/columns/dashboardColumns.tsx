@@ -4,6 +4,7 @@ import { QualityManagementTaskDto } from "../../../types/qualityManagement";
 import {
   DashboardRecentRequestDto,
   RevenueByCustomerDto,
+  RevenueByContactDto,
 } from "../../../services/dashboardService";
 import { formatDate } from "../../../utils/formatters";
 import {
@@ -163,6 +164,38 @@ export const getRevenueColumns = (): ColumnsType<RevenueByCustomerDto> => [
     title: "Cơ sở/Doanh nghiệp",
     dataIndex: "customerName",
     key: "customerName",
+    width: 150,
+    ellipsis: true,
+  },
+  {
+    title: "Mẫu",
+    dataIndex: "totalSamples",
+    key: "totalSamples",
+    width: 70,
+    align: "center" as const,
+  },
+  {
+    title: "Chỉ tiêu",
+    dataIndex: "totalIndicators",
+    key: "totalIndicators",
+    width: 80,
+    align: "center" as const,
+  },
+  {
+    title: "Doanh thu",
+    dataIndex: "revenue",
+    key: "revenue",
+    width: 130,
+    align: "right" as const,
+    render: (value: number) => formatCurrency(value),
+  },
+];
+
+export const getRevenueByContactColumns = (): ColumnsType<RevenueByContactDto> => [
+  {
+    title: "Người liên hệ",
+    dataIndex: "contactPerson",
+    key: "contactPerson",
     width: 150,
     ellipsis: true,
   },

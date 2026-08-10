@@ -4,6 +4,7 @@ import dashboardService, {
   DashboardOverviewDto,
   DashboardRecentRequestDto,
   RevenueByCustomerDto,
+  RevenueByContactDto,
   MonthlyRevenueDto,
 } from "../../services/dashboardService";
 import { qualityManagementService } from "../../services/qualityManagementService";
@@ -70,10 +71,18 @@ const Dashboard: React.FC = () => {
   const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenueDto[]>([]);
   const [customerNames, setCustomerNames] = useState<string[]>([]);
 
+  // Revenue by contact section state
+  const [revenueByContact, setRevenueByContact] = useState<RevenueByContactDto[]>([]);
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [monthlyRevenueByContact, setMonthlyRevenueByContact] = useState<MonthlyRevenueDto[]>([]);
+  const [contactPersonNames, setContactPersonNames] = useState<string[]>([]);
+
   const [loadingPendingTasks, setLoadingPendingTasks] = useState(false);
   const [loadingRecentRequests, setLoadingRecentRequests] = useState(false);
   const [loadingRevenue, setLoadingRevenue] = useState(false);
   const [loadingMonthlyRevenue, setLoadingMonthlyRevenue] = useState(false);
+  const [loadingRevenueByContact, setLoadingRevenueByContact] = useState(false);
+  const [loadingMonthlyRevenueByContact, setLoadingMonthlyRevenueByContact] = useState(false);
 
   // Load overview data
   const loadOverview = async () => {
@@ -168,6 +177,47 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Load revenue by contact person
+  const loadRevenueByContact = async () => {
+    setLoadingRevenueByContact(true);
+    try {
+      const result = await dashboardService.getRevenueByContact(0, 10);
+      setRevenueByContact(result.items || []);
+
+      if (!selectedContact && result.items.length > 0) {
+        setSelectedContact(result.items[0].contactPerson);
+      }
+    } catch (err) {
+      console.error("Failed to load revenue by contact:", err);
+    } finally {
+      setLoadingRevenueByContact(false);
+    }
+  };
+
+  // Load monthly revenue for contact person chart
+  const loadMonthlyRevenueByContact = async (contactPerson: string) => {
+    setLoadingMonthlyRevenueByContact(true);
+    try {
+      const year = dayjs().year();
+      const data = await dashboardService.getMonthlyRevenueByContact(contactPerson, year);
+      setMonthlyRevenueByContact(data);
+    } catch (err) {
+      console.error("Failed to load monthly revenue by contact:", err);
+    } finally {
+      setLoadingMonthlyRevenueByContact(false);
+    }
+  };
+
+  // Load contact person names for filter
+  const loadContactPersonNames = async () => {
+    try {
+      const names = await dashboardService.getContactPersonNames();
+      setContactPersonNames(names);
+    } catch (err) {
+      console.error("Failed to load contact person names:", err);
+    }
+  };
+
   // Handle period change
   const handlePeriodChange = (period: FilterPeriod) => {
     setFilterPeriod(period);
@@ -190,11 +240,20 @@ const Dashboard: React.FC = () => {
     setIsCustomDateRange(false);
   };
 
+  // Load monthly revenue by contact when selected contact changes
+  useEffect(() => {
+    if (selectedContact) {
+      loadMonthlyRevenueByContact(selectedContact);
+    }
+  }, [selectedContact]);
+
   // Initial load
   useEffect(() => {
     loadCustomerNames();
     loadPendingTasks();
     loadRevenueByCustomer();
+    loadContactPersonNames();
+    loadRevenueByContact();
   }, []);
 
   // Load overview when date range changes
@@ -263,12 +322,57 @@ const Dashboard: React.FC = () => {
     },
     label: false,
     tooltip: {
-      formatter: (datum: any) => ({
-        name: "Doanh thu",
-        value: formatCurrency(datum.revenue),
-      }),
+      items: [
+        {
+          channel: "y",
+          name: "Doanh thu",
+          valueFormatter: (v: number) => formatCurrency(v),
+        },
+      ],
     },
   }), [monthlyRevenue]);
+
+  const contactChartConfig = useMemo(() => ({
+    data: monthlyRevenueByContact.map((item) => ({
+      month: item.monthName,
+      revenue: item.revenue,
+    })),
+    xField: "month",
+    yField: "revenue",
+    color: "#36CFC9",
+    columnStyle: {
+      radius: [4, 4, 0, 0],
+    },
+    axis: {
+      x: {
+        label: {
+          style: {
+            fill: "#8C8C8C",
+            fontSize: 12,
+          },
+        },
+      },
+      y: {
+        labelFormatter: (v: number) => formatYAxisValue(v),
+        label: {
+          style: {
+            fill: "#8C8C8C",
+            fontSize: 12,
+          },
+        },
+      },
+    },
+    label: false,
+    tooltip: {
+      items: [
+        {
+          channel: "y",
+          name: "Doanh thu",
+          valueFormatter: (v: number) => formatCurrency(v),
+        },
+      ],
+    },
+  }), [monthlyRevenueByContact]);
 
   return (
     <DashboardContainer
@@ -289,12 +393,20 @@ const Dashboard: React.FC = () => {
       loadingRecentRequests={loadingRecentRequests}
       loadingRevenue={loadingRevenue}
       loadingMonthlyRevenue={loadingMonthlyRevenue}
+      revenueByContact={revenueByContact}
+      selectedContact={selectedContact}
+      monthlyRevenueByContact={monthlyRevenueByContact}
+      contactPersonNames={contactPersonNames}
+      loadingRevenueByContact={loadingRevenueByContact}
+      loadingMonthlyRevenueByContact={loadingMonthlyRevenueByContact}
       chartConfig={chartConfig}
+      contactChartConfig={contactChartConfig}
       onPeriodChange={handlePeriodChange}
       onDateRangeChange={handleDateRangeChange}
       onRefresh={handleRefresh}
       onRecentRequestsFilterChange={setRecentRequestsFilter}
       onSelectedCustomerChange={setSelectedCustomer}
+      onSelectedContactChange={setSelectedContact}
       onNavigateToQualityManagement={() => navigate(PATH_ROUTES.qualityManagement.index)}
       onNavigateToQualityManagementDetail={(id: string) => navigate(PATH_ROUTES.qualityManagement.detail(id))}
       onNavigateToTestRequests={() => navigate(PATH_ROUTES.testRequests.index)}

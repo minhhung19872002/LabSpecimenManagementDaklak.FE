@@ -87,6 +87,18 @@ export interface MonthlyRevenueDto {
   revenue: number;
 }
 
+export interface RevenueByContactDto {
+  contactPerson: string;
+  totalSamples: number;
+  totalIndicators: number;
+  revenue: number;
+}
+
+export interface RevenueByContactPagedResult {
+  items: RevenueByContactDto[];
+  totalCount: number;
+}
+
 const BASE_URL = '/api/v1/dashboard';
 const STATISTICS_URL = '/api/v1/statistics';
 
@@ -219,6 +231,28 @@ export const dashboardService = {
 
   getCustomerNames: async (): Promise<string[]> => {
     const response = await api.get<string[]>(`${BASE_URL}/customer-names`);
+    return response.data;
+  },
+
+  getRevenueByContact: async (
+    skipCount: number = 0,
+    maxResultCount: number = 10
+  ): Promise<RevenueByContactPagedResult> => {
+    const response = await api.get<RevenueByContactPagedResult>(`${BASE_URL}/revenue-by-contact`, {
+      params: { skipCount, maxResultCount }
+    });
+    return response.data;
+  },
+
+  getMonthlyRevenueByContact: async (contactPerson: string, year: number): Promise<MonthlyRevenueDto[]> => {
+    const response = await api.get<MonthlyRevenueDto[]>(`${BASE_URL}/monthly-revenue-by-contact`, {
+      params: { contactPerson, year }
+    });
+    return response.data;
+  },
+
+  getContactPersonNames: async (): Promise<string[]> => {
+    const response = await api.get<string[]>(`${BASE_URL}/contact-person-names`);
     return response.data;
   },
 };
