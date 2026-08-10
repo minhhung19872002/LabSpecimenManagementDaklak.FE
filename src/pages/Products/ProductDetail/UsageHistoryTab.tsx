@@ -23,9 +23,10 @@ const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 export interface UsageHistoryTabProps {
   productId: string;
+  warehouseId?: string;
 }
 
-const UsageHistoryTab: React.FC<UsageHistoryTabProps> = ({ productId }) => {
+const UsageHistoryTab: React.FC<UsageHistoryTabProps> = ({ productId, warehouseId }) => {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("7d");
   const [rangeValue, setRangeValue] = useState<[Dayjs, Dayjs] | null>(
     () => buildDateRange("7d")
@@ -46,6 +47,9 @@ const UsageHistoryTab: React.FC<UsageHistoryTabProps> = ({ productId }) => {
         params.dateFrom = range[0].toISOString();
         params.dateTo = range[1].toISOString();
       }
+      if (warehouseId) {
+        params.warehouseId = warehouseId;
+      }
       setLoading(true);
       productService
         .getUsageLog(productId, params)
@@ -56,7 +60,7 @@ const UsageHistoryTab: React.FC<UsageHistoryTabProps> = ({ productId }) => {
         .catch(() => { setItems([]); setTotalCount(0); })
         .finally(() => setLoading(false));
     },
-    [productId]
+    [productId, warehouseId]
   );
 
   useEffect(() => {

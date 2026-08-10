@@ -30,6 +30,7 @@ export interface ProductDetailViewProps {
   onDateRangeChange: (dates: DateRange) => void;
   onHistoryPageChange: (page: number, pageSize: number) => void;
   onReceiptClick: (receiptId: string) => void;
+  warehouseId?: string;
   warehouseName?: string;
   materialHistoryItems: ProductMaterialReceiptHistoryDto[];
   materialHistoryTotal: number;
@@ -59,7 +60,7 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onDateRangeChange,
   onHistoryPageChange,
   onReceiptClick,
-  warehouseName,
+  warehouseId,
   materialHistoryItems,
   materialHistoryTotal,
   materialHistoryLoading,
@@ -77,7 +78,7 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     {
       key: "usage-history",
       label: "Lịch sử sử dụng",
-      children: <UsageHistoryTab productId={productId} />,
+      children: <UsageHistoryTab productId={productId} warehouseId={warehouseId} />,
     },
     {
       key: "import-history",

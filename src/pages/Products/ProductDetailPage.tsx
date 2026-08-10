@@ -166,6 +166,7 @@ const ProductDetailPage: React.FC = () => {
         onDateRangeChange={handleDateRangeChange}
         onHistoryPageChange={handleHistoryPageChange}
         onReceiptClick={handleReceiptClick}
+        warehouseId={warehouseId}
         warehouseName={warehouseName}
         materialHistoryItems={materialHistoryItems}
         materialHistoryTotal={materialHistoryTotal}

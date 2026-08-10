@@ -339,6 +339,7 @@ export interface ProductUsageLogItemDto {
 export interface GetProductUsageLogParams {
   dateFrom?: string;
   dateTo?: string;
+  warehouseId?: string;
   skipCount?: number;
   maxResultCount?: number;
 }
