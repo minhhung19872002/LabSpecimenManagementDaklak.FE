@@ -131,7 +131,7 @@ const UsageHistoryTab: React.FC<UsageHistoryTabProps> = ({ productId }) => {
       render: (v) => (v ? dayjs(v).format("DD/MM/YYYY - HH:mm") : "—"),
     },
     {
-      title: "Tồn kho hiện tại",
+      title: "Tồn kho tạm tính",
       dataIndex: "consumableStockBefore",
       width: 150,
       align: "right",
