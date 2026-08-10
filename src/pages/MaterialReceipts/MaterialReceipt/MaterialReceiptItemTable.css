@@ -1,0 +1,7 @@
+.material-receipt-row-exceeded > td {
+  background-color: #fff1f0 !important;
+}
+
+.material-receipt-row-exceeded:hover > td {
+  background-color: #ffccc7 !important;
+}

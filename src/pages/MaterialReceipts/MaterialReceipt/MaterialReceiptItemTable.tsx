@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Table, Select, Input, Button, Spin, Popconfirm } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 import { NumericFormat } from "react-number-format";
@@ -7,8 +7,10 @@ import type { WarehouseDto } from "../../../services/masterDataService";
 import {
   formatExpiryDate,
   formatStockDisplay,
+  resolveLineItemBaseQuantity,
   type MaterialReceiptLineItem,
 } from "./utils";
+import "./MaterialReceiptItemTable.css";
 
 export interface MaterialReceiptItemTableProps {
   items: MaterialReceiptLineItem[];
@@ -27,6 +29,15 @@ export interface MaterialReceiptItemTableProps {
   >;
 }
 
+const isExceeded = (record: MaterialReceiptLineItem): boolean => {
+  if (record.quantity == null || record.quantity <= 0) return false;
+  const requestedBaseQuantity = resolveLineItemBaseQuantity(
+    record,
+    record.quantity,
+  );
+  return requestedBaseQuantity > record.centralStockBaseQty + Number.EPSILON;
+};
+
 const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
   items,
   warehouses,
@@ -36,6 +47,11 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
   onDeleteItem,
   itemErrors,
 }) => {
+  const exceededKeys = useMemo(
+    () => new Set(items.filter(isExceeded).map((item) => item.key)),
+    [items],
+  );
+
   const columns: ColumnsType<MaterialReceiptLineItem> = [
     {
       title: "STT",
@@ -111,10 +127,12 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
         </span>
       ),
       dataIndex: "quantity",
-      width: 110,
+      width: 130,
       render: (_, record) => {
         if (isReadonly) return record.quantity ?? "—";
+        const exceeded = exceededKeys.has(record.key);
         const error = itemErrors[record.key]?.quantity;
+        const hasError = !!error || exceeded;
         return (
           <>
             <NumericFormat
@@ -127,12 +145,24 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
               thousandSeparator="."
               decimalSeparator=","
               customInput={Input}
-              status={error ? "error" : undefined}
-              style={{ width: "100%" }}
+              status={hasError ? "error" : undefined}
+              style={{
+                width: "100%",
+                backgroundColor: hasError ? "#fff1f0" : undefined,
+                borderColor: hasError ? "#ff4d4f" : undefined,
+              }}
               placeholder="Nhập SL"
             />
-            {error && (
-              <div style={{ color: "#ff4d4f", fontSize: 11 }}>{error}</div>
+            {hasError && (
+              <div style={{ color: "#ff4d4f", fontSize: 11, marginTop: 2 }}>
+                {error ||
+                  `Vượt tồn kho Trung tâm kiểm soát (${formatStockDisplay(
+                    record.centralStockBaseQty,
+                    record.storageUnitName,
+                    record.consumableUnitName,
+                    record.volumePerUnit,
+                  )})`}
+              </div>
             )}
           </>
         );
@@ -219,6 +249,9 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
       columns={columns}
       dataSource={items}
       rowKey="key"
+      rowClassName={(record) =>
+        exceededKeys.has(record.key) ? "material-receipt-row-exceeded" : ""
+      }
       pagination={false}
       scroll={{ x: 1400 }}
       size="small"
@@ -231,3 +264,4 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
 };
 
 export default MaterialReceiptItemTable;
+

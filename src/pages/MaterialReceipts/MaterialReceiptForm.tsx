@@ -250,7 +250,7 @@ const MaterialReceiptForm: React.FC = () => {
       if (!product) return;
       const lineItem = buildLineItemFromProduct(product);
       lineItem.key = `new-${Date.now()}`;
-      lineItem.quantity = 1;
+      lineItem.quantity = null;
       setItems((prev) => [...prev, lineItem]);
     },
     [centralProducts],
