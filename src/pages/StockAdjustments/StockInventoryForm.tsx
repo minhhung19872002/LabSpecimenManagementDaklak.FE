@@ -540,10 +540,13 @@ const StockInventoryForm: React.FC = () => {
   }
 
   const handleGoBack = () => {
-    if (location.state?.from) {
-      navigate(location.state.from);
-    } else {
+    const from = location.state?.from || searchParams.get("from");
+    if (from) {
+      navigate(from);
+    } else if (window.history.length > 1) {
       navigate(-1);
+    } else {
+      navigate(PATH_ROUTES.stockAdjustments.index);
     }
   };
 

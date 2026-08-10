@@ -205,10 +205,10 @@ const ProductList: React.FC = () => {
             <Space>
               <Button
                 onClick={() => {
-                  const url = warehouseId
-                    ? `${PATH_ROUTES.stockAdjustments.create}?warehouseId=${warehouseId}`
-                    : PATH_ROUTES.stockAdjustments.create;
-                  window.open(url, "_blank");
+                  const params = new URLSearchParams();
+                  if (warehouseId) params.set("warehouseId", warehouseId);
+                  params.set("from", PATH_ROUTES.products.index);
+                  window.open(`${PATH_ROUTES.stockAdjustments.create}?${params}`, "_blank");
                 }}
               >
                 Kiểm kê kho
