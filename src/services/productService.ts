@@ -263,6 +263,8 @@ export interface ProductDetailDto {
   consumableImportedQuantity: number;
   volumePerUnit?: number;
   volumeUnitName?: string;
+  theoreticalConsumption: number;
+  expectedStockConsumable: number;
 }
 
 export interface ProductImportHistoryDto {

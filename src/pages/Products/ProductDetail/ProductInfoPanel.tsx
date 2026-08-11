@@ -73,6 +73,46 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) 
               )}
             </Row>
 
+            <Row gutter={16}>
+              <Col span={12}>
+                <DetailItem
+                  label="Tiêu hao trong kỳ"
+                  value={(() => {
+                    const vol = detail.theoreticalConsumption;
+                    if (!vol || !detail.volumePerUnit || !detail.volumeUnitName) return null;
+                    const baseQty = vol / detail.volumePerUnit;
+                    const intPart = Math.floor(baseQty);
+                    const decPart = baseQty - intPart;
+                    if (decPart === 0) {
+                      return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${vol.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;
+                    }
+                    const remainingVol = Math.round(decPart * detail.volumePerUnit);
+                    return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${remainingVol.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;
+                  })()}
+                />
+              </Col>
+              <Col span={12}>
+                <DetailItem
+                  label="Tồn kho cuối kỳ (Dự tính)"
+                  value={(() => {
+                    const expected = detail.expectedStockConsumable;
+                    if (!detail.volumePerUnit || !detail.volumeUnitName) return null;
+                    if (expected < 0) {
+                      return <span style={{ color: "#ff4d4f" }}>{`${expected.toLocaleString("vi-VN")} ${detail.volumeUnitName}`}</span>;
+                    }
+                    const baseQty = expected / detail.volumePerUnit;
+                    const intPart = Math.floor(baseQty);
+                    const decPart = baseQty - intPart;
+                    if (decPart === 0) {
+                      return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${expected.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;
+                    }
+                    const remainingVol = Math.round(decPart * detail.volumePerUnit);
+                    return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${remainingVol.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;
+                  })()}
+                />
+              </Col>
+            </Row>
+
             <DetailItem
               label="Điều kiện bảo quản"
               value={

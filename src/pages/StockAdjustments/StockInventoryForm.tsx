@@ -382,13 +382,13 @@ const StockInventoryForm: React.FC = () => {
         },
       },
       {
-        title: "Tồn kho",
+        title: "Tồn kho đầu kỳ",
         width: 160,
         align: "right" as const,
         render: (_: any, record: ProductDto) => formatStock(record),
       },
       {
-        title: "Số lượng (đơn vị)",
+        title: "Tồn kho đầu kỳ (số lượng)",
         width: 160,
         align: "right" as const,
         render: (_: any, record: ProductDto) => {

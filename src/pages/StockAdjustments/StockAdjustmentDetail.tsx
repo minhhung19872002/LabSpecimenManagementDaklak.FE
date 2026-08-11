@@ -132,10 +132,36 @@ const StockAdjustmentDetail: React.FC = () => {
     {
       title: "Tồn kho dự kiến",
       dataIndex: "expectedStock",
-      width: 150,
+      width: 180,
       align: "right" as const,
       render: (v: number | null | undefined, record: StockAdjustmentItemDto) => {
         if (v == null) return "-";
+        const volumeUnit = record.volumeUnitName || "";
+        const storageUnit = record.packagingUnitName || "";
+
+        if (record.volumePerUnit && record.volumePerUnit > 0 && volumeUnit) {
+          const volumeLine = `${v.toLocaleString("vi-VN")} ${volumeUnit}`;
+          if (v < 0) {
+            return (
+              <div style={{ color: "#ff4d4f" }}>
+                <div>{volumeLine}</div>
+              </div>
+            );
+          }
+          const expectedBase = v / record.volumePerUnit;
+          const intPart = Math.floor(expectedBase);
+          const decPart = expectedBase - intPart;
+          const packagingLine = decPart === 0
+            ? `${expectedBase.toLocaleString("vi-VN")} ${storageUnit}`
+            : `${intPart.toLocaleString("vi-VN")} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN")} ${volumeUnit}`;
+          return (
+            <div>
+              <div>{packagingLine}</div>
+              <div style={{ fontSize: 12, color: "#888" }}>{volumeLine}</div>
+            </div>
+          );
+        }
+
         const unit = record.actualUnitName || record.unitName || "";
         return `${v.toLocaleString("vi-VN")} ${unit}`.trim();
       },
