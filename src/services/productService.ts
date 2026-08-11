@@ -269,21 +269,19 @@ export interface ProductDetailDto {
 
 export interface ProductImportHistoryDto {
   warehouseImportReceiptId: string;
-  receiptCode: string;
-  actualImportDate?: string;
+  warehouseImportReceiptCode: string;
+  actualImportDate: string;
   supplierName?: string;
   orderedQuantity: number;
-  purchaseUnitName?: string;
   actualReceivedQuantity: number;
   unitName?: string;
   manufacturerName?: string;
   lotNumber?: string;
   lotExpiryDate?: string;
-  totalAmount?: number;
-  qualityDocumentFileId?: string;
-  qualityDocumentFileName?: string;
-  qualityDocumentFilePath?: string;
-  deliveryDocumentFiles?: { fileId: string; fileName: string }[];
+  storageWarehouseName?: string;
+  unitPrice?: number;
+  vatPercent?: number;
+  totalLineAmount?: number;
 }
 
 export interface GetProductImportHistoryInput {
@@ -292,7 +290,6 @@ export interface GetProductImportHistoryInput {
   sorting?: string;
   fromDate?: string;
   toDate?: string;
-  warehouseId?: string;
 }
 
 export interface ProductMaterialReceiptHistoryDto {
@@ -428,7 +425,6 @@ export const productService = {
     if (params.sorting) apiParams.Sorting = params.sorting;
     if (params.fromDate) apiParams.FromDate = params.fromDate;
     if (params.toDate) apiParams.ToDate = params.toDate;
-    if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
     const response = await api.get<PagedResult<ProductImportHistoryDto>>(`${BASE_URL}/${id}/import-history`, { params: apiParams });
     return response.data;
   },

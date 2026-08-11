@@ -5,7 +5,6 @@ import dayjs from "dayjs";
 import { ProductImportHistoryDto } from "../../../services/productService";
 
 const { Link } = Typography;
-const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
 
 export interface ImportHistoryTableProps {
   items: ProductImportHistoryDto[];
@@ -39,8 +38,8 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
   const columns: ColumnsType<ProductImportHistoryDto> = [
     {
       title: "Phiếu nhập kho",
-      dataIndex: "receiptCode",
-      key: "receiptCode",
+      dataIndex: "warehouseImportReceiptCode",
+      key: "warehouseImportReceiptCode",
       width: 160,
       render: (code: string, record) => (
         <Link onClick={() => onReceiptClick(record.warehouseImportReceiptId)}>
@@ -69,14 +68,14 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
       width: 120,
       align: "right" as const,
       render: (_: any, record: ProductImportHistoryDto) => {
-        const unit = record.purchaseUnitName || "";
+        const unit = record.unitName || "";
         return `${record.orderedQuantity} ${unit}`.trim();
       },
     },
     {
       title: "SL thực nhận",
       key: "actualReceivedQuantity",
-      width: 130,
+      width: 120,
       align: "right" as const,
       render: (_: any, record: ProductImportHistoryDto) => {
         const unit = record.unitName || "";
@@ -107,46 +106,12 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
       render: formatDate,
     },
     {
-      title: "Tổng giá trị đơn hàng",
-      dataIndex: "totalAmount",
-      key: "totalAmount",
-      width: 170,
+      title: "Tổng giá trị đơn",
+      dataIndex: "totalLineAmount",
+      key: "totalLineAmount",
+      width: 150,
       align: "right" as const,
       render: formatCurrency,
-    },
-    {
-      title: "Hồ sơ chất lượng",
-      key: "qualityDocument",
-      width: 150,
-      ellipsis: true,
-      render: (_: any, record: ProductImportHistoryDto) => {
-        if (!record.qualityDocumentFileName) return "-";
-        if (record.qualityDocumentFileId) {
-          return (
-            <Link onClick={() => window.open(`${baseUrl}/api/v1/files/${record.qualityDocumentFileId}`, "_blank")}>
-              {record.qualityDocumentFileName}
-            </Link>
-          );
-        }
-        return record.qualityDocumentFileName;
-      },
-    },
-    {
-      title: "Chứng từ giao hàng",
-      key: "deliveryDocuments",
-      width: 150,
-      ellipsis: true,
-      render: (_: any, record: ProductImportHistoryDto) => {
-        if (!record.deliveryDocumentFiles?.length) return "-";
-        return record.deliveryDocumentFiles.map((f, i) => (
-          <span key={f.fileId}>
-            {i > 0 && ", "}
-            <Link onClick={() => window.open(`${baseUrl}/api/v1/files/${f.fileId}`, "_blank")}>
-              {f.fileName}
-            </Link>
-          </span>
-        ));
-      },
     },
   ];
 
@@ -157,7 +122,7 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
       rowKey={(_record, index) => `${_record.warehouseImportReceiptId}-${index}`}
       loading={loading}
       size="small"
-      scroll={{ x: 1400 }}
+      scroll={{ x: 1300 }}
       pagination={{
         current: page,
         pageSize,

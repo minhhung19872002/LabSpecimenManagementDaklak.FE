@@ -62,19 +62,18 @@ const ProductDetailPage: React.FC = () => {
       const data = await productService.getImportHistory(id, {
         page: historyPage,
         limit: historyPageSize,
-        sorting: "lotExpiryDate asc",
+        sorting: "actualImportDate desc",
         fromDate: dateRange?.[0]?.format("YYYY-MM-DD"),
         toDate: dateRange?.[1]?.format("YYYY-MM-DD"),
-        warehouseId,
       });
       setHistoryItems(data.items);
       setHistoryTotal(data.totalCount);
     } catch (error) {
-      message.error(getApiErrorMessage(error, "Không thể tải lịch sử nhập kho"));
+      message.error(getApiErrorMessage(error, "Không thể tải lịch sử nhập hàng"));
     } finally {
       setHistoryLoading(false);
     }
-  }, [id, historyPage, historyPageSize, dateRange, warehouseId]);
+  }, [id, historyPage, historyPageSize, dateRange]);
 
   const loadMaterialHistory = useCallback(async () => {
     if (!id) return;
