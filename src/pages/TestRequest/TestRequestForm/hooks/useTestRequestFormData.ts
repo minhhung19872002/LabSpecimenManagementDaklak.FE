@@ -841,13 +841,15 @@ export const useTestRequestFormData = () => {
       // Generate samples from quotation samples (new structure)
       const generatedSamples: SampleFormData[] = [];
       const generatedDates: Record<string, IndicatorDateInfo> = {};
+      const generatedCustomPrices: Record<string, number> = {};
 
       let globalIndex = 0;
       quotation.samples.forEach((quotationSample) => {
         const qty = quotationSample.quantity || 1;
 
-        // Build indicator methods list once per quotation sample
+        // Build indicator methods list + quotation prices once per quotation sample
         const indicatorMethodsList: IndicatorMethodKey[] = [];
+        const quotationPricesByMethodKey: Record<string, number> = {};
         quotationSample.indicators.forEach((indicator) => {
           const testMethodId = indicator.testMethodId || "";
           let resolvedSpecimenTypeId = indicator.specimenTypeId || undefined;
@@ -858,6 +860,10 @@ export const useTestRequestFormData = () => {
           }
           const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, resolvedSpecimenTypeId);
           indicatorMethodsList.push(methodKey);
+
+          if (indicator.unitPrice !== undefined && indicator.unitPrice !== null) {
+            quotationPricesByMethodKey[methodKey] = indicator.unitPrice;
+          }
 
           if (!generatedDates[methodKey]) {
             generatedDates[methodKey] = {
@@ -890,11 +896,18 @@ export const useTestRequestFormData = () => {
             attachments: [],
           });
 
+          indicatorMethodsList.forEach((methodKey) => {
+            if (quotationPricesByMethodKey[methodKey] !== undefined) {
+              generatedCustomPrices[`${sampleKey}_${methodKey}`] = quotationPricesByMethodKey[methodKey];
+            }
+          });
+
           globalIndex++;
         }
       });
 
       setSamples(generatedSamples);
+      setCustomPrices(generatedCustomPrices);
       setSelectedIndicatorDates(generatedDates);
       setSourceQuotationId(quotationIdToLoad);
 
