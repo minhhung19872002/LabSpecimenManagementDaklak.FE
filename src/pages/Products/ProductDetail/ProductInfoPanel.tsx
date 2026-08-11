@@ -50,7 +50,7 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) 
             <Row gutter={16}>
               <Col span={12}>
                 <DetailItem
-                  label="Số lượng tồn kho"
+                  label="Tồn kho đầu kỳ"
                   value={(() => {
                     const qty = detail.warehouseAvailableQuantity ?? 0;
                     const intPart = Math.floor(qty);
@@ -66,7 +66,7 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) 
               {detail.consumableImportedQuantity > 0 && detail.volumeUnitName && (
                 <Col span={12}>
                   <DetailItem
-                    label="Số lượng tồn kho (Đơn vị)"
+                    label="Tồn kho đầu kỳ (số lượng)"
                     value={`${detail.consumableImportedQuantity.toLocaleString("vi-VN")} ${detail.volumeUnitName}`}
                   />
                 </Col>

@@ -15,8 +15,8 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "name", title: "Tên vật tư", defaultVisible: true },
   { key: "productType", title: "Phân loại", defaultVisible: true },
   { key: "earliestReceivedDate", title: "Ngày nhận", defaultVisible: true },
-  { key: "availableQuantity", title: "Tồn kho", defaultVisible: true },
-  { key: "storageAvailableQuantity", title: "Số lượng (đơn vị)", defaultVisible: true },
+  { key: "availableQuantity", title: "Tồn kho đầu kỳ", defaultVisible: true },
+  { key: "storageAvailableQuantity", title: "Tồn kho đầu kỳ (số lượng)", defaultVisible: true },
   { key: "theoreticalConsumption", title: "Tiêu hao lý thuyết", defaultVisible: true },
   { key: "expectedStockConsumable", title: "Tồn kho dự kiến", defaultVisible: true },
   { key: "usage", title: "Sử dụng", defaultVisible: true },
@@ -116,7 +116,7 @@ export const getProductColumns = (
 
   if (visibleKeys.has("availableQuantity")) {
     columns.push({
-      title: "Tồn kho",
+      title: "Tồn kho đầu kỳ",
       dataIndex: "availableQuantity",
       key: "availableQuantity",
       width: 160,
@@ -143,7 +143,7 @@ export const getProductColumns = (
 
   if (visibleKeys.has("storageAvailableQuantity")) {
     columns.push({
-      title: "Số lượng (đơn vị)",
+      title: "Tồn kho đầu kỳ (số lượng)",
       dataIndex: "storageAvailableQuantity",
       key: "storageAvailableQuantity",
       width: 180,
