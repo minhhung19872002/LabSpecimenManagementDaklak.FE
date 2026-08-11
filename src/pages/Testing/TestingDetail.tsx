@@ -53,7 +53,8 @@ const TestingDetail: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const submitting = false;
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const submitting = bulkSubmitting;
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
   const [allResultValues, setAllResultValues] = useState<TestResultValueWithIndicator[]>([]);
@@ -227,8 +228,6 @@ const TestingDetail: React.FC = () => {
     indicatorName: "",
   });
 
-  const [, setSubmittingIndicatorId] = useState<string | null>(null);
-  const [, setBulkSubmitting] = useState(false);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -638,7 +637,6 @@ const TestingDetail: React.FC = () => {
       return;
     }
 
-    setSubmittingIndicatorId(indicatorId);
     try {
       if (editedResult) {
         await testingService.saveResults(id, { results: [editedResult] });
@@ -657,8 +655,6 @@ const TestingDetail: React.FC = () => {
       await reloadData();
     } catch (error) {
       message.error(getApiErrorMessage(error, "Lỗi gửi kết quả"));
-    } finally {
-      setSubmittingIndicatorId(null);
     }
   }, [id, detail, updateIndicatorsOptimistically, reloadData]);
 

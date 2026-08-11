@@ -99,6 +99,7 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
                 type="primary"
                 size="small"
                 icon={<SendOutlined />}
+                loading={submitting}
                 onClick={() => onSubmitResults(sample.sampleId)}
                 disabled={
                   submitting ||

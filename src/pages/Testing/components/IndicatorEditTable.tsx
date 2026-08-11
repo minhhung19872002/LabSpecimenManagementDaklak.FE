@@ -91,7 +91,7 @@ interface IndicatorEditTableProps {
     indicatorId: string,
     result?: SaveIndicatorResultDto,
   ) => void;
-  onSubmitIndicator?: (indicatorId: string) => void;
+  onSubmitIndicator?: (indicatorId: string) => Promise<void>;
   onUploadIndicatorImages?: (
     indicatorId: string,
     files: File[],
@@ -102,6 +102,45 @@ interface IndicatorEditTableProps {
   /** Danh sách key cột được hiển thị (từ ColumnVisibilitySelector) */
   visibleColumns?: string[];
 }
+
+const SubmitIndicatorButton = React.memo<{
+  indicatorId: string;
+  status: IndicatorTestingStatus;
+  onSubmit: (id: string) => Promise<void>;
+  disabled?: boolean;
+}>(function SubmitIndicatorButton({ indicatorId, status, onSubmit, disabled }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <Tooltip
+      title={
+        status === IndicatorTestingStatus.PendingApproval
+          ? "Gửi lại kết quả cho QLKT duyệt"
+          : "Gửi kết quả cho QLKT duyệt"
+      }
+    >
+      <Button
+        type="primary"
+        size="small"
+        icon={<SendOutlined />}
+        onClick={async (e) => {
+          e.stopPropagation();
+          setLoading(true);
+          try {
+            await onSubmit(indicatorId);
+          } finally {
+            setLoading(false);
+          }
+        }}
+        loading={loading}
+        disabled={disabled || loading}
+      >
+        {status === IndicatorTestingStatus.PendingApproval
+          ? "Gửi lại"
+          : "Gửi duyệt"}
+      </Button>
+    </Tooltip>
+  );
+});
 
 // Extended indicator with parent-child metadata
 interface ProcessedIndicator extends TestingIndicatorDto {
@@ -999,28 +1038,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         return (
           <Space size={4}>
             {canSubmit && onSubmitIndicator && (
-              <Tooltip
-                title={
-                  status === IndicatorTestingStatus.PendingApproval
-                    ? "Gửi lại kết quả cho QLKT duyệt"
-                    : "Gửi kết quả cho QLKT duyệt"
-                }
-              >
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<SendOutlined />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSubmitIndicator(record.id);
-                  }}
-                  disabled={submitting}
-                >
-                  {status === IndicatorTestingStatus.PendingApproval
-                    ? "Gửi lại"
-                    : "Gửi duyệt"}
-                </Button>
-              </Tooltip>
+              <SubmitIndicatorButton
+                indicatorId={record.id}
+                status={status}
+                onSubmit={onSubmitIndicator}
+                disabled={submitting}
+              />
             )}
             {canMarkCannotTest && onShowCannotTestModal && (
               <Tooltip title="Báo không thể thử nghiệm">

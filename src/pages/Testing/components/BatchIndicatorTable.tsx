@@ -35,8 +35,36 @@ interface Props {
   editedValuesRef?: React.MutableRefObject<EditedValuesMap>;
   resultOptions?: ResultOption[];
   onResultSaved?: () => void;
-  onSubmitItem?: (itemId: string) => void;
+  onSubmitItem?: (itemId: string) => Promise<void>;
 }
+
+const SubmitBatchItemButton = React.memo<{
+  itemId: string;
+  label: string;
+  onSubmit: (itemId: string) => Promise<void>;
+}>(function SubmitBatchItemButton({ itemId, label, onSubmit }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <Button
+      type="primary"
+      size="small"
+      icon={<SendOutlined />}
+      loading={loading}
+      disabled={loading}
+      onClick={async (e) => {
+        e.stopPropagation();
+        setLoading(true);
+        try {
+          await onSubmit(itemId);
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      {label}
+    </Button>
+  );
+});
 
 const getItemStatus = (item: TestBatchItemDto, overrides?: { result?: string; testDate?: string }) => {
   const result = overrides?.result ?? item.result;
@@ -348,14 +376,11 @@ const BatchIndicatorTable: React.FC<Props> = ({
         if (!canEdit || !onSubmitItem || !canSelectItem(item)) return <span style={{ color: "#bfbfbf" }}>-</span>;
         const isRejected = !item.isSubmitted && !!item.rejectionReason;
         return (
-          <Button
-            type="primary"
-            size="small"
-            icon={<SendOutlined />}
-            onClick={(e) => { e.stopPropagation(); onSubmitItem(item.id); }}
-          >
-            {isRejected ? "Gửi lại" : "Gửi duyệt"}
-          </Button>
+          <SubmitBatchItemButton
+            itemId={item.id}
+            label={isRejected ? "Gửi lại" : "Gửi duyệt"}
+            onSubmit={onSubmitItem}
+          />
         );
       },
     },

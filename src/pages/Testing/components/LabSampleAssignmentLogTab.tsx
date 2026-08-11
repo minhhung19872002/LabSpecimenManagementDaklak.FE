@@ -45,6 +45,34 @@ const ACTIONABLE_STATUSES: QLKTDisplayStatus[] = [
   QLKTDisplayStatus.ResultRejected,
 ];
 
+const SubmitResultButton = React.memo<{
+  label: string;
+  onSubmit: () => Promise<void>;
+}>(function SubmitResultButton({ label, onSubmit }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <Tooltip title={label}>
+      <Button
+        size="small"
+        type="primary"
+        icon={<SendOutlined />}
+        loading={loading}
+        disabled={loading}
+        onClick={async () => {
+          setLoading(true);
+          try {
+            await onSubmit();
+          } finally {
+            setLoading(false);
+          }
+        }}
+      >
+        {label}
+      </Button>
+    </Tooltip>
+  );
+});
+
 // ---------- Row types ----------
 
 interface DisplayRow extends Partial<SampleAssignmentLogDto> {
@@ -188,7 +216,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
 
   const [editedResults, setEditedResults] = useState<Record<string, string>>({});
   const [editedTestDates, setEditedTestDates] = useState<Record<string, string>>({});
-  const submittingIds = new Set<string>();
   // indicatorId → list of result value options (from master data)
   const [resultValueMap, setResultValueMap] = useState<Map<string, string[]>>(new Map());
 
@@ -217,7 +244,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     indicatorName: string;
   }>({ visible: false, taskId: '', indicatorId: '', indicatorName: '' });
 
-  const [, setSubmittingId] = useState<string | null>(null);
 
   const [resultSearchHtml, setResultSearchHtml] = useState('');
   const [resultFilterOpen, setResultFilterOpen] = useState(false);
@@ -304,7 +330,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         return;
       }
 
-      setSubmittingId(labIndicatorId);
       try {
         await testingService.saveResults(taskId, {
           results: [{ indicatorId: labIndicatorId, result: resultValue.trim(), testDate }],
@@ -327,8 +352,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         reload();
       } catch (err: any) {
         message.error(err?.response?.data?.error?.message || 'Lỗi gửi kết quả');
-      } finally {
-        setSubmittingId(null);
       }
     },
     [editedResults, editedTestDates, reload],
@@ -560,7 +583,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
 
           if (!isActionable || !labIndicatorId) return null;
 
-          const isSubmitting = submittingIds.has(labIndicatorId);
           const buttonLabel =
             status === QLKTDisplayStatus.WaitingQLKTApproval ? 'Gửi lại' : 'Gửi KQ';
 
@@ -573,17 +595,10 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           return (
             <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
               {canSendResult && canSubmit && (
-                <Tooltip title={buttonLabel}>
-                  <Button
-                    size="small"
-                    type="primary"
-                    icon={<SendOutlined />}
-                    loading={isSubmitting}
-                    onClick={() => handleSubmitResult(record)}
-                  >
-                    {buttonLabel}
-                  </Button>
-                </Tooltip>
+                <SubmitResultButton
+                  label={buttonLabel}
+                  onSubmit={() => handleSubmitResult(record)}
+                />
               )}
               {canInputResult && (
                 <Tooltip title="Không TN được">
@@ -591,7 +606,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
                     size="small"
                     danger
                     icon={<StopOutlined />}
-                    disabled={isSubmitting}
                     onClick={() => handleCannotTest(record)}
                   />
                 </Tooltip>
@@ -653,7 +667,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     editedResults,
     editedTestDates,
     resultValueMap,
-    submittingIds,
     canInputResult,
     canSendResult,
     handleSubmitResult,

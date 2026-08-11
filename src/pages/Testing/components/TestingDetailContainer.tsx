@@ -49,7 +49,7 @@ interface SamplePanelContentProps {
   onImagesChange: (sampleId: string, imageType: SampleTestingImageType, images: SampleTestingImageDto[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onSaveIndicator: (indicatorId: string, result?: SaveIndicatorResultDto) => void;
-  onSubmitIndicator: (indicatorId: string) => void;
+  onSubmitIndicator: (indicatorId: string) => Promise<void>;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
   onShowCannotTestModal: (indicatorId: string, indicatorName: string) => void;
@@ -166,7 +166,7 @@ interface TestingDetailContainerProps {
     indicatorId: string,
     result?: SaveIndicatorResultDto,
   ) => void;
-  onSubmitIndicator: (indicatorId: string) => void;
+  onSubmitIndicator: (indicatorId: string) => Promise<void>;
   onUploadIndicatorImages?: (
     indicatorId: string,
     files: File[],

@@ -45,7 +45,7 @@ const BatchDetailPanel = React.memo<Props>(({
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const editedValuesRef = useRef<EditedValuesMap>(new Map());
   const [resultOptions, setResultOptions] = useState<{ value: string; label: string }[]>([]);
 
@@ -162,7 +162,6 @@ const BatchDetailPanel = React.memo<Props>(({
       return;
     }
 
-    setSubmitting(true);
     try {
       await testBatchService.submitItems(batchDetail.id, [itemId]);
       message.success("Gửi kết quả thành công");
@@ -170,8 +169,6 @@ const BatchDetailPanel = React.memo<Props>(({
       onBatchesChanged();
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message || "Lỗi gửi kết quả");
-    } finally {
-      setSubmitting(false);
     }
   }, [batchDetail, loadDetail, onBatchesChanged]);
 
@@ -272,7 +269,8 @@ const BatchDetailPanel = React.memo<Props>(({
                 size="small"
                 type="primary"
                 icon={<SendOutlined />}
-                disabled={selectedItemIds.length === 0}
+                loading={submitting}
+                disabled={selectedItemIds.length === 0 || submitting}
                 onClick={handleOpenSubmitConsumption}
               >
                 Gửi ({selectedItemIds.length})
