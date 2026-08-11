@@ -19,7 +19,6 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "storageAvailableQuantity", title: "Tồn kho đầu kỳ (số lượng)", defaultVisible: true },
   { key: "theoreticalConsumption", title: "Tiêu hao lý thuyết", defaultVisible: true },
   { key: "expectedStockConsumable", title: "Tồn kho dự kiến", defaultVisible: true },
-  { key: "usage", title: "Sử dụng", defaultVisible: true },
   { key: "earliestLotExpiryDate", title: "Hạn sử dụng", defaultVisible: true },
   { key: "storageConditions", title: "Điều kiện bảo quản", defaultVisible: true },
   { key: "earliestLotNumber", title: "Code/Lot", defaultVisible: true },
@@ -212,20 +211,6 @@ export const getProductColumns = (
         }
 
         return `${expected.toLocaleString("vi-VN")} ${storageUnit}`.trim();
-      },
-    });
-  }
-
-  if (visibleKeys.has("usage")) {
-    columns.push({
-      title: "Sử dụng",
-      key: "usage",
-      width: 130,
-      align: "right" as const,
-      render: (_: any, record: ProductDto) => {
-        const qty = record.storageTotalConsumedQuantity || 0;
-        const unitName = record.baseUnitName || "";
-        return qty > 0 ? `${qty} ${unitName}`.trim() : "-";
       },
     });
   }
