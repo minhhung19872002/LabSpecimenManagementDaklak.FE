@@ -33,8 +33,8 @@ interface WarehouseSection {
 
 interface InventoryItem {
   productId: string;
-  actualQuantity: number | null;
-  actualUnitId: string;
+  actualQuantityStorage: number | null;
+  actualQuantityConsumable: number | null;
   reason: string;
 }
 
@@ -125,11 +125,31 @@ const StockInventoryForm: React.FC = () => {
 
         const items: InventoryItem[] = products.map(p => {
           const existing = whItems.find(i => i.productId === p.id);
+          if (!existing) {
+            return {
+              productId: p.id,
+              actualQuantityStorage: null,
+              actualQuantityConsumable: null,
+              reason: "",
+            };
+          }
+
+          const hasVolume = p.volumePerUnit && p.volumePerUnit > 0;
+          let storage: number | null = null;
+          let consumable: number | null = null;
+
+          if (hasVolume && (!existing.actualUnitId || existing.actualUnitId === p.volumeUnitId)) {
+            storage = Math.floor(existing.actualQuantity / p.volumePerUnit!);
+            consumable = Math.round((existing.actualQuantity - storage * p.volumePerUnit!) * 100) / 100;
+          } else {
+            storage = existing.actualQuantity;
+          }
+
           return {
             productId: p.id,
-            actualQuantity: existing?.actualQuantity ?? null,
-            actualUnitId: existing?.actualUnitId || p.volumeUnitId || p.baseUnitId,
-            reason: existing?.reason || "",
+            actualQuantityStorage: storage,
+            actualQuantityConsumable: consumable,
+            reason: existing.reason || "",
           };
         });
 
@@ -176,8 +196,8 @@ const StockInventoryForm: React.FC = () => {
 
       const items: InventoryItem[] = result.items.map(p => ({
         productId: p.id,
-        actualQuantity: null,
-        actualUnitId: p.volumeUnitId || p.baseUnitId,
+        actualQuantityStorage: null,
+        actualQuantityConsumable: null,
         reason: "",
       }));
 
@@ -216,31 +236,37 @@ const StockInventoryForm: React.FC = () => {
     }));
   }, []);
 
-  const convertExpectedToActualUnit = (product: ProductDto, actualUnitId: string | undefined): number | undefined => {
-    const expected = product.expectedStockConsumable;
-    if (!expected && expected !== 0) return undefined;
-    if (!actualUnitId || actualUnitId === product.volumeUnitId) return expected;
-    if (actualUnitId === product.baseUnitId && product.volumePerUnit && product.volumePerUnit > 0) {
-      return expected / product.volumePerUnit;
+  const combineActualQuantity = (product: ProductDto, item: InventoryItem): number | null => {
+    const hasStorage = item.actualQuantityStorage !== null;
+    const hasConsumable = item.actualQuantityConsumable !== null;
+    if (!hasStorage && !hasConsumable) return null;
+
+    const hasVolume = product.volumePerUnit && product.volumePerUnit > 0 && product.volumeUnitId;
+    if (hasVolume) {
+      return (item.actualQuantityStorage ?? 0) * product.volumePerUnit! + (item.actualQuantityConsumable ?? 0);
     }
-    return expected;
+    return item.actualQuantityStorage ?? 0;
   };
 
   const buildPayload = (): CreateUpdateStockAdjustmentDto => {
     const allItems = sections.flatMap(s =>
-      s.items
-        .filter(item => item.actualQuantity !== null && item.actualQuantity !== undefined)
-        .map(item => {
-          const product = s.products.find(p => p.id === item.productId);
-          return {
-            productId: item.productId,
-            actualQuantity: item.actualQuantity!,
-            warehouseId: s.warehouseId,
-            actualUnitId: item.actualUnitId || undefined,
-            reason: item.reason || undefined,
-            expectedStock: product ? convertExpectedToActualUnit(product, item.actualUnitId) : undefined,
-          };
-        })
+      s.items.map(item => {
+        const product = s.products.find(p => p.id === item.productId);
+        const hasVolume = product && product.volumePerUnit && product.volumePerUnit > 0 && product.volumeUnitId;
+
+        const combined = product ? combineActualQuantity(product, item) : null;
+        const actualQuantity = combined ?? (product?.expectedStockConsumable ?? 0);
+        const actualUnitId = hasVolume ? product.volumeUnitId : product?.baseUnitId || undefined;
+
+        return {
+          productId: item.productId,
+          actualQuantity,
+          warehouseId: s.warehouseId,
+          actualUnitId,
+          reason: item.reason || undefined,
+          expectedStock: product?.expectedStockConsumable,
+        };
+      })
     );
 
     return {
@@ -252,8 +278,8 @@ const StockInventoryForm: React.FC = () => {
 
   const handleSaveDraft = async () => {
     const payload = buildPayload();
-    if (payload.items.length === 0) {
-      message.warning("Vui lòng nhập số lượng thực tế cho ít nhất một vật tư");
+    if (sections.length === 0) {
+      message.warning("Vui lòng thêm ít nhất một kho để kiểm kê");
       return;
     }
 
@@ -276,11 +302,11 @@ const StockInventoryForm: React.FC = () => {
   };
 
   const handleConfirm = async () => {
-    const payload = buildPayload();
-    if (payload.items.length === 0) {
-      message.warning("Vui lòng nhập số lượng thực tế cho ít nhất một vật tư");
+    if (sections.length === 0) {
+      message.warning("Vui lòng thêm ít nhất một kho để kiểm kê");
       return;
     }
+    const payload = buildPayload();
 
     setConfirming(true);
     try {
@@ -303,21 +329,6 @@ const StockInventoryForm: React.FC = () => {
     }
   };
 
-  const getUnitOptions = (product: ProductDto) => {
-    const options: { value: string; label: string }[] = [];
-    if (product.volumeUnitId && product.volumeUnitName) {
-      options.push({ value: product.volumeUnitId, label: product.volumeUnitName });
-    }
-    if (product.baseUnitId && product.baseUnitName) {
-      options.push({ value: product.baseUnitId, label: product.baseUnitName });
-    }
-    if (product.packagingUnitId && product.packagingUnitName
-      && !options.some(o => o.value === product.packagingUnitId)) {
-      options.push({ value: product.packagingUnitId, label: product.packagingUnitName });
-    }
-    return options;
-  };
-
   const formatStock = (product: ProductDto) => {
     const qty = product.availableQuantity;
     const storageUnit = product.packagingUnitName || "";
@@ -333,12 +344,13 @@ const StockInventoryForm: React.FC = () => {
   };
 
   const computeDifference = (product: ProductDto, item: InventoryItem) => {
-    if (item.actualQuantity === null || item.actualQuantity === undefined) return null;
+    const actual = combineActualQuantity(product, item);
+    if (actual === null) return null;
 
-    const expectedInActualUnit = convertExpectedToActualUnit(product, item.actualUnitId);
-    if (expectedInActualUnit === undefined) return null;
+    const expected = product.expectedStockConsumable;
+    if (!expected && expected !== 0) return null;
 
-    return item.actualQuantity - expectedInActualUnit;
+    return actual - expected;
   };
 
   const renderWarehouseTable = (section: WarehouseSection) => {
@@ -436,36 +448,61 @@ const StockInventoryForm: React.FC = () => {
       },
       {
         title: "Số lượng thực tế",
-        width: 220,
+        width: 320,
         render: (_: any, record: ProductDto) => {
           const item = section.items.find(i => i.productId === record.id);
           if (!item) return null;
-          const unitOptions = getUnitOptions(record);
+
+          const hasVolume = record.volumePerUnit && record.volumePerUnit > 0 && record.volumeUnitName;
+          const storageUnitName = record.packagingUnitName || record.baseUnitName || "";
 
           return (
-            <Space.Compact style={{ width: "100%" }}>
-              <NumericFormat
-                value={item.actualQuantity ?? ""}
-                onValueChange={(values) => {
-                  updateItem(section.warehouseId, record.id, "actualQuantity", values.floatValue ?? null);
-                }}
-                allowNegative={false}
-                decimalScale={2}
-                thousandSeparator="."
-                decimalSeparator=","
-                customInput={Input}
-                style={{ flex: 1 }}
-                placeholder="Nhập SL"
-                disabled={isReadonly}
-              />
-              <Select
-                value={item.actualUnitId}
-                onChange={(v) => updateItem(section.warehouseId, record.id, "actualUnitId", v)}
-                options={unitOptions}
-                style={{ width: 90 }}
-                disabled={isReadonly}
-              />
-            </Space.Compact>
+            <div style={{ display: "flex", gap: 6 }}>
+              <Space.Compact style={{ flex: 1 }}>
+                <NumericFormat
+                  value={item.actualQuantityStorage ?? ""}
+                  onValueChange={(values) => {
+                    updateItem(section.warehouseId, record.id, "actualQuantityStorage", values.floatValue ?? null);
+                  }}
+                  allowNegative={false}
+                  decimalScale={2}
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  customInput={Input}
+                  style={{ flex: 1 }}
+                  placeholder="Nhập SL"
+                  disabled={isReadonly}
+                />
+                <Input
+                  value={storageUnitName}
+                  disabled
+                  style={{ width: 65, textAlign: "center" }}
+                />
+              </Space.Compact>
+              {hasVolume && (
+                <Space.Compact style={{ flex: 1 }}>
+                  <NumericFormat
+                    value={item.actualQuantityConsumable ?? ""}
+                    onValueChange={(values) => {
+                      updateItem(section.warehouseId, record.id, "actualQuantityConsumable", values.floatValue ?? null);
+                    }}
+                    allowNegative={false}
+                    decimalScale={2}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    customInput={Input}
+                    style={{ flex: 1 }}
+                    placeholder="Nhập SL"
+                    disabled={isReadonly}
+                  />
+                  <Input
+                    value={record.volumeUnitName}
+                    disabled
+                    style={{ width: 65, textAlign: "center" }}
+                  />
+                </Space.Compact>
+              )}
+            </div>
           );
         },
       },
@@ -522,7 +559,7 @@ const StockInventoryForm: React.FC = () => {
         rowKey="id"
         size="small"
         pagination={false}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1500 }}
       />
     );
   };
