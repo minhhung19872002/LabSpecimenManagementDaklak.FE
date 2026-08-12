@@ -16,11 +16,12 @@ import {
   StockAdjustmentStatus,
   CreateUpdateStockAdjustmentDto,
 } from "../../services/stockAdjustmentService";
-import { productService, ProductDto } from "../../services/productService";
+import { productService, ProductDto, ProductTypeLabels } from "../../services/productService";
 import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import { authService } from "../../services/authService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import { PATH_ROUTES } from "../../constants/routes";
+import { formatStockPackaging, formatConsumption, renderExpectedStock } from "./utils";
 import "../../styles/ListCard.css";
 
 interface WarehouseSection {
@@ -329,20 +330,6 @@ const StockInventoryForm: React.FC = () => {
     }
   };
 
-  const formatStock = (product: ProductDto) => {
-    const qty = product.availableQuantity;
-    const storageUnit = product.packagingUnitName || "";
-    const intPart = Math.floor(qty);
-    const decPart = qty - intPart;
-
-    if (decPart === 0 || !product.volumePerUnit || !product.volumeUnitName) {
-      return `${qty} ${storageUnit}`.trim();
-    }
-
-    const consumableAmount = Math.round(decPart * product.volumePerUnit);
-    return `${intPart} ${storageUnit} - ${consumableAmount} ${product.volumeUnitName}`;
-  };
-
   const computeDifference = (product: ProductDto, item: InventoryItem) => {
     const actual = combineActualQuantity(product, item);
     if (actual === null) return null;
@@ -373,19 +360,13 @@ const StockInventoryForm: React.FC = () => {
         title: "Phân loại",
         dataIndex: "productType",
         width: 100,
-        render: (type: number) => {
-          const labels: Record<number, string> = {
-            0: "Hóa chất", 1: "Sinh phẩm", 2: "VT tiêu hao",
-            3: "Chất chuẩn", 4: "Dung môi", 5: "Thiết bị", 6: "DD pha",
-          };
-          return labels[type] || "-";
-        },
+        render: (type: number) => ProductTypeLabels[type as keyof typeof ProductTypeLabels] || "-",
       },
       {
         title: "Tồn kho đầu kỳ",
         width: 160,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => formatStock(record),
+        render: (_: any, record: ProductDto) => formatStockPackaging(record.availableQuantity, record),
       },
       {
         title: "Tồn kho đầu kỳ (số lượng)",
@@ -402,11 +383,7 @@ const StockInventoryForm: React.FC = () => {
         title: "Tiêu hao trong kỳ",
         width: 130,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => {
-          if (!record.theoreticalConsumption) return "-";
-          const unit = record.volumeUnitName || record.baseUnitName || "";
-          return `${record.theoreticalConsumption.toLocaleString("vi-VN")} ${unit}`.trim();
-        },
+        render: (_: any, record: ProductDto) => formatConsumption(record.theoreticalConsumption, record),
       },
       {
         title: "Tồn kho cuối kỳ (Dự kiến)",
@@ -415,35 +392,7 @@ const StockInventoryForm: React.FC = () => {
         render: (_: any, record: ProductDto) => {
           const expected = record.expectedStockConsumable;
           if (!record.consumableImportedQuantity && !expected) return "-";
-
-          const storageUnit = record.packagingUnitName || "";
-          const volumeUnit = record.volumeUnitName || "";
-
-          if (record.volumePerUnit && record.volumePerUnit > 0 && volumeUnit) {
-            const volumeLine = `${expected.toLocaleString("vi-VN")} ${volumeUnit}`;
-            if (expected < 0) {
-              return (
-                <div style={{ color: "#ff4d4f" }}>
-                  <div>{volumeLine}</div>
-                </div>
-              );
-            }
-            const expectedBase = expected / record.volumePerUnit;
-            const intPart = Math.floor(expectedBase);
-            const decPart = expectedBase - intPart;
-            const packagingLine = decPart === 0
-              ? `${expectedBase.toLocaleString("vi-VN")} ${storageUnit}`
-              : `${intPart.toLocaleString("vi-VN")} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN")} ${volumeUnit}`;
-            return (
-              <div>
-                <div>{packagingLine}</div>
-                <div style={{ fontSize: 12, color: "#888" }}>{volumeLine}</div>
-              </div>
-            );
-          }
-
-          const unit = volumeUnit || record.baseUnitName || "";
-          return `${expected.toLocaleString("vi-VN")} ${unit}`.trim();
+          return renderExpectedStock(expected, record);
         },
       },
       {

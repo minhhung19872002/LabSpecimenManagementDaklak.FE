@@ -15,6 +15,8 @@ import {
   StockAdjustmentStatusLabels,
   StockAdjustmentStatusColors,
 } from "../../services/stockAdjustmentService";
+import { ProductTypeLabels } from "../../services/productService";
+import { formatStockPackaging, formatConsumableQuantity, formatConsumption, renderExpectedStock } from "./utils";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { PATH_ROUTES } from "../../constants/routes";
@@ -130,40 +132,51 @@ const StockAdjustmentDetail: React.FC = () => {
       ellipsis: true,
     },
     {
+      title: "Phân loại",
+      dataIndex: "productType",
+      width: 100,
+      render: (v: number | undefined) => (v != null ? ProductTypeLabels[v as keyof typeof ProductTypeLabels] : "-") || "-",
+    },
+    {
+      title: "Tồn kho đầu kỳ",
+      dataIndex: "quantityBefore",
+      width: 160,
+      align: "right" as const,
+      render: (v: number, record: StockAdjustmentItemDto) => {
+        if (!v && v !== 0) return "-";
+        return formatStockPackaging(v, record);
+      },
+    },
+    {
+      title: "Tồn kho đầu kỳ (số lượng)",
+      dataIndex: "quantityBefore",
+      width: 160,
+      align: "right" as const,
+      render: (v: number, record: StockAdjustmentItemDto) => {
+        if (!v && v !== 0) return "-";
+        return formatConsumableQuantity(v, record);
+      },
+    },
+    {
+      title: "Tiêu hao trong kỳ",
+      width: 130,
+      align: "right" as const,
+      render: (_: any, record: StockAdjustmentItemDto) => {
+        if (record.expectedStock == null || (!record.quantityBefore && record.quantityBefore !== 0)) return "-";
+        const initial = record.volumePerUnit && record.volumePerUnit > 0
+          ? record.quantityBefore * record.volumePerUnit
+          : record.quantityBefore;
+        return formatConsumption(initial - record.expectedStock, record);
+      },
+    },
+    {
       title: "Tồn kho cuối kỳ (Dự kiến)",
       dataIndex: "expectedStock",
       width: 180,
       align: "right" as const,
       render: (v: number | null | undefined, record: StockAdjustmentItemDto) => {
         if (v == null) return "-";
-        const volumeUnit = record.volumeUnitName || "";
-        const storageUnit = record.packagingUnitName || "";
-
-        if (record.volumePerUnit && record.volumePerUnit > 0 && volumeUnit) {
-          const volumeLine = `${v.toLocaleString("vi-VN")} ${volumeUnit}`;
-          if (v < 0) {
-            return (
-              <div style={{ color: "#ff4d4f" }}>
-                <div>{volumeLine}</div>
-              </div>
-            );
-          }
-          const expectedBase = v / record.volumePerUnit;
-          const intPart = Math.floor(expectedBase);
-          const decPart = expectedBase - intPart;
-          const packagingLine = decPart === 0
-            ? `${expectedBase.toLocaleString("vi-VN")} ${storageUnit}`
-            : `${intPart.toLocaleString("vi-VN")} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN")} ${volumeUnit}`;
-          return (
-            <div>
-              <div>{packagingLine}</div>
-              <div style={{ fontSize: 12, color: "#888" }}>{volumeLine}</div>
-            </div>
-          );
-        }
-
-        const unit = record.actualUnitName || record.unitName || "";
-        return `${v.toLocaleString("vi-VN")} ${unit}`.trim();
+        return renderExpectedStock(v, record);
       },
     },
     {
@@ -320,7 +333,7 @@ const StockAdjustmentDetail: React.FC = () => {
                 rowKey="id"
                 size="small"
                 pagination={false}
-                scroll={{ x: 900 }}
+                scroll={{ x: 1500 }}
               />
             </div>
           );

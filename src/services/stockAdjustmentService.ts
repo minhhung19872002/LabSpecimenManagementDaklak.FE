@@ -48,6 +48,8 @@ export interface StockAdjustmentItemDto {
   volumePerUnit?: number;
   packagingUnitName?: string;
   volumeUnitName?: string;
+  productType?: number;
+  baseUnitName?: string;
 }
 
 export interface StockAdjustmentDto extends StockAdjustmentListDto {
