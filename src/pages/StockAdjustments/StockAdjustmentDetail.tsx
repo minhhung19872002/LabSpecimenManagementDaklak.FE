@@ -130,7 +130,7 @@ const StockAdjustmentDetail: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: "Tồn kho dự kiến",
+      title: "Tồn kho cuối kỳ (Dự kiến)",
       dataIndex: "expectedStock",
       width: 180,
       align: "right" as const,

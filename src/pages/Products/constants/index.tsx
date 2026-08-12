@@ -17,8 +17,8 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "earliestReceivedDate", title: "Ngày nhận", defaultVisible: true },
   { key: "availableQuantity", title: "Tồn kho đầu kỳ", defaultVisible: true },
   { key: "storageAvailableQuantity", title: "Tồn kho đầu kỳ (số lượng)", defaultVisible: true },
-  { key: "theoreticalConsumption", title: "Tiêu hao lý thuyết", defaultVisible: true },
-  { key: "expectedStockConsumable", title: "Tồn kho dự kiến", defaultVisible: true },
+  { key: "theoreticalConsumption", title: "Tiêu hao trong kỳ", defaultVisible: true },
+  { key: "expectedStockConsumable", title: "Tồn kho cuối kỳ (Dự kiến)", defaultVisible: true },
   { key: "earliestLotExpiryDate", title: "Hạn sử dụng", defaultVisible: true },
   { key: "storageConditions", title: "Điều kiện bảo quản", defaultVisible: true },
   { key: "earliestLotNumber", title: "Code/Lot", defaultVisible: true },
@@ -160,7 +160,7 @@ export const getProductColumns = (
 
   if (visibleKeys.has("theoreticalConsumption")) {
     columns.push({
-      title: "Tiêu hao lý thuyết",
+      title: "Tiêu hao trong kỳ",
       dataIndex: "theoreticalConsumption",
       key: "theoreticalConsumption",
       width: 160,
@@ -175,7 +175,7 @@ export const getProductColumns = (
 
   if (visibleKeys.has("expectedStockConsumable")) {
     columns.push({
-      title: "Tồn kho dự kiến",
+      title: "Tồn kho cuối kỳ (Dự kiến)",
       dataIndex: "expectedStockConsumable",
       key: "expectedStockConsumable",
       width: 180,
