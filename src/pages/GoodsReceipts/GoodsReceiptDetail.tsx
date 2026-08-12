@@ -300,7 +300,7 @@ const GoodsReceiptDetail: React.FC = () => {
         title={
           <div className="card-header-flex">
             <Space wrap>
-              <span>Chi tiết phiếu nhập hàng</span>
+              <span>Chi tiết phiếu dự trù và đặt hàng</span>
               <Tag className="receipt-code-tag">{receipt.code}</Tag>
               <Tag color={OrderStatusColors[receipt.orderStatus]}>
                 {OrderStatusLabels[receipt.orderStatus]}

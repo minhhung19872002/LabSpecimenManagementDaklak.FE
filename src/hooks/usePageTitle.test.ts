@@ -15,7 +15,7 @@ describe('getTitleForPath - GoodsReceipts routes', () => {
   });
 
   it('should return title for goods receipt detail', () => {
-    expect(getTitleForPath('/goods-receipts/some-uuid')).toBe('Chi tiết phiếu nhập hàng');
+    expect(getTitleForPath('/goods-receipts/some-uuid')).toBe('Chi tiết phiếu dự trù và đặt hàng');
   });
 
   it('should match list route for sub-paths (end: false)', () => {
