@@ -20,7 +20,7 @@ interface RichTextEditorProps {
   placeholder?: string;
   disabled?: boolean;
   showToolbar?: boolean;
-  /** Min height of editor content area (default: 32px, or 180px when showToolbar) */
+  /** Min height of editor content area (default: 32px, or 100px when showToolbar) */
   minHeight?: number;
   /** Size variant matching Ant Design sizing (default: "default") */
   size?: "small" | "default";
@@ -91,7 +91,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         codeBlock: false,
         code: false,
         horizontalRule: false,
-        hardBreak: false,
       }),
       Underline,
       Subscript,
@@ -129,10 +128,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     return null;
   }
 
-  const effectiveMinHeight = minHeight ?? (showToolbar ? 180 : 32);
+  const effectiveMinHeight = minHeight ?? (showToolbar ? 100 : 32);
 
   return (
-    <div className={`rich-text-editor-wrapper ${showToolbar ? "with-toolbar" : ""} ${size === "small" ? "rte-small" : ""}`}>
+    <div
+      className={`rich-text-editor-wrapper ${showToolbar ? "with-toolbar" : ""} ${size === "small" ? "rte-small" : ""}`}
+    >
       {showToolbar && (
         <div
           className="rte-toolbar"
@@ -221,27 +222,54 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </ToolbarButton>
         </div>
       )}
-      <EditorContent editor={editor} />
+      {showToolbar ? (
+        <div
+          className="rte-editor-area"
+          style={{
+            minHeight: effectiveMinHeight,
+            resize: "vertical",
+            overflow: "auto",
+            border: "1px solid #d9d9d9",
+            borderTop: "none",
+            borderRadius: "0 0 6px 6px",
+            background: "#fff",
+            transition: "border-color 0.2s, box-shadow 0.2s",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <EditorContent editor={editor} />
+        </div>
+      ) : (
+        <EditorContent editor={editor} />
+      )}
       <style>{`
         .rich-text-editor-wrapper {
           width: 100%;
         }
         .rich-text-editor-wrapper .tiptap {
           box-sizing: border-box;
-          min-height: ${effectiveMinHeight}px;
+          min-height: 32px;
           padding: 4px 11px;
           border: 1px solid #d9d9d9;
           border-radius: 6px;
           outline: none;
-          transition: all 0.2s;
+          transition: border-color 0.2s, box-shadow 0.2s;
           font-size: 14px;
           line-height: 22px;
           background: #fff;
         }
-        .rich-text-editor-wrapper.with-toolbar .tiptap {
-          border-top-left-radius: 0;
-          border-top-right-radius: 0;
-          border-top: none;
+        .rich-text-editor-wrapper.with-toolbar .rte-editor-area > div {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        .rich-text-editor-wrapper.with-toolbar .rte-editor-area .tiptap {
+          flex: 1;
+          border: none;
+          border-radius: 0;
+          min-height: auto;
+          background: transparent;
         }
         .rich-text-editor-wrapper:hover .tiptap {
           border-color: #4096ff;
@@ -250,15 +278,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           border-color: #1677ff;
           box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
         }
+        .rich-text-editor-wrapper.with-toolbar:hover .rte-editor-area {
+          border-color: #4096ff;
+        }
         .rich-text-editor-wrapper.with-toolbar:hover .rte-toolbar {
           border-color: #4096ff;
+        }
+        .rich-text-editor-wrapper.with-toolbar:focus-within .rte-editor-area {
+          border-color: #1677ff;
+          box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
         }
         .rich-text-editor-wrapper.with-toolbar:focus-within .rte-toolbar {
           border-color: #1677ff;
           box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
-        }
-        .rich-text-editor-wrapper.with-toolbar:focus-within .tiptap {
-          box-shadow: 0 2px 0 0 rgba(5, 145, 255, 0.1);
         }
         .rich-text-editor-wrapper .tiptap p {
           margin: 0;

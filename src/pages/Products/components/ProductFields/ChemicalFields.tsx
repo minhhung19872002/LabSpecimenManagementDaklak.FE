@@ -60,7 +60,7 @@ const ChemicalFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
       </Row>
 
       <Row gutter={16}>
-        <Col xs={24} sm={14}>
+        <Col xs={24} sm={12}>
           <Form.Item
             label="Mã nhận dạng"
             required
@@ -83,7 +83,7 @@ const ChemicalFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
             />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={10}>
+        <Col xs={24} sm={12}>
           <Form.Item label="Công thức hóa học">
             <Controller
               name="chemicalFormula"
@@ -97,7 +97,7 @@ const ChemicalFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
       </Row>
 
       <Row gutter={16}>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             label={
               <Space size={4}>
@@ -117,25 +117,7 @@ const ChemicalFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
             />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={8}>
-          <Form.Item label="Cấu hình kỹ thuật">
-            <Controller
-              name="formattedConcentration"
-              control={control}
-              render={({ field }) => (
-                <RichTextEditor
-                  value={field.value || ""}
-                  onChange={(html, plainText) => {
-                    field.onChange(html);
-                    setValue("concentration", plainText);
-                  }}
-                  placeholder="VD: ≥ 99.5%"
-                />
-              )}
-            />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={12}>
           <Form.Item
             label={
               <Space size={4}>
@@ -163,6 +145,28 @@ const ChemicalFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
                   addonAfter={consumptionUnitLabel || undefined}
                   style={{ width: "100%" }}
                   placeholder="VD: 10"
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={16}>
+        <Col xs={24}>
+          <Form.Item label="Cấu hình kỹ thuật">
+            <Controller
+              name="formattedConcentration"
+              control={control}
+              render={({ field }) => (
+                <RichTextEditor
+                  showToolbar
+                  value={field.value || ""}
+                  onChange={(html, plainText) => {
+                    field.onChange(html);
+                    setValue("concentration", plainText);
+                  }}
+                  placeholder="VD: ≥ 99.5%"
                 />
               )}
             />

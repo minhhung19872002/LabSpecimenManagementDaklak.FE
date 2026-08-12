@@ -243,13 +243,14 @@ const SupplyFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, identi
       </Row>
 
       <Row gutter={16}>
-        <Col xs={24} sm={16}>
+        <Col xs={24}>
           <Form.Item label="Cấu hình kỹ thuật">
             <Controller
               name="formattedConcentration"
               control={control}
               render={({ field }) => (
                 <RichTextEditor
+                  showToolbar
                   value={field.value || ""}
                   onChange={(html, plainText) => {
                     field.onChange(html);
