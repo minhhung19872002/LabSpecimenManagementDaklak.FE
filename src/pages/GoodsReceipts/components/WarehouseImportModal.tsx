@@ -40,12 +40,12 @@ const generateBarcodeContent = (
   fallbackDate?: string
 ): string => {
   const parts: string[] = [];
-  if (item.lotNumber) parts.push(item.lotNumber);
   if (item.identificationCode) parts.push(item.identificationCode);
   const dateStr = formatDateForBarcode(item.receivedDate || fallbackDate);
   if (dateStr) parts.push(dateStr);
-  parts.push(String(sequence).padStart(3, "0"));
-  const raw = removeAccents(parts.join("-"));
+  if (item.lotNumber) parts.push(item.lotNumber);
+  parts.push(String(sequence).padStart(4, "0"));
+  const raw = removeAccents(parts.join(""));
   return raw.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "");
 };
 
@@ -99,8 +99,8 @@ const calcBarcodeCountFromImportUnit = (
 
 const BARCODE_OPTIONS = {
   format: "CODE128" as const,
-  width: 2,
-  height: 60,
+  width: 1.5,
+  height: 50,
   displayValue: true,
   fontSize: 12,
   margin: 5,
