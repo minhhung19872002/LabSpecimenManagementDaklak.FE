@@ -1,5 +1,6 @@
 import React from "react";
-import { Row, Col, Spin } from "antd";
+import { Row, Col, Spin, Button } from "antd";
+import { HistoryOutlined } from "@ant-design/icons";
 import DOMPurify from "dompurify";
 import { ProductDetailDto } from "../../../services/productService";
 import { IndicatorName } from "../../../components/common";
@@ -7,6 +8,7 @@ import { IndicatorName } from "../../../components/common";
 export interface ProductInfoPanelProps {
   detail: ProductDetailDto | null;
   loading?: boolean;
+  onOpenLotHistory?: () => void;
 }
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -18,7 +20,7 @@ const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label
   </div>
 );
 
-const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) => {
+const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading, onOpenLotHistory }) => {
   const qtyUnit = detail?.packagingUnitName || detail?.baseUnitName || "";
 
   return (
@@ -125,6 +127,17 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) 
             />
 
             <DetailItem label="Cấu hình kỹ thuật" value={detail.mainTechnicalSpecs} />
+
+            {onOpenLotHistory && (
+              <div style={{ marginTop: 16 }}>
+                <Button
+                  icon={<HistoryOutlined />}
+                  onClick={onOpenLotHistory}
+                >
+                  Xem lịch sử
+                </Button>
+              </div>
+            )}
           </>
         )}
       </Spin>

@@ -5,6 +5,7 @@ import {
   ProductDetailDto,
   ProductImportHistoryDto,
   ProductMaterialReceiptHistoryDto,
+  BarcodeLotGroupDto,
 } from "../../../services/productService";
 import ProductInfoPanel from "./ProductInfoPanel";
 import ImportHistoryToolbar from "./ImportHistoryToolbar";
@@ -13,6 +14,7 @@ import UsageHistoryTab from "./UsageHistoryTab";
 import MaterialReceiptHistoryToolbar from "./MaterialReceiptHistoryToolbar";
 import MaterialReceiptHistoryTable from "./MaterialReceiptHistoryTable";
 import BarcodeListModal from "./BarcodeListModal";
+import BarcodeLotHistoryModal from "./BarcodeLotHistoryModal";
 
 type DateRange = [dayjs.Dayjs | null, dayjs.Dayjs | null] | null;
 
@@ -44,6 +46,11 @@ export interface ProductDetailViewProps {
   onMaterialReceiptClick: (receiptId: string) => void;
   onBarcodeListClick: (barcodes: string[]) => void;
   onBarcodeListClose: () => void;
+  lotHistoryOpen: boolean;
+  lotHistoryGroups: BarcodeLotGroupDto[];
+  lotHistoryLoading: boolean;
+  onOpenLotHistory: () => void;
+  onCloseLotHistory: () => void;
 }
 
 const ProductDetailView: React.FC<ProductDetailViewProps> = ({
@@ -73,6 +80,11 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onMaterialReceiptClick,
   onBarcodeListClick,
   onBarcodeListClose,
+  lotHistoryOpen,
+  lotHistoryGroups,
+  lotHistoryLoading,
+  onOpenLotHistory,
+  onCloseLotHistory,
 }) => {
   const tabItems = [
     {
@@ -134,7 +146,7 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     <Card className="list-card" title={pageTitle}>
       <Row gutter={20}>
         <Col xs={24} md={8} lg={7} className="detail-left-col">
-          <ProductInfoPanel detail={detail} loading={detailLoading} />
+          <ProductInfoPanel detail={detail} loading={detailLoading} onOpenLotHistory={onOpenLotHistory} />
         </Col>
         <Col xs={24} md={16} lg={17}>
           <Tabs defaultActiveKey="usage-history" items={tabItems} />
@@ -144,6 +156,12 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         open={selectedBarcodes.length > 0}
         barcodes={selectedBarcodes}
         onClose={onBarcodeListClose}
+      />
+      <BarcodeLotHistoryModal
+        open={lotHistoryOpen}
+        loading={lotHistoryLoading}
+        groups={lotHistoryGroups}
+        onClose={onCloseLotHistory}
       />
     </Card>
   );

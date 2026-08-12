@@ -9,6 +9,7 @@ import {
   ProductImportHistoryDto,
   ProductMaterialReceiptHistoryDto,
   ProductTypeLabels,
+  BarcodeLotGroupDto,
 } from "../../services/productService";
 import { PATH_ROUTES } from "../../constants/routes";
 import { getApiErrorMessage } from "../../utils/errorHandler";
@@ -41,6 +42,9 @@ const ProductDetailPage: React.FC = () => {
   const [materialHistoryPageSize, setMaterialHistoryPageSize] = useState(10);
   const [materialDateRange, setMaterialDateRange] = useState<DateRange>(null);
   const [selectedBarcodes, setSelectedBarcodes] = useState<string[]>([]);
+  const [lotHistoryOpen, setLotHistoryOpen] = useState(false);
+  const [lotHistoryGroups, setLotHistoryGroups] = useState<BarcodeLotGroupDto[]>([]);
+  const [lotHistoryLoading, setLotHistoryLoading] = useState(false);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -138,6 +142,20 @@ const ProductDetailPage: React.FC = () => {
     window.open(PATH_ROUTES.materialReceipts.detail(receiptId), "_blank");
   }, []);
 
+  const handleOpenLotHistory = useCallback(async () => {
+    if (!id) return;
+    setLotHistoryOpen(true);
+    setLotHistoryLoading(true);
+    try {
+      const data = await productService.getBarcodeLotHistory(id, warehouseId);
+      setLotHistoryGroups(data);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không thể tải lịch sử Code/Lot"));
+    } finally {
+      setLotHistoryLoading(false);
+    }
+  }, [id, warehouseId]);
+
   const typeLabel = detail ? ProductTypeLabels[detail.productType] || "" : "";
   const pageTitle = warehouseName
     ? `${warehouseName} - Chi tiết ${typeLabel.toLowerCase()}`
@@ -179,6 +197,11 @@ const ProductDetailPage: React.FC = () => {
         onMaterialReceiptClick={handleMaterialReceiptClick}
         onBarcodeListClick={setSelectedBarcodes}
         onBarcodeListClose={() => setSelectedBarcodes([])}
+        lotHistoryOpen={lotHistoryOpen}
+        lotHistoryGroups={lotHistoryGroups}
+        lotHistoryLoading={lotHistoryLoading}
+        onOpenLotHistory={handleOpenLotHistory}
+        onCloseLotHistory={() => setLotHistoryOpen(false)}
       />
     </div>
   );

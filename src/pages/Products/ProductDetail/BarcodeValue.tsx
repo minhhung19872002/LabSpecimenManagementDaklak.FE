@@ -3,9 +3,10 @@ import JsBarcode from "jsbarcode";
 
 interface BarcodeValueProps {
   value: string;
+  displayValue?: boolean;
 }
 
-const BarcodeValue: React.FC<BarcodeValueProps> = ({ value }) => {
+const BarcodeValue: React.FC<BarcodeValueProps> = ({ value, displayValue = true }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -18,7 +19,7 @@ const BarcodeValue: React.FC<BarcodeValueProps> = ({ value }) => {
         height: 32,
         margin: 2,
         fontSize: 10,
-        displayValue: true,
+        displayValue,
       });
     } catch {
       svgRef.current.replaceChildren();

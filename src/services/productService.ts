@@ -322,6 +322,25 @@ export interface GetProductMaterialReceiptHistoryInput {
   warehouseId?: string;
 }
 
+export enum InventoryBarcodeStatus {
+  InUse = 0,
+  UsedUp = 1,
+  NotUsed = 2,
+  Expired = 3,
+}
+
+export interface BarcodeLotItemDto {
+  code: string;
+  status: InventoryBarcodeStatus;
+}
+
+export interface BarcodeLotGroupDto {
+  warehouseImportReceiptItemId: string;
+  lotNumber?: string;
+  lotExpiryDate?: string;
+  barcodes: BarcodeLotItemDto[];
+}
+
 export interface ProductUsageLogItemDto {
   sampleCode: string;
   sampleName: string;
@@ -463,6 +482,13 @@ export const productService = {
       `${BASE_URL}/${id}/usage-log`,
       { params }
     );
+    return response.data;
+  },
+
+  getBarcodeLotHistory: async (id: string, warehouseId?: string): Promise<BarcodeLotGroupDto[]> => {
+    const params: Record<string, any> = {};
+    if (warehouseId) params.WarehouseId = warehouseId;
+    const response = await api.get<BarcodeLotGroupDto[]>(`${BASE_URL}/${id}/barcode-lot-history`, { params });
     return response.data;
   },
 
