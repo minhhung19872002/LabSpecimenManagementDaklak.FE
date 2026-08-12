@@ -175,7 +175,7 @@ const WarehouseImportDetail: React.FC = () => {
       render: (v?: string) => v || "-",
     },
     {
-      title: "Hạn lô",
+      title: "Hạn sử dụng",
       dataIndex: "lotExpiryDate",
       key: "lotExpiryDate",
       width: 110,
@@ -200,7 +200,7 @@ const WarehouseImportDetail: React.FC = () => {
       ),
     },
     {
-      title: "Chứng từ CL",
+      title: "COA",
       key: "qualityDocument",
       width: 160,
       render: (_, record) =>
