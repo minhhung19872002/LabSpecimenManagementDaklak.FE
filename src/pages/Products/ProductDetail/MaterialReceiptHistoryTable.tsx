@@ -51,7 +51,7 @@ const MaterialReceiptHistoryTable: React.FC<MaterialReceiptHistoryTableProps> = 
     {
       title: "Số lượng nhận",
       width: 135,
-      render: (_, record) => `${record.receivedQuantity.toLocaleString("vi-VN")} ${record.unitName || ""}`.trim(),
+      render: (_, record) => `${record.receivedQuantity.toLocaleString("vi-VN")} ${record.storageUnitName || record.unitName || ""}`.trim(),
     },
     {
       title: "Hạn sử dụng",
