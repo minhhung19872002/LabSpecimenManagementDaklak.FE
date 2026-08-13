@@ -222,6 +222,7 @@ export const PERMISSIONS = {
     Create: `${P}.Products.Create`,
     Edit: `${P}.Products.Edit`,
     Delete: `${P}.Products.Delete`,
+    Export: `${P}.Products.Export`,
   },
 
   // Master Data - Individual (DEPRECATED - use MasterData instead)

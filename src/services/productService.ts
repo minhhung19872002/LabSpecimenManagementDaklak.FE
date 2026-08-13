@@ -492,6 +492,23 @@ export const productService = {
     return response.data;
   },
 
+  exportInventory: async (params: {
+    warehouseId?: string;
+    search?: string;
+    productType?: ProductType;
+    isDraft?: boolean;
+  }): Promise<Blob> => {
+    const apiParams: Record<string, any> = {};
+    if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
+    if (params.search) apiParams.Search = params.search;
+    if (params.productType !== undefined && params.productType !== null)
+      apiParams.ProductType = params.productType;
+    if (params.isDraft !== undefined && params.isDraft !== null)
+      apiParams.IsDraft = params.isDraft;
+    const response = await api.download(`${BASE_URL}/export-inventory`, { params: apiParams });
+    return response.data;
+  },
+
   // File upload via existing file API
   uploadFile: async (file: File): Promise<{ fileId: string; fileName: string; fileSize: number; url: string }> => {
     const formData = new FormData();

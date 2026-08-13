@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, Button, Space, Tree, Spin, Tooltip, Typography } from "antd";
+import { Card, Button, Space, Tree, Spin, Tooltip, Typography, message } from "antd";
 import type { TreeDataNode } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,8 @@ import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { PATH_ROUTES } from "../../constants/routes";
 import { warehouseService, WarehouseDto } from "../../services/masterDataService";
+import { productService } from "../../services/productService";
+import { downloadBlobAsFile } from "../../services/importService";
 import "../../styles/ListCard.css";
 import "./ProductList.css";
 
@@ -100,12 +102,14 @@ const ProductList: React.FC = () => {
     handleModalCancel,
   } = useProductActions({ fetchData });
   const canCreateGoodsReceipt = authService.hasPermission(PERMISSIONS.GoodsReceipts.Create);
+  const canExport = authService.hasPermission(PERMISSIONS.Products.Export);
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(loadVisibleKeys);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [warehouseLoading, setWarehouseLoading] = useState(false);
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const loadWarehouses = async () => {
@@ -151,6 +155,34 @@ const ProductList: React.FC = () => {
     setVisibleKeys(keys);
     localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify([...keys]));
   };
+
+  const handleExportInventory = useCallback(async () => {
+    if (!warehouseId) {
+      message.warning("Vui lòng chọn kho trước khi xuất file kiểm kê.");
+      return;
+    }
+    setExporting(true);
+    try {
+      const blob = await productService.exportInventory({
+        warehouseId,
+        search: searchText || undefined,
+        productType: productTypeFilter,
+        isDraft: isDraftFilter,
+      });
+      const today = new Date();
+      const dateStr = [
+        String(today.getDate()).padStart(2, "0"),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        today.getFullYear(),
+      ].join("");
+      downloadBlobAsFile(blob, `KiemKeKho_${dateStr}.xlsx`);
+      message.success("Xuất file kiểm kê thành công!");
+    } catch {
+      message.error("Không thể xuất file kiểm kê.");
+    } finally {
+      setExporting(false);
+    }
+  }, [warehouseId, searchText, productTypeFilter, isDraftFilter]);
 
   const columns = useMemo(
     () => getProductColumns(visibleKeys),
@@ -203,6 +235,15 @@ const ProductList: React.FC = () => {
           title="Quản lý danh sách vật tư"
           extra={
             <Space>
+              {canExport && (
+                <Button
+                  loading={exporting}
+                  disabled={!warehouseId}
+                  onClick={handleExportInventory}
+                >
+                  Xuất file kiểm kê
+                </Button>
+              )}
               <Button
                 onClick={() => {
                   const params = new URLSearchParams();
