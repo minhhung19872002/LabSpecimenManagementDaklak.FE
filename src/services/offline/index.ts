@@ -42,6 +42,7 @@ export {
   // Offline-aware getActive methods
   getActiveIndicatorGroupsOffline,
   getActiveIndicatorsOffline,
+  getAllIndicatorsOffline,
   getActiveStorageLocationsOffline,
   getActiveLaboratoriesOffline,
   getActiveSpecimenTypesOffline,

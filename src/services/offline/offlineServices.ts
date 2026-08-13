@@ -425,6 +425,36 @@ export async function getActiveIndicatorsOffline(): Promise<IndicatorDto[]> {
 }
 
 /**
+ * Get ALL indicators (including inactive) with offline support.
+ * Used by TestRequest edit form so deactivated indicators still display correctly.
+ */
+export async function getAllIndicatorsOffline(): Promise<IndicatorDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+  const CACHE_TYPE = 'AllIndicator';
+
+  if (navigator.onLine) {
+    try {
+      const data = await indicatorService.getActive(true);
+      for (const item of data) {
+        await cacheEntity(CACHE_TYPE, item.id, item, false);
+      }
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType(CACHE_TYPE);
+        if (cachedEntities.length > 0) {
+          return cachedEntities.map(e => e.data as IndicatorDto);
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive(includeInactive) failed, returning cached data:', error);
+    }
+  }
+
+  const cachedEntities = await getCachedEntitiesByType(CACHE_TYPE);
+  return cachedEntities.map(e => e.data as IndicatorDto);
+}
+
+/**
  * Get active storage locations with offline support
  */
 export async function getActiveStorageLocationsOffline(): Promise<PagedResultDto<StorageLocationDto>> {

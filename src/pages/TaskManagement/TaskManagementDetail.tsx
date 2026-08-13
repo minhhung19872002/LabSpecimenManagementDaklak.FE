@@ -359,12 +359,10 @@ const TaskManagementDetail: React.FC = () => {
         processedIndicatorsRef.current.add(indicator.id);
 
         // Find matching standards for this indicator (and method + specimenType if available)
-        // Only consider active StandardIndicators
         const matchingStandards = standards.filter((standard) =>
           standard.indicators.some(
             (si) =>
               si.indicatorId === indicator.indicatorId &&
-              si.isActive === true &&
               (!indicator.methodId || si.testMethodId === indicator.methodId) &&
               (!indicator.specimenTypeId ||
                 !si.specimenTypeId ||

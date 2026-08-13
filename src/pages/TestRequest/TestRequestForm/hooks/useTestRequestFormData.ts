@@ -19,7 +19,7 @@ import {
 } from "../../../../services/masterDataService";
 import {
   getActiveIndicatorGroupsOffline,
-  getActiveIndicatorsOffline,
+  getAllIndicatorsOffline,
   getActiveStorageLocationsOffline,
   getActiveLaboratoriesOffline,
   getActiveSpecimenTypesOffline,
@@ -323,7 +323,7 @@ export const useTestRequestFormData = () => {
     try {
       const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData, specimenTypesWithIndsData, sampleConditionsData, sampleTypeCategoriesData] = await Promise.all([
         getActiveIndicatorGroupsOffline(),
-        getActiveIndicatorsOffline(),
+        getAllIndicatorsOffline(),
         getActiveStorageLocationsOffline(),
         getUserLookupOffline(),
         getActiveOrganizationsOffline(),
@@ -352,16 +352,15 @@ export const useTestRequestFormData = () => {
       })));
 
       // Build reverse map: indicatorId -> list of specimenTypes
+      // Include inactive SpecimenTypeIndicators so old records still resolve
       const indToSpecMap: Record<string, { id: string; name: string }[]> = {};
       (specimenTypesWithIndsData || []).forEach((st) => {
-        if (st.isActive && st.indicators) {
+        if (st.indicators) {
           st.indicators.forEach((ind) => {
-            if (ind.isActive) {
-              if (!indToSpecMap[ind.indicatorId]) {
-                indToSpecMap[ind.indicatorId] = [];
-              }
-              indToSpecMap[ind.indicatorId].push({ id: st.id, name: st.name });
+            if (!indToSpecMap[ind.indicatorId]) {
+              indToSpecMap[ind.indicatorId] = [];
             }
+            indToSpecMap[ind.indicatorId].push({ id: st.id, name: st.name });
           });
         }
       });
@@ -369,28 +368,26 @@ export const useTestRequestFormData = () => {
 
       // Build map: indicatorId -> methods[]
       // Cùng 1 chỉ tiêu + phương pháp có thể có nhiều nền mẫu khác nhau
+      // Include inactive TestMethodIndicators so old records still display name/price
       const methodMap: Record<string, IndicatorMethodInfo[]> = {};
       (methodsData || []).forEach((method) => {
         method.indicators?.forEach((ind) => {
-          if (ind.isActive) {
-            if (!methodMap[ind.indicatorId]) {
-              methodMap[ind.indicatorId] = [];
-            }
-            methodMap[ind.indicatorId].push({
-              testMethodId: method.id,
-              testMethodCode: method.code,
-              testMethodName: method.name,
-              testMethodFormattedName: method.formattedName || undefined,
-              unitPrice: ind.unitPrice,
-              isActive: ind.isActive,
-              parentIndicatorId: ind.parentIndicatorId,
-              // Include specimen type info for proper differentiation
-              specimenTypeId: ind.specimenTypeId,
-              specimenTypeCode: ind.specimenTypeCode,
-              specimenTypeName: ind.specimenTypeName,
-              isSubcontract: ind.isSubcontract,
-            });
+          if (!methodMap[ind.indicatorId]) {
+            methodMap[ind.indicatorId] = [];
           }
+          methodMap[ind.indicatorId].push({
+            testMethodId: method.id,
+            testMethodCode: method.code,
+            testMethodName: method.name,
+            testMethodFormattedName: method.formattedName || undefined,
+            unitPrice: ind.unitPrice,
+            isActive: ind.isActive,
+            parentIndicatorId: ind.parentIndicatorId,
+            specimenTypeId: ind.specimenTypeId,
+            specimenTypeCode: ind.specimenTypeCode,
+            specimenTypeName: ind.specimenTypeName,
+            isSubcontract: ind.isSubcontract,
+          });
         });
       });
 
