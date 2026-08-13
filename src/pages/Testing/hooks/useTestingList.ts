@@ -131,7 +131,7 @@ export const useTestingList = () => {
   useEffect(() => {
     const loadIndicators = async () => {
       try {
-        const result = await indicatorService.getActive();
+        const result = await indicatorService.getActive(true);
         setIndicators(result || []);
       } catch (error) {
         console.error("Failed to load indicators:", error);

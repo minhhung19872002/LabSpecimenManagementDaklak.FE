@@ -99,7 +99,7 @@ export const useSampleAssignmentLogForQLKT = (
     const loadMasterData = async () => {
       try {
         const [indicatorList, technicianList] = await Promise.all([
-          indicatorService.getActive(),
+          indicatorService.getActive(true),
           laboratoryTaskService.getTechniciansByLaboratory(),
         ]);
         setIndicators(indicatorList);

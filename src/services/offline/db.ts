@@ -32,6 +32,7 @@ export type SyncEntityType =
   | 'SpecimenType'
   | 'TestResult'
   | 'IndicatorGroup'
+  | 'AllIndicator'
   | 'File';
 
 /**

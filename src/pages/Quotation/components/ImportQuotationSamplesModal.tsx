@@ -94,16 +94,14 @@ const ImportQuotationSamplesModal: React.FC<ImportQuotationSamplesModalProps> = 
 
     const [allIndicators, testMethodsWithIndicators] =
       await Promise.all([
-        indicatorService.getActive(),
+        indicatorService.getActive(true),
         testMethodService.getWithIndicators(),
       ]);
 
     const methodsMap: IndicatorMethodsMap = {};
     testMethodsWithIndicators.forEach(
       (method: TestMethodWithIndicatorsDto) => {
-        if (!method.isActive) return;
         method.indicators?.forEach((ind: TestMethodIndicatorDto) => {
-          if (!ind.isActive) return;
           if (!methodsMap[ind.indicatorId]) {
             methodsMap[ind.indicatorId] = [];
           }
@@ -132,9 +130,7 @@ const ImportQuotationSamplesModal: React.FC<ImportQuotationSamplesModalProps> = 
 
     const indicatorNameMap = new Map<string, IndicatorDto>();
     allIndicators.forEach((ind: IndicatorDto) => {
-      if (ind.isActive) {
-        indicatorNameMap.set(ind.name.trim().toLowerCase(), ind);
-      }
+      indicatorNameMap.set(ind.name.trim().toLowerCase(), ind);
     });
 
     masterDataRef.current = {

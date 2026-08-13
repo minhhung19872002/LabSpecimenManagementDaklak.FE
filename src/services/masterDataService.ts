@@ -1039,8 +1039,10 @@ export const indicatorService = {
     const response = await api.get<IndicatorDto[]>(`${INDICATOR_URL}/by-group/${groupId}`);
     return response.data;
   },
-  getActive: async (): Promise<IndicatorDto[]> => {
-    const response = await api.get<IndicatorDto[]>(`${INDICATOR_URL}/get-active`);
+  getActive: async (includeInactive?: boolean): Promise<IndicatorDto[]> => {
+    const response = await api.get<IndicatorDto[]>(`${INDICATOR_URL}/get-active`, {
+      params: includeInactive ? { includeInactive: true } : undefined,
+    });
     return response.data;
   },
   canDelete: async (id: string): Promise<boolean> => {

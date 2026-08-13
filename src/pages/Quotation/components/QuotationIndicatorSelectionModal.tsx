@@ -226,7 +226,7 @@ const QuotationIndicatorSelectionModal: React.FC<
         categories,
       ] = await Promise.all([
         indicatorGroupService.getActive(),
-        indicatorService.getActive(),
+        indicatorService.getActive(true),
         testMethodService.getWithIndicators(),
         specimenTypeService.getActive(),
         sampleTypeCategoryService.getActive(),
@@ -242,10 +242,7 @@ const QuotationIndicatorSelectionModal: React.FC<
 
       testMethodsWithIndicators.forEach(
         (method: TestMethodWithIndicatorsDto) => {
-          if (!method.isActive) return;
-
           method.indicators?.forEach((ind: TestMethodIndicatorDto) => {
-            if (!ind.isActive) return;
 
             if (!methodsMap[ind.indicatorId]) {
               methodsMap[ind.indicatorId] = [];
@@ -273,7 +270,7 @@ const QuotationIndicatorSelectionModal: React.FC<
                 testMethodName: method.name,
                 testMethodFormattedName: method.formattedName || undefined,
                 unitPrice: ind.unitPrice,
-                isActive: true,
+                isActive: ind.isActive,
                 specimenTypeId: specimenTypeId || undefined,
                 specimenTypeName: specimenTypeName || undefined,
                 specimenTypeCode: (ind as any).specimenTypeCode || undefined,
@@ -598,18 +595,23 @@ const QuotationIndicatorSelectionModal: React.FC<
           m.testMethodId === testMethodId &&
           (m.specimenTypeId || null) === (specimenTypeId || null),
       );
-      const masterPrice = method?.unitPrice || 0;
+      const existing = !method && existingMethods?.length
+        ? existingMethods.find(
+            (em) => em.indicatorId === indicatorId && em.testMethodId === testMethodId,
+          )
+        : undefined;
+      const masterPrice = method?.unitPrice || existing?.unitPrice || 0;
       const effectivePrice = getEffectivePrice(key, masterPrice);
       return {
         indicatorId,
-        indicatorName: indicator?.name || "",
-        indicatorFormattedName: indicator?.formattedName || undefined,
+        indicatorName: indicator?.name || existing?.indicatorName || "",
+        indicatorFormattedName: indicator?.formattedName || existing?.indicatorFormattedName || undefined,
         testMethodId,
-        testMethodName: method?.testMethodName || "",
-        testMethodFormattedName: method?.testMethodFormattedName || undefined,
+        testMethodName: method?.testMethodName || existing?.testMethodName || "",
+        testMethodFormattedName: method?.testMethodFormattedName || existing?.testMethodFormattedName || undefined,
         unitPrice: effectivePrice,
         specimenTypeId: specimenTypeId || undefined,
-        specimenTypeName: method?.specimenTypeName || undefined,
+        specimenTypeName: method?.specimenTypeName || existing?.specimenTypeName || undefined,
       };
     });
     onOk(selectedMethods);

@@ -55,6 +55,7 @@ export async function prefetchMasterData(): Promise<void> {
     const results = await Promise.allSettled([
       prefetchIndicatorGroups(),
       prefetchIndicators(),
+      prefetchAllIndicators(),
       prefetchStorageLocations(),
       prefetchLaboratories(),
       prefetchTestMethods(),
@@ -109,6 +110,19 @@ async function prefetchIndicators(): Promise<void> {
     console.log(`Cached ${data.length} indicators`);
   } catch (error) {
     console.error('Failed to prefetch indicators:', error);
+    throw error;
+  }
+}
+
+async function prefetchAllIndicators(): Promise<void> {
+  try {
+    const data = await indicatorService.getActive(true);
+    for (const item of data) {
+      await cacheEntity('AllIndicator', item.id, item, false);
+    }
+    console.log(`Cached ${data.length} all indicators (incl. inactive)`);
+  } catch (error) {
+    console.error('Failed to prefetch all indicators:', error);
     throw error;
   }
 }
