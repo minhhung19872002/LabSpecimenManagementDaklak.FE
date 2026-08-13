@@ -106,7 +106,7 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading, on
                     const intPart = Math.floor(baseQty);
                     const decPart = baseQty - intPart;
                     if (decPart === 0) {
-                      return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${expected.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;
+                      return `${intPart.toLocaleString("vi-VN")} ${qtyUnit}`;
                     }
                     const remainingVol = Math.round(decPart * detail.volumePerUnit);
                     return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${remainingVol.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;

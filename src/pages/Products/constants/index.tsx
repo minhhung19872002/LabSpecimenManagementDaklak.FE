@@ -199,9 +199,10 @@ export const getProductColumns = (
           const expectedBase = expected / record.volumePerUnit;
           const intPart = Math.floor(expectedBase);
           const decPart = expectedBase - intPart;
-          const packagingLine = decPart === 0
-            ? `${expectedBase.toLocaleString("vi-VN")} ${storageUnit}`
-            : `${intPart.toLocaleString("vi-VN")} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN")} ${volumeUnit}`;
+          if (decPart === 0) {
+            return `${expectedBase.toLocaleString("vi-VN")} ${storageUnit}`;
+          }
+          const packagingLine = `${intPart.toLocaleString("vi-VN")} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN")} ${volumeUnit}`;
           return (
             <div>
               <div>{packagingLine}</div>
