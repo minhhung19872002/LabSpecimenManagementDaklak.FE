@@ -78,7 +78,7 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
       width: 120,
       align: "right" as const,
       render: (_: any, record: ProductImportHistoryDto) => {
-        const unit = record.unitName || "";
+        const unit = record.purchaseUnitName || record.unitName || "";
         return `${record.actualReceivedQuantity} ${unit}`.trim();
       },
     },
