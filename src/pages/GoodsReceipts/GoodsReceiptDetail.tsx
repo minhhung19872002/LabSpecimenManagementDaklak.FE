@@ -19,6 +19,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -67,6 +68,7 @@ const GoodsReceiptDetail: React.FC = () => {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectNotes, setRejectNotes] = useState("");
   const [snapshot, setSnapshot] = useState<ApprovalSnapshotDto | null>(null);
+  const [printingPurchaseRequest, setPrintingPurchaseRequest] = useState(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
   const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
@@ -135,6 +137,28 @@ const GoodsReceiptDetail: React.FC = () => {
       message.error(getApiErrorMessage(error, "Không thể từ chối phiếu."));
     } finally {
       setRejecting(false);
+    }
+  };
+
+  const handlePrintPurchaseRequest = async () => {
+    if (!id) return;
+    setPrintingPurchaseRequest(true);
+
+    const newTab = window.open("about:blank", "_blank");
+
+    try {
+      const result = await goodsReceiptService.generatePurchaseRequest(id);
+      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
+      if (newTab) {
+        newTab.location.href = editorUrl;
+      } else {
+        window.open(editorUrl, "_blank");
+      }
+    } catch (error: any) {
+      if (newTab) newTab.close();
+      message.error(getApiErrorMessage(error, "Không thể tạo phiếu yêu cầu mua sắm."));
+    } finally {
+      setPrintingPurchaseRequest(false);
     }
   };
 
@@ -284,6 +308,13 @@ const GoodsReceiptDetail: React.FC = () => {
             Chỉnh sửa
           </Button>
         )}
+      <Button
+        icon={<FileTextOutlined />}
+        loading={printingPurchaseRequest}
+        onClick={handlePrintPurchaseRequest}
+      >
+        In phiếu yêu cầu
+      </Button>
     </Space>
   );
 

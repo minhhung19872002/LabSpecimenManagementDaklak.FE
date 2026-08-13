@@ -339,4 +339,9 @@ export const goodsReceiptService = {
         : item
     );
   },
+
+  generatePurchaseRequest: async (id: string): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${id}/purchase-request`);
+    return response.data;
+  },
 };
