@@ -275,6 +275,7 @@ export interface ProductImportHistoryDto {
   orderedQuantity: number;
   actualReceivedQuantity: number;
   unitName?: string;
+  purchaseUnitName?: string;
   manufacturerName?: string;
   lotNumber?: string;
   lotExpiryDate?: string;
