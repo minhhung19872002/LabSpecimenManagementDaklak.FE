@@ -204,7 +204,7 @@ export const getProductColumns = (
           );
           const firstVolumeUnit = record.stockByUnits.find(e => e.volumeUnitName)?.volumeUnitName || "";
 
-          if (expected < 0 && firstVolumeUnit) {
+          if (expected < 0) {
             return (
               <div style={{ color: "#ff4d4f" }}>
                 <div>{`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}</div>
