@@ -197,6 +197,49 @@ export const getProductColumns = (
         const expected = record.expectedStockConsumable;
         if (!record.consumableImportedQuantity && !expected) return "-";
 
+        // Multi-unit path
+        if (record.stockByUnits && record.stockByUnits.length >= 2) {
+          const totalVolume = record.stockByUnits.reduce(
+            (s, e) => s + e.quantity * (e.volumePerUnit || 0), 0,
+          );
+          const firstVolumeUnit = record.stockByUnits.find(e => e.volumeUnitName)?.volumeUnitName || "";
+
+          if (expected < 0 && firstVolumeUnit) {
+            return (
+              <div style={{ color: "#ff4d4f" }}>
+                <div>{`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}</div>
+              </div>
+            );
+          }
+
+          if (totalVolume > 0) {
+            return (
+              <div>
+                {record.stockByUnits.map((entry, i) => {
+                  const entryVol = entry.quantity * (entry.volumePerUnit || 0);
+                  if (entryVol <= 0 || !entry.volumePerUnit) return null;
+                  const unitExpectedVol = expected * (entryVol / totalVolume);
+                  const unitExpectedBase = unitExpectedVol / entry.volumePerUnit;
+                  const unit = entry.packagingUnitName || "";
+                  const intPart = Math.floor(unitExpectedBase);
+                  const decPart = unitExpectedBase - intPart;
+                  if (decPart === 0) {
+                    return <div key={i}>{`${unitExpectedBase.toLocaleString("vi-VN")} ${unit}`.trim()}</div>;
+                  }
+                  const vol = Math.round(decPart * entry.volumePerUnit);
+                  return <div key={i}>{`${intPart.toLocaleString("vi-VN")} ${unit} - ${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName || ""}`}</div>;
+                })}
+                {firstVolumeUnit && (
+                  <div style={{ fontSize: 12, color: "#888" }}>
+                    {`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}
+                  </div>
+                )}
+              </div>
+            );
+          }
+        }
+
+        // Single-unit path
         const storageUnit = record.packagingUnitName || "";
         const volumeUnit = record.volumeUnitName || "";
 
