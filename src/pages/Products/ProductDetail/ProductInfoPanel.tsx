@@ -54,6 +54,22 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading, on
                 <DetailItem
                   label="Tồn kho đầu kỳ"
                   value={(() => {
+                    if (detail.stockByUnits && detail.stockByUnits.length >= 2) {
+                      return (
+                        <div>
+                          {detail.stockByUnits.map((entry, i) => {
+                            const unit = entry.packagingUnitName || "";
+                            const intPart = Math.floor(entry.quantity);
+                            const decPart = entry.quantity - intPart;
+                            if (decPart === 0 || !entry.volumePerUnit || !entry.volumeUnitName) {
+                              return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
+                            }
+                            const vol = Math.round(decPart * entry.volumePerUnit);
+                            return <div key={i}>{`${intPart} ${unit} - ${vol} ${entry.volumeUnitName}`}</div>;
+                          })}
+                        </div>
+                      );
+                    }
                     const qty = detail.warehouseAvailableQuantity ?? 0;
                     const intPart = Math.floor(qty);
                     const decPart = qty - intPart;
@@ -98,6 +114,44 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading, on
                   label="Tồn kho cuối kỳ (Dự tính)"
                   value={(() => {
                     const expected = detail.expectedStockConsumable;
+
+                    if (detail.stockByUnits && detail.stockByUnits.length >= 2) {
+                      const totalVolume = detail.stockByUnits.reduce(
+                        (s, e) => s + e.quantity * (e.volumePerUnit || 0), 0,
+                      );
+                      const firstVolumeUnit = detail.stockByUnits.find(e => e.volumeUnitName)?.volumeUnitName || "";
+
+                      if (expected < 0) {
+                        return <span style={{ color: "#ff4d4f" }}>{`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}</span>;
+                      }
+
+                      if (totalVolume > 0) {
+                        return (
+                          <div>
+                            {detail.stockByUnits.map((entry, i) => {
+                              const entryVol = entry.quantity * (entry.volumePerUnit || 0);
+                              if (entryVol <= 0 || !entry.volumePerUnit) return null;
+                              const unitExpectedVol = expected * (entryVol / totalVolume);
+                              const unitExpectedBase = unitExpectedVol / entry.volumePerUnit;
+                              const unit = entry.packagingUnitName || "";
+                              const intPart = Math.floor(unitExpectedBase);
+                              const decPart = unitExpectedBase - intPart;
+                              if (decPart === 0) {
+                                return <div key={i}>{`${unitExpectedBase.toLocaleString("vi-VN")} ${unit}`.trim()}</div>;
+                              }
+                              const vol = Math.round(decPart * entry.volumePerUnit);
+                              return <div key={i}>{`${intPart.toLocaleString("vi-VN")} ${unit} - ${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName || ""}`}</div>;
+                            })}
+                            {firstVolumeUnit && (
+                              <div style={{ fontSize: 12, color: "#888" }}>
+                                {`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                    }
+
                     if (!detail.volumePerUnit || !detail.volumeUnitName) return null;
                     if (expected < 0) {
                       return <span style={{ color: "#ff4d4f" }}>{`${expected.toLocaleString("vi-VN")} ${detail.volumeUnitName}`}</span>;

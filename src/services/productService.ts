@@ -273,6 +273,7 @@ export interface ProductDetailDto {
   volumeUnitName?: string;
   theoreticalConsumption: number;
   expectedStockConsumable: number;
+  stockByUnits: StockByUnitDto[];
 }
 
 export interface ProductImportHistoryDto {
