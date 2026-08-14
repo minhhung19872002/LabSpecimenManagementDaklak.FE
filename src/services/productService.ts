@@ -104,6 +104,14 @@ export interface ProductDto {
   attachments: ProductAttachmentDto[];
   unitConversions: ProductUnitConversionDto[];
   skus: ProductSkuDto[];
+  stockByUnits: StockByUnitDto[];
+}
+
+export interface StockByUnitDto {
+  packagingUnitName?: string;
+  quantity: number;
+  volumePerUnit?: number;
+  volumeUnitName?: string;
 }
 
 export interface ProductSkuDto {

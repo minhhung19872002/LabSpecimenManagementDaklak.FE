@@ -122,9 +122,22 @@ export const getProductColumns = (
       align: "right" as const,
       sorter: true,
       render: (qty: number, record: ProductDto) => {
-        // Logic cũ:
-        // const unitName = record.packagingUnitName || "";
-        // return `${qty} ${unitName}`.trim();
+        if (record.stockByUnits && record.stockByUnits.length >= 2) {
+          return (
+            <div>
+              {record.stockByUnits.map((entry, i) => {
+                const unit = entry.packagingUnitName || "";
+                const intPart = Math.floor(entry.quantity);
+                const decPart = entry.quantity - intPart;
+                if (decPart === 0 || !entry.volumePerUnit || !entry.volumeUnitName) {
+                  return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
+                }
+                const vol = Math.round(decPart * entry.volumePerUnit);
+                return <div key={i}>{`${intPart} ${unit} - ${vol} ${entry.volumeUnitName}`}</div>;
+              })}
+            </div>
+          );
+        }
 
         const storageUnit = record.packagingUnitName || "";
         const intPart = Math.floor(qty);
