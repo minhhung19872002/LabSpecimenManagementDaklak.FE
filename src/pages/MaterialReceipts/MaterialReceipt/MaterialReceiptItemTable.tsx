@@ -101,34 +101,9 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
     },
     {
       title: "Đơn vị",
-      dataIndex: "unitId",
-      width: 170,
-      render: (_, record) => {
-        if (isReadonly) return record.unitName || "—";
-        return (
-          <Select
-            value={record.unitId || undefined}
-            onChange={(val) => {
-              const unit = record.availableUnits.find((u) => u.unitId === val);
-              const sku = record.skus.find(
-                (item) =>
-                  item.storageUnitId === val || item.consumableUnitId === val,
-              );
-              onItemChange(record.key, "unitId", val);
-              onItemChange(record.key, "unitName", unit?.unitName || "");
-              onItemChange(record.key, "skuId", sku?.skuId);
-            }}
-            style={{ width: "100%" }}
-            placeholder="Chọn đơn vị"
-            options={record.availableUnits
-              .filter((u) => !u.isConsumable)
-              .map((u) => ({
-                value: u.unitId,
-                label: u.unitName,
-              }))}
-          />
-        );
-      },
+      dataIndex: "unitName",
+      width: 100,
+      render: (val) => val || "—",
     },
     {
       title: (
@@ -263,7 +238,7 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
         exceededKeys.has(record.key) ? "material-receipt-row-exceeded" : ""
       }
       pagination={false}
-      scroll={{ x: 1650 }}
+      scroll={{ x: 1580 }}
       size="small"
       bordered
       locale={{
