@@ -70,6 +70,8 @@ export interface MaterialReceiptItemDto {
   technicalSpec?: string;
   casNumber?: string;
   nearestExpiryDate?: string;
+  lotNumber?: string;
+  manufacturerName?: string;
   productType?: number;
   availableUnits: ProductUnitOptionDto[];
 }
@@ -88,6 +90,8 @@ export interface CreateUpdateMaterialReceiptItemDto {
   quantity: number;
   skuId?: string;
   receivingWarehouseId: string;
+  lotNumber?: string;
+  manufacturerName?: string;
 }
 
 export interface CentralWarehouseProductDto {
@@ -100,6 +104,9 @@ export interface CentralWarehouseProductDto {
   productType: number;
   centralStockBaseQty: number;
   nearestExpiryDate?: string;
+  lotNumber?: string;
+  lotExpiryDate?: string;
+  manufacturerName?: string;
   storageUnitName?: string;
   consumableUnitName?: string;
   volumePerUnit?: number;

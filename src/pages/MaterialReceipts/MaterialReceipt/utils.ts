@@ -40,6 +40,8 @@ export interface MaterialReceiptLineItem {
   technicalSpec?: string;
   casNumber?: string;
   nearestExpiryDate?: string;
+  lotNumber?: string;
+  manufacturerName?: string;
   productType?: number;
   unitId?: string;
   unitName?: string;
@@ -114,6 +116,8 @@ export const buildLineItemFromProduct = (
     technicalSpec: product.technicalSpec,
     casNumber: product.casNumber,
     nearestExpiryDate: product.nearestExpiryDate,
+    lotNumber: product.lotNumber,
+    manufacturerName: product.manufacturerName,
     productType: product.productType,
     unitId: defaultUnit?.unitId,
     unitName: defaultUnit?.unitName,

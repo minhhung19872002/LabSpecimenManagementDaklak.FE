@@ -100,10 +100,12 @@ const MaterialReceiptDetail: React.FC = () => {
   const columns = useMemo<ColumnsType<MaterialReceiptItemDto>>(() => [
     { title: "STT", width: 60, align: "center", render: (_, __, index) => index + 1 },
     { title: "Mã nhận dạng", dataIndex: "identificationCode", width: 140, render: (value) => value || "—" },
+    { title: "Số lô", dataIndex: "lotNumber", width: 110, render: (value: string) => value || "—" },
     { title: "Tên vật tư / hóa chất", dataIndex: "productName", width: 220 },
     { title: "Cấu hình kỹ thuật", dataIndex: "technicalSpec", width: 180, render: (value) => value || "—" },
     { title: "Hạn sử dụng", dataIndex: "nearestExpiryDate", width: 120, render: (value) => value ? dayjs(value).format("DD/MM/YYYY") : "—" },
     { title: "CAS", dataIndex: "casNumber", width: 120, render: (value) => value || "—" },
+    { title: "Hãng sản xuất", dataIndex: "manufacturerName", width: 140, ellipsis: true, render: (value: string) => value || "—" },
     { title: "Đơn vị", dataIndex: "unitName", width: 120, render: (value) => value || "—" },
     { title: "Số lượng", dataIndex: "quantity", width: 110, align: "right" },
     { title: "Kho nhận", dataIndex: "receivingWarehouseName", width: 170 },
@@ -168,7 +170,7 @@ const MaterialReceiptDetail: React.FC = () => {
             pagination={false}
             size="small"
             bordered
-            scroll={{ x: 1240 }}
+            scroll={{ x: 1500 }}
             locale={{ emptyText: "Không có vật tư" }}
           />
         </Card>

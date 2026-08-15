@@ -65,19 +65,22 @@ const MaterialReceiptForm: React.FC = () => {
   const [productModalLoading, setProductModalLoading] = useState(false);
 
   const filteredProductOptions = useMemo(() => {
-    const addedIds = new Set(items.map((i) => i.productId));
+    const addedKeys = new Set(
+      items.map((i) => `${i.productId}::${i.lotNumber ?? ""}`),
+    );
     return centralProducts
       .filter(
         (p) =>
-          !addedIds.has(p.productId) &&
+          !addedKeys.has(`${p.productId}::${p.lotNumber ?? ""}`) &&
           (productTypeFilter === "all" ||
             p.productType === Number(productTypeFilter)),
       )
-      .map((p) => ({
-        value: p.productId,
+      .map((p, index) => ({
+        value: `${p.productId}::${p.lotNumber ?? ""}::${index}`,
         label: p.identificationCode
           ? `${p.identificationCode} - ${p.productName}`
           : p.productName,
+        lotNumber: p.lotNumber,
       }));
   }, [centralProducts, items, productTypeFilter]);
 
@@ -113,7 +116,13 @@ const MaterialReceiptForm: React.FC = () => {
     if (centralProducts.length === 0) return;
     setItems((currentItems) =>
       currentItems.map((item) => {
-        const product = centralProducts.find((p) => p.productId === item.productId);
+        const product =
+          centralProducts.find(
+            (p) =>
+              p.productId === item.productId &&
+              (p.lotNumber ?? "") === (item.lotNumber ?? ""),
+          ) ??
+          centralProducts.find((p) => p.productId === item.productId);
         if (!product) return item;
         return {
           ...item,
@@ -209,6 +218,8 @@ const MaterialReceiptForm: React.FC = () => {
             technicalSpec: item.technicalSpec,
             casNumber: item.casNumber,
             nearestExpiryDate: item.nearestExpiryDate,
+            lotNumber: item.lotNumber,
+            manufacturerName: item.manufacturerName,
             productType: item.productType,
             unitId: item.unitId,
             unitName: item.unitName,
@@ -243,8 +254,13 @@ const MaterialReceiptForm: React.FC = () => {
   }, [id, loadWarehouseStock]);
 
   const handleAddProduct = useCallback(
-    (productId: string) => {
-      const product = centralProducts.find((p) => p.productId === productId);
+    (compositeKey: string) => {
+      const [productId, lotNumber] = compositeKey.split("::");
+      const product = centralProducts.find(
+        (p) =>
+          p.productId === productId &&
+          (p.lotNumber ?? "") === lotNumber,
+      );
       if (!product) return;
       const lineItem = buildLineItemFromProduct(product);
       lineItem.key = `new-${Date.now()}`;
@@ -379,6 +395,8 @@ const MaterialReceiptForm: React.FC = () => {
       quantity: item.quantity || 0,
       skuId: item.skuId,
       receivingWarehouseId: item.receivingWarehouseId || "",
+      lotNumber: item.lotNumber,
+      manufacturerName: item.manufacturerName,
     })),
   });
 

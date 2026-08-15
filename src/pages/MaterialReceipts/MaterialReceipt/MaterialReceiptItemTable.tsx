@@ -62,6 +62,12 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
       render: (val) => val || "—",
     },
     {
+      title: "Số lô",
+      dataIndex: "lotNumber",
+      width: 110,
+      render: (val) => val || "—",
+    },
+    {
       title: "Tên vật tư / hóa chất",
       dataIndex: "productName",
       width: 220,
@@ -84,6 +90,13 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
       title: "CAS",
       dataIndex: "casNumber",
       width: 100,
+      render: (val) => val || "—",
+    },
+    {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturerName",
+      width: 140,
+      ellipsis: true,
       render: (val) => val || "—",
     },
     {
@@ -250,7 +263,7 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
         exceededKeys.has(record.key) ? "material-receipt-row-exceeded" : ""
       }
       pagination={false}
-      scroll={{ x: 1400 }}
+      scroll={{ x: 1650 }}
       size="small"
       bordered
       locale={{

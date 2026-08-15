@@ -26,7 +26,7 @@ export interface MaterialReceiptFormViewProps
   confirming: boolean;
   warehouses: WarehouseDto[];
   productTypeFilter: string;
-  productOptions: { value: string; label: string }[];
+  productOptions: { value: string; label: string; lotNumber?: string }[];
   itemCount: number;
   children?: React.ReactNode;
   onProductTypeChange: (value: string) => void;
@@ -113,11 +113,22 @@ const MaterialReceiptFormView: React.FC<MaterialReceiptFormViewProps> = ({
                     onSelect={onAddProduct}
                     style={{ width: "100%" }}
                     showSearch
-                    filterOption={(input, option) =>
-                      (option?.label as string)
-                        ?.toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
+                    filterOption={(input, option) => {
+                      const searchText = input.toLowerCase();
+                      const label = (option?.label as string)?.toLowerCase() ?? "";
+                      const lot = (option as any)?.lotNumber?.toLowerCase() ?? "";
+                      return label.includes(searchText) || lot.includes(searchText);
+                    }}
+                    optionRender={(option) => (
+                      <div>
+                        <div>{option.label}</div>
+                        {(option.data as any)?.lotNumber && (
+                          <div style={{ fontSize: 12, color: "#888" }}>
+                            Số lô: {(option.data as any).lotNumber}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   />
                   <Button
                     type="primary"
