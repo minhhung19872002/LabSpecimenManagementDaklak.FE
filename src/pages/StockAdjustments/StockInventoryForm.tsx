@@ -413,7 +413,7 @@ const StockInventoryForm: React.FC = () => {
                   onValueChange={(values) => {
                     updateItem(section.warehouseId, record.id, "actualQuantityStorage", values.floatValue ?? null);
                   }}
-                  allowNegative={false}
+                  allowNegative
                   decimalScale={2}
                   thousandSeparator="."
                   decimalSeparator=","
@@ -435,7 +435,7 @@ const StockInventoryForm: React.FC = () => {
                     onValueChange={(values) => {
                       updateItem(section.warehouseId, record.id, "actualQuantityConsumable", values.floatValue ?? null);
                     }}
-                    allowNegative={false}
+                    allowNegative
                     decimalScale={2}
                     thousandSeparator="."
                     decimalSeparator=","
