@@ -29,8 +29,6 @@ import MaterialReceiptFormView from "./MaterialReceipt/MaterialReceiptFormView";
 import {
   type MaterialReceiptLineItem,
   buildLineItemFromProduct,
-  formatStockDisplay,
-  resolveLineItemBaseQuantity,
 } from "./MaterialReceipt/utils";
 
 const ProductModal = lazy(
@@ -349,17 +347,6 @@ const MaterialReceiptForm: React.FC = () => {
       } else if (item.quantity <= 0 || !Number.isInteger(item.quantity)) {
         rowError.quantity = "Vui lòng nhập số lượng nguyên lớn hơn 0";
         hasInvalidItemInfo = true;
-      } else {
-        const requestedBaseQuantity = resolveLineItemBaseQuantity(item, item.quantity);
-        if (requestedBaseQuantity > item.centralStockBaseQty + Number.EPSILON) {
-          rowError.quantity = `Không được vượt tồn Kho Trung tâm: ${formatStockDisplay(
-            item.centralStockBaseQty,
-            item.storageUnitName,
-            item.consumableUnitName,
-            item.volumePerUnit,
-          )}`;
-          hasInvalidItemInfo = true;
-        }
       }
       if (!item.receivingWarehouseId) {
         rowError.receivingWarehouseId = "Vui lòng chọn kho nhận";

@@ -7,7 +7,7 @@ import type { WarehouseDto } from "../../../services/masterDataService";
 import {
   formatExpiryDate,
   formatStockDisplay,
-  resolveLineItemBaseQuantity,
+  isQuantityExceedingCentralStock,
   type MaterialReceiptLineItem,
 } from "./utils";
 import "./MaterialReceiptItemTable.css";
@@ -31,11 +31,7 @@ export interface MaterialReceiptItemTableProps {
 
 const isExceeded = (record: MaterialReceiptLineItem): boolean => {
   if (record.quantity == null || record.quantity <= 0) return false;
-  const requestedBaseQuantity = resolveLineItemBaseQuantity(
-    record,
-    record.quantity,
-  );
-  return requestedBaseQuantity > record.centralStockBaseQty + Number.EPSILON;
+  return isQuantityExceedingCentralStock(record, record.quantity);
 };
 
 const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({

@@ -76,6 +76,25 @@ export const resolveLineItemBaseQuantity = (
   return quantity;
 };
 
+export const isQuantityExceedingCentralStock = (
+  item: MaterialReceiptLineItem,
+  quantity: number,
+): boolean => {
+  if (quantity <= 0) return false;
+
+  const sku = item.skus.find((s) => s.skuId === item.skuId);
+  const selectedVPU = sku?.volumePerUnit ?? item.volumePerUnit;
+  const stockVPU = item.volumePerUnit;
+
+  if (selectedVPU && selectedVPU > 0 && stockVPU && stockVPU > 0) {
+    const requestedConsumable = quantity * selectedVPU;
+    const stockConsumable = item.centralStockBaseQty * stockVPU;
+    return requestedConsumable > stockConsumable + Number.EPSILON;
+  }
+
+  return quantity > item.centralStockBaseQty + Number.EPSILON;
+};
+
 export const buildLineItemFromProduct = (
   product: CentralWarehouseProductDto,
 ): MaterialReceiptLineItem => {
