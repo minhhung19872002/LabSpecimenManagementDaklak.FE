@@ -50,6 +50,7 @@ export interface StockAdjustmentItemDto {
   volumeUnitName?: string;
   productType?: number;
   baseUnitName?: string;
+  consumableQuantityBefore?: number;
 }
 
 export interface StockAdjustmentDto extends StockAdjustmentListDto {

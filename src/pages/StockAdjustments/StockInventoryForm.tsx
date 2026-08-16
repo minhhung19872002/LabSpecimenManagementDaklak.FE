@@ -469,7 +469,7 @@ const StockInventoryForm: React.FC = () => {
           const color = diff > 0 ? "#52c41a" : diff < 0 ? "#ff4d4f" : undefined;
           const sign = diff > 0 ? "+" : "";
           const expected = record.expectedStockConsumable;
-          const pct = expected !== 0 ? ((diff / expected) * 100).toFixed(1) : null;
+          const pct = expected !== 0 ? ((diff / Math.abs(expected)) * 100).toFixed(1) : null;
 
           return (
             <div style={{ color, fontWeight: diff !== 0 ? 600 : undefined }}>

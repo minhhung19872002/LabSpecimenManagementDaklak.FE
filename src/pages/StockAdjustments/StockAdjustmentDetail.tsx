@@ -149,12 +149,14 @@ const StockAdjustmentDetail: React.FC = () => {
     },
     {
       title: "Tồn kho đầu kỳ (số lượng)",
-      dataIndex: "quantityBefore",
       width: 160,
       align: "right" as const,
-      render: (v: number, record: StockAdjustmentItemDto) => {
-        if (!v && v !== 0) return "-";
-        return formatConsumableQuantity(v, record);
+      render: (_: any, record: StockAdjustmentItemDto) => {
+        if (record.consumableQuantityBefore != null && record.consumableQuantityBefore > 0 && record.volumeUnitName) {
+          return `${record.consumableQuantityBefore.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
+        }
+        if (!record.quantityBefore && record.quantityBefore !== 0) return "-";
+        return formatConsumableQuantity(record.quantityBefore, record);
       },
     },
     {
@@ -162,10 +164,13 @@ const StockAdjustmentDetail: React.FC = () => {
       width: 130,
       align: "right" as const,
       render: (_: any, record: StockAdjustmentItemDto) => {
-        if (record.expectedStock == null || (!record.quantityBefore && record.quantityBefore !== 0)) return "-";
-        const initial = record.volumePerUnit && record.volumePerUnit > 0
-          ? record.quantityBefore * record.volumePerUnit
-          : record.quantityBefore;
+        if (record.expectedStock == null) return "-";
+        const initial = record.consumableQuantityBefore != null
+          ? record.consumableQuantityBefore
+          : record.volumePerUnit && record.volumePerUnit > 0
+            ? record.quantityBefore * record.volumePerUnit
+            : record.quantityBefore;
+        if (!initial && initial !== 0) return "-";
         return formatConsumption(initial - record.expectedStock, record);
       },
     },
@@ -215,7 +220,7 @@ const StockAdjustmentDetail: React.FC = () => {
           <div style={{ color, fontWeight: 600 }}>
             <div>{sign}{diff.toLocaleString("vi-VN")} {unit}</div>
             {expected !== 0 && (
-              <div style={{ fontSize: 12 }}>{sign}{((diff / expected) * 100).toFixed(1)}%</div>
+              <div style={{ fontSize: 12 }}>{sign}{((diff / Math.abs(expected)) * 100).toFixed(1)}%</div>
             )}
           </div>
         );
