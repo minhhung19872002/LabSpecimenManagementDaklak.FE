@@ -2,7 +2,7 @@ import React from "react";
 import { Button, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { ProductMaterialReceiptHistoryDto } from "../../../services/productService";
+import { ProductMaterialReceiptHistoryDto, StockByUnitDto } from "../../../services/productService";
 import { formatStockDisplay } from "../../MaterialReceipts/MaterialReceipt/utils";
 
 const { Link } = Typography;
@@ -21,6 +21,35 @@ interface MaterialReceiptHistoryTableProps {
 
 const displayDate = (value?: string) => value ? dayjs(value).format("DD/MM/YYYY") : "—";
 const displayText = (value?: string) => value || "—";
+
+const renderStockByUnits = (
+  byUnits: StockByUnitDto[] | undefined,
+  fallbackQty: number | null | undefined,
+  record: ProductMaterialReceiptHistoryDto,
+) => {
+  if (byUnits && byUnits.length >= 2) {
+    return (
+      <div>
+        {byUnits.map((entry, i) => {
+          const unit = entry.packagingUnitName || "";
+          const intPart = Math.floor(entry.quantity);
+          const decPart = entry.quantity - intPart;
+          if (decPart === 0 || !entry.volumePerUnit || !entry.volumeUnitName) {
+            return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
+          }
+          const vol = Math.round(decPart * entry.volumePerUnit);
+          return <div key={i}>{`${intPart} ${unit} - ${vol} ${entry.volumeUnitName}`}</div>;
+        })}
+      </div>
+    );
+  }
+  return formatStockDisplay(
+    fallbackQty ?? undefined,
+    record.storageUnitName,
+    record.consumableUnitName,
+    record.volumePerUnit,
+  );
+};
 
 const MaterialReceiptHistoryTable: React.FC<MaterialReceiptHistoryTableProps> = ({
   items,
@@ -93,21 +122,19 @@ const MaterialReceiptHistoryTable: React.FC<MaterialReceiptHistoryTableProps> = 
     {
       title: "Tồn trước nhập",
       width: 155,
-      render: (_, record) => formatStockDisplay(
-        record.stockBeforeBaseQuantity ?? undefined,
-        record.storageUnitName,
-        record.consumableUnitName,
-        record.volumePerUnit,
+      render: (_, record) => renderStockByUnits(
+        record.stockBeforeByUnits,
+        record.stockBeforeBaseQuantity,
+        record,
       ),
     },
     {
       title: "Tồn sau nhập",
       width: 155,
-      render: (_, record) => formatStockDisplay(
-        record.stockAfterBaseQuantity ?? undefined,
-        record.storageUnitName,
-        record.consumableUnitName,
-        record.volumePerUnit,
+      render: (_, record) => renderStockByUnits(
+        record.stockAfterByUnits,
+        record.stockAfterBaseQuantity,
+        record,
       ),
     },
   ];

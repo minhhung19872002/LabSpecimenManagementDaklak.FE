@@ -322,6 +322,8 @@ export interface ProductMaterialReceiptHistoryDto {
   storageUnitName?: string;
   consumableUnitName?: string;
   volumePerUnit?: number;
+  stockBeforeByUnits?: StockByUnitDto[];
+  stockAfterByUnits?: StockByUnitDto[];
 }
 
 export interface GetProductMaterialReceiptHistoryInput {

@@ -366,13 +366,45 @@ const StockInventoryForm: React.FC = () => {
         title: "Tồn kho đầu kỳ",
         width: 160,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => formatStockPackaging(record.availableQuantity, record),
+        render: (_: any, record: ProductDto) => {
+          if (record.stockByUnits && record.stockByUnits.length >= 2) {
+            return (
+              <div>
+                {record.stockByUnits.map((entry, i) => {
+                  const unit = entry.packagingUnitName || "";
+                  const intPart = Math.floor(entry.quantity);
+                  const decPart = entry.quantity - intPart;
+                  if (decPart === 0 || !entry.volumePerUnit || !entry.volumeUnitName) {
+                    return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
+                  }
+                  const vol = Math.round(decPart * entry.volumePerUnit);
+                  return <div key={i}>{`${intPart} ${unit} - ${vol} ${entry.volumeUnitName}`}</div>;
+                })}
+              </div>
+            );
+          }
+          return formatStockPackaging(record.availableQuantity, record);
+        },
       },
       {
         title: "Tồn kho đầu kỳ (số lượng)",
         width: 160,
         align: "right" as const,
         render: (_: any, record: ProductDto) => {
+          if (record.stockByUnits && record.stockByUnits.length >= 2) {
+            return (
+              <div>
+                {record.stockByUnits.map((entry, i) => {
+                  if (entry.volumePerUnit && entry.volumePerUnit > 0 && entry.volumeUnitName) {
+                    const vol = entry.quantity * entry.volumePerUnit;
+                    return <div key={i}>{`${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName}`}</div>;
+                  }
+                  const unit = entry.packagingUnitName || "";
+                  return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
+                })}
+              </div>
+            );
+          }
           if (record.consumableImportedQuantity > 0 && record.volumeUnitName) {
             return `${record.consumableImportedQuantity.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
           }
@@ -392,6 +424,44 @@ const StockInventoryForm: React.FC = () => {
         render: (_: any, record: ProductDto) => {
           const expected = record.expectedStockConsumable;
           if (!record.consumableImportedQuantity && !expected) return "-";
+
+          if (record.stockByUnits && record.stockByUnits.length >= 2) {
+            const totalVolume = record.stockByUnits.reduce(
+              (s, e) => s + e.quantity * (e.volumePerUnit || 0), 0,
+            );
+            const firstVolumeUnit = record.stockByUnits.find(e => e.volumeUnitName)?.volumeUnitName || "";
+
+            if (expected < 0) {
+              return <div style={{ color: "#ff4d4f" }}>{`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}</div>;
+            }
+
+            if (totalVolume > 0) {
+              return (
+                <div>
+                  {record.stockByUnits.map((entry, i) => {
+                    const entryVol = entry.quantity * (entry.volumePerUnit || 0);
+                    if (entryVol <= 0 || !entry.volumePerUnit) return null;
+                    const unitExpectedVol = expected * (entryVol / totalVolume);
+                    const unitExpectedBase = unitExpectedVol / entry.volumePerUnit;
+                    const unit = entry.packagingUnitName || "";
+                    const intPart = Math.floor(unitExpectedBase);
+                    const decPart = unitExpectedBase - intPart;
+                    if (decPart === 0) {
+                      return <div key={i}>{`${unitExpectedBase.toLocaleString("vi-VN")} ${unit}`.trim()}</div>;
+                    }
+                    const vol = Math.round(decPart * entry.volumePerUnit);
+                    return <div key={i}>{`${intPart.toLocaleString("vi-VN")} ${unit} - ${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName || ""}`}</div>;
+                  })}
+                  {firstVolumeUnit && (
+                    <div style={{ fontSize: 12, color: "#888" }}>
+                      {`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+          }
+
           return renderExpectedStock(expected, record);
         },
       },
