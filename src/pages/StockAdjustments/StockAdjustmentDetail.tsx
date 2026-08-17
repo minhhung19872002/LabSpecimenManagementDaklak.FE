@@ -138,6 +138,20 @@ const StockAdjustmentDetail: React.FC = () => {
       render: (v: number | undefined) => (v != null ? ProductTypeLabels[v as keyof typeof ProductTypeLabels] : "-") || "-",
     },
     {
+      title: "Số lô",
+      dataIndex: "lotNumber",
+      width: 120,
+      ellipsis: true,
+      render: (v: string | undefined) => v || "-",
+    },
+    {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturerName",
+      width: 140,
+      ellipsis: true,
+      render: (v: string | undefined) => v || "-",
+    },
+    {
       title: "Tồn kho đầu kỳ",
       dataIndex: "quantityBefore",
       width: 160,
@@ -338,7 +352,7 @@ const StockAdjustmentDetail: React.FC = () => {
                 rowKey="id"
                 size="small"
                 pagination={false}
-                scroll={{ x: 1500 }}
+                scroll={{ x: 1760 }}
               />
             </div>
           );

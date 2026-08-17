@@ -15,8 +15,9 @@ import {
   StockAdjustmentDto,
   StockAdjustmentStatus,
   CreateUpdateStockAdjustmentDto,
+  WarehouseProductLotDto,
 } from "../../services/stockAdjustmentService";
-import { productService, ProductDto, ProductTypeLabels } from "../../services/productService";
+import { ProductTypeLabels } from "../../services/productService";
 import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import { authService } from "../../services/authService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
@@ -27,16 +28,22 @@ import "../../styles/ListCard.css";
 interface WarehouseSection {
   warehouseId: string;
   warehouseName: string;
-  products: ProductDto[];
+  lots: WarehouseProductLotDto[];
   loading: boolean;
   items: InventoryItem[];
 }
 
 interface InventoryItem {
   productId: string;
+  lotNumber: string | null;
+  manufacturerName: string | null;
   actualQuantityStorage: number | null;
   actualQuantityConsumable: number | null;
   reason: string;
+}
+
+function lotKey(productId: string, lotNumber: string | null): string {
+  return `${productId}::${lotNumber ?? ""}`;
 }
 
 const StockInventoryForm: React.FC = () => {
@@ -115,39 +122,41 @@ const StockInventoryForm: React.FC = () => {
         const whItems = data.items.filter(i => i.warehouseId === whId);
         const warehouseName = whItems[0]?.warehouseName || "";
 
-        let products: ProductDto[] = [];
+        let lots: WarehouseProductLotDto[] = [];
         try {
-          const result = await productService.getList({
-            warehouseId: whId,
-            limit: 500,
-          });
-          products = result.items;
+          lots = await stockAdjustmentService.getWarehouseProductLots(whId);
         } catch { /* fallback empty */ }
 
-        const items: InventoryItem[] = products.map(p => {
-          const existing = whItems.find(i => i.productId === p.id);
+        const items: InventoryItem[] = lots.map(lot => {
+          const existing = whItems.find(i =>
+            i.productId === lot.productId && (i.lotNumber ?? "") === (lot.lotNumber ?? "")
+          );
           if (!existing) {
             return {
-              productId: p.id,
+              productId: lot.productId,
+              lotNumber: lot.lotNumber,
+              manufacturerName: lot.manufacturerName,
               actualQuantityStorage: null,
               actualQuantityConsumable: null,
               reason: "",
             };
           }
 
-          const hasVolume = p.volumePerUnit && p.volumePerUnit > 0;
+          const hasVolume = lot.volumePerUnit && lot.volumePerUnit > 0;
           let storage: number | null = null;
           let consumable: number | null = null;
 
-          if (hasVolume && (!existing.actualUnitId || existing.actualUnitId === p.volumeUnitId)) {
-            storage = Math.floor(existing.actualQuantity / p.volumePerUnit!);
-            consumable = Math.round((existing.actualQuantity - storage * p.volumePerUnit!) * 100) / 100;
+          if (hasVolume && (!existing.actualUnitId || existing.actualUnitId === lot.volumeUnitId)) {
+            storage = Math.floor(existing.actualQuantity / lot.volumePerUnit!);
+            consumable = Math.round((existing.actualQuantity - storage * lot.volumePerUnit!) * 100) / 100;
           } else {
             storage = existing.actualQuantity;
           }
 
           return {
-            productId: p.id,
+            productId: lot.productId,
+            lotNumber: lot.lotNumber,
+            manufacturerName: lot.manufacturerName,
             actualQuantityStorage: storage,
             actualQuantityConsumable: consumable,
             reason: existing.reason || "",
@@ -157,7 +166,7 @@ const StockInventoryForm: React.FC = () => {
         newSections.push({
           warehouseId: whId,
           warehouseName,
-          products,
+          lots,
           loading: false,
           items,
         });
@@ -181,7 +190,7 @@ const StockInventoryForm: React.FC = () => {
     const newSection: WarehouseSection = {
       warehouseId: warehouse.id,
       warehouseName: warehouse.name,
-      products: [],
+      lots: [],
       loading: true,
       items: [],
     };
@@ -190,13 +199,12 @@ const StockInventoryForm: React.FC = () => {
     setActiveKeys(prev => [...prev, warehouse.id]);
 
     try {
-      const result = await productService.getList({
-        warehouseId: warehouse.id,
-        limit: 500,
-      });
+      const lots = await stockAdjustmentService.getWarehouseProductLots(warehouse.id);
 
-      const items: InventoryItem[] = result.items.map(p => ({
-        productId: p.id,
+      const items: InventoryItem[] = lots.map(lot => ({
+        productId: lot.productId,
+        lotNumber: lot.lotNumber,
+        manufacturerName: lot.manufacturerName,
         actualQuantityStorage: null,
         actualQuantityConsumable: null,
         reason: "",
@@ -204,7 +212,7 @@ const StockInventoryForm: React.FC = () => {
 
       setSections(prev => prev.map(s =>
         s.warehouseId === warehouse.id
-          ? { ...s, products: result.items, items, loading: false }
+          ? { ...s, lots, items, loading: false }
           : s
       ));
     } catch {
@@ -223,6 +231,7 @@ const StockInventoryForm: React.FC = () => {
   const updateItem = useCallback((
     warehouseId: string,
     productId: string,
+    lotNumber: string | null,
     field: keyof InventoryItem,
     value: any,
   ) => {
@@ -231,20 +240,22 @@ const StockInventoryForm: React.FC = () => {
       return {
         ...s,
         items: s.items.map(item =>
-          item.productId === productId ? { ...item, [field]: value } : item
+          item.productId === productId && (item.lotNumber ?? "") === (lotNumber ?? "")
+            ? { ...item, [field]: value }
+            : item
         ),
       };
     }));
   }, []);
 
-  const combineActualQuantity = (product: ProductDto, item: InventoryItem): number | null => {
+  const combineActualQuantity = (lot: WarehouseProductLotDto, item: InventoryItem): number | null => {
     const hasStorage = item.actualQuantityStorage !== null;
     const hasConsumable = item.actualQuantityConsumable !== null;
     if (!hasStorage && !hasConsumable) return null;
 
-    const hasVolume = product.volumePerUnit && product.volumePerUnit > 0 && product.volumeUnitId;
+    const hasVolume = lot.volumePerUnit && lot.volumePerUnit > 0 && lot.volumeUnitId;
     if (hasVolume) {
-      return (item.actualQuantityStorage ?? 0) * product.volumePerUnit! + (item.actualQuantityConsumable ?? 0);
+      return (item.actualQuantityStorage ?? 0) * lot.volumePerUnit! + (item.actualQuantityConsumable ?? 0);
     }
     return item.actualQuantityStorage ?? 0;
   };
@@ -252,20 +263,25 @@ const StockInventoryForm: React.FC = () => {
   const buildPayload = (): CreateUpdateStockAdjustmentDto => {
     const allItems = sections.flatMap(s =>
       s.items.map(item => {
-        const product = s.products.find(p => p.id === item.productId);
-        const hasVolume = product && product.volumePerUnit && product.volumePerUnit > 0 && product.volumeUnitId;
+        const lot = s.lots.find(l =>
+          l.productId === item.productId && (l.lotNumber ?? "") === (item.lotNumber ?? "")
+        );
+        const hasVolume = lot && lot.volumePerUnit && lot.volumePerUnit > 0 && lot.volumeUnitId;
 
-        const combined = product ? combineActualQuantity(product, item) : null;
-        const actualQuantity = combined ?? (product?.expectedStockConsumable ?? 0);
-        const actualUnitId = hasVolume ? product.volumeUnitId : product?.baseUnitId || undefined;
+        const combined = lot ? combineActualQuantity(lot, item) : null;
+        const expectedStock = lot ? lot.consumableQuantity - (lot.theoreticalConsumption || 0) : 0;
+        const actualQuantity = combined ?? expectedStock;
+        const actualUnitId = hasVolume ? lot.volumeUnitId : lot?.baseUnitId || undefined;
 
         return {
           productId: item.productId,
           actualQuantity,
           warehouseId: s.warehouseId,
-          actualUnitId,
+          actualUnitId: actualUnitId || undefined,
           reason: item.reason || undefined,
-          expectedStock: product?.expectedStockConsumable,
+          expectedStock: lot ? expectedStock : undefined,
+          lotNumber: item.lotNumber || undefined,
+          manufacturerName: item.manufacturerName || undefined,
         };
       })
     );
@@ -330,11 +346,11 @@ const StockInventoryForm: React.FC = () => {
     }
   };
 
-  const computeDifference = (product: ProductDto, item: InventoryItem) => {
-    const actual = combineActualQuantity(product, item);
+  const computeDifference = (lot: WarehouseProductLotDto, item: InventoryItem) => {
+    const actual = combineActualQuantity(lot, item);
     if (actual === null) return null;
 
-    const expected = product.expectedStockConsumable;
+    const expected = lot.consumableQuantity - (lot.theoreticalConsumption || 0);
     if (!expected && expected !== 0) return null;
 
     return actual - expected;
@@ -345,14 +361,14 @@ const StockInventoryForm: React.FC = () => {
       return <Spin tip="Đang tải vật tư..." />;
     }
 
-    if (section.products.length === 0) {
+    if (section.lots.length === 0) {
       return <Empty description="Không có vật tư trong kho này" />;
     }
 
     const columns = [
       {
         title: "Tên vật tư",
-        dataIndex: "name",
+        dataIndex: "productName",
         width: 200,
         ellipsis: true,
       },
@@ -363,113 +379,62 @@ const StockInventoryForm: React.FC = () => {
         render: (type: number) => ProductTypeLabels[type as keyof typeof ProductTypeLabels] || "-",
       },
       {
+        title: "Số lô",
+        dataIndex: "lotNumber",
+        width: 120,
+        ellipsis: true,
+        render: (v: string | null) => v || "-",
+      },
+      {
+        title: "Hãng sản xuất",
+        dataIndex: "manufacturerName",
+        width: 140,
+        ellipsis: true,
+        render: (v: string | null) => v || "-",
+      },
+      {
         title: "Tồn kho đầu kỳ",
         width: 160,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => {
-          if (record.stockByUnits && record.stockByUnits.length >= 2) {
-            return (
-              <div>
-                {record.stockByUnits.map((entry, i) => {
-                  const unit = entry.packagingUnitName || "";
-                  const intPart = Math.floor(entry.quantity);
-                  const decPart = entry.quantity - intPart;
-                  if (decPart === 0 || !entry.volumePerUnit || !entry.volumeUnitName) {
-                    return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
-                  }
-                  const vol = Math.round(decPart * entry.volumePerUnit);
-                  return <div key={i}>{`${intPart} ${unit} - ${vol} ${entry.volumeUnitName}`}</div>;
-                })}
-              </div>
-            );
-          }
-          return formatStockPackaging(record.availableQuantity, record);
+        render: (_: any, record: WarehouseProductLotDto) => {
+          return formatStockPackaging(record.remainingBaseQuantity, record);
         },
       },
       {
         title: "Tồn kho đầu kỳ (số lượng)",
         width: 160,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => {
-          if (record.stockByUnits && record.stockByUnits.length >= 2) {
-            return (
-              <div>
-                {record.stockByUnits.map((entry, i) => {
-                  if (entry.volumePerUnit && entry.volumePerUnit > 0 && entry.volumeUnitName) {
-                    const vol = entry.quantity * entry.volumePerUnit;
-                    return <div key={i}>{`${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName}`}</div>;
-                  }
-                  const unit = entry.packagingUnitName || "";
-                  return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
-                })}
-              </div>
-            );
+        render: (_: any, record: WarehouseProductLotDto) => {
+          if (record.volumePerUnit && record.volumePerUnit > 0 && record.volumeUnitName) {
+            return `${record.consumableQuantity.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
           }
-          if (record.consumableImportedQuantity > 0 && record.volumeUnitName) {
-            return `${record.consumableImportedQuantity.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
-          }
-          return `${record.storageAvailableQuantity} ${record.baseUnitName || ""}`.trim();
+          return `${record.remainingBaseQuantity.toLocaleString("vi-VN")} ${record.baseUnitName || ""}`.trim();
         },
       },
       {
         title: "Tiêu hao trong kỳ",
         width: 130,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => formatConsumption(record.theoreticalConsumption, record),
+        render: (_: any, record: WarehouseProductLotDto) => {
+          return formatConsumption(record.theoreticalConsumption, record);
+        },
       },
       {
         title: "Tồn kho cuối kỳ (Dự kiến)",
         width: 180,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => {
-          const expected = record.expectedStockConsumable;
-          if (!record.consumableImportedQuantity && !expected) return "-";
-
-          if (record.stockByUnits && record.stockByUnits.length >= 2) {
-            const totalVolume = record.stockByUnits.reduce(
-              (s, e) => s + e.quantity * (e.volumePerUnit || 0), 0,
-            );
-            const firstVolumeUnit = record.stockByUnits.find(e => e.volumeUnitName)?.volumeUnitName || "";
-
-            if (expected < 0) {
-              return <div style={{ color: "#ff4d4f" }}>{`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}</div>;
-            }
-
-            if (totalVolume > 0) {
-              return (
-                <div>
-                  {record.stockByUnits.map((entry, i) => {
-                    const entryVol = entry.quantity * (entry.volumePerUnit || 0);
-                    if (entryVol <= 0 || !entry.volumePerUnit) return null;
-                    const unitExpectedVol = expected * (entryVol / totalVolume);
-                    const unitExpectedBase = unitExpectedVol / entry.volumePerUnit;
-                    const unit = entry.packagingUnitName || "";
-                    const intPart = Math.floor(unitExpectedBase);
-                    const decPart = unitExpectedBase - intPart;
-                    if (decPart === 0) {
-                      return <div key={i}>{`${unitExpectedBase.toLocaleString("vi-VN")} ${unit}`.trim()}</div>;
-                    }
-                    const vol = Math.round(decPart * entry.volumePerUnit);
-                    return <div key={i}>{`${intPart.toLocaleString("vi-VN")} ${unit} - ${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName || ""}`}</div>;
-                  })}
-                  {firstVolumeUnit && (
-                    <div style={{ fontSize: 12, color: "#888" }}>
-                      {`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-          }
-
+        render: (_: any, record: WarehouseProductLotDto) => {
+          const expected = record.consumableQuantity - (record.theoreticalConsumption || 0);
           return renderExpectedStock(expected, record);
         },
       },
       {
         title: "Số lượng thực tế",
         width: 320,
-        render: (_: any, record: ProductDto) => {
-          const item = section.items.find(i => i.productId === record.id);
+        render: (_: any, record: WarehouseProductLotDto) => {
+          const item = section.items.find(i =>
+            i.productId === record.productId && (i.lotNumber ?? "") === (record.lotNumber ?? "")
+          );
           if (!item) return null;
 
           const hasVolume = record.volumePerUnit && record.volumePerUnit > 0 && record.volumeUnitName;
@@ -481,7 +446,7 @@ const StockInventoryForm: React.FC = () => {
                 <NumericFormat
                   value={item.actualQuantityStorage ?? ""}
                   onValueChange={(values) => {
-                    updateItem(section.warehouseId, record.id, "actualQuantityStorage", values.floatValue ?? null);
+                    updateItem(section.warehouseId, record.productId, record.lotNumber, "actualQuantityStorage", values.floatValue ?? null);
                   }}
                   allowNegative
                   decimalScale={2}
@@ -503,7 +468,7 @@ const StockInventoryForm: React.FC = () => {
                   <NumericFormat
                     value={item.actualQuantityConsumable ?? ""}
                     onValueChange={(values) => {
-                      updateItem(section.warehouseId, record.id, "actualQuantityConsumable", values.floatValue ?? null);
+                      updateItem(section.warehouseId, record.productId, record.lotNumber, "actualQuantityConsumable", values.floatValue ?? null);
                     }}
                     allowNegative
                     decimalScale={2}
@@ -515,7 +480,7 @@ const StockInventoryForm: React.FC = () => {
                     disabled={isReadonly}
                   />
                   <Input
-                    value={record.volumeUnitName}
+                    value={record.volumeUnitName ?? ""}
                     disabled
                     style={{ width: 65, textAlign: "center" }}
                   />
@@ -529,8 +494,10 @@ const StockInventoryForm: React.FC = () => {
         title: "Chênh lệch",
         width: 140,
         align: "right" as const,
-        render: (_: any, record: ProductDto) => {
-          const item = section.items.find(i => i.productId === record.id);
+        render: (_: any, record: WarehouseProductLotDto) => {
+          const item = section.items.find(i =>
+            i.productId === record.productId && (i.lotNumber ?? "") === (record.lotNumber ?? "")
+          );
           if (!item) return null;
           const diff = computeDifference(record, item);
           if (diff === null) return "-";
@@ -538,7 +505,7 @@ const StockInventoryForm: React.FC = () => {
           const unit = record.volumeUnitName || record.baseUnitName || "";
           const color = diff > 0 ? "#52c41a" : diff < 0 ? "#ff4d4f" : undefined;
           const sign = diff > 0 ? "+" : "";
-          const expected = record.expectedStockConsumable;
+          const expected = record.consumableQuantity - (record.theoreticalConsumption || 0);
           const pct = expected !== 0 ? ((diff / Math.abs(expected)) * 100).toFixed(1) : null;
 
           return (
@@ -552,14 +519,16 @@ const StockInventoryForm: React.FC = () => {
       {
         title: "Lý do",
         width: 180,
-        render: (_: any, record: ProductDto) => {
-          const item = section.items.find(i => i.productId === record.id);
+        render: (_: any, record: WarehouseProductLotDto) => {
+          const item = section.items.find(i =>
+            i.productId === record.productId && (i.lotNumber ?? "") === (record.lotNumber ?? "")
+          );
           if (!item) return null;
 
           return (
             <Input.TextArea
               value={item.reason}
-              onChange={(e) => updateItem(section.warehouseId, record.id, "reason", e.target.value)}
+              onChange={(e) => updateItem(section.warehouseId, record.productId, record.lotNumber, "reason", e.target.value)}
               rows={1}
               maxLength={1000}
               placeholder="Lý do"
@@ -573,12 +542,12 @@ const StockInventoryForm: React.FC = () => {
 
     return (
       <Table
-        dataSource={section.products}
+        dataSource={section.lots}
         columns={columns}
-        rowKey="id"
+        rowKey={(record) => lotKey(record.productId, record.lotNumber)}
         size="small"
         pagination={false}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1800 }}
       />
     );
   };
@@ -709,7 +678,7 @@ const StockInventoryForm: React.FC = () => {
                 label: (
                   <Space>
                     <span style={{ fontWeight: 600 }}>{section.warehouseName}</span>
-                    <Tag>{section.products.length} vật tư</Tag>
+                    <Tag>{section.lots.length} vật tư</Tag>
                   </Space>
                 ),
                 extra: !isReadonly && (

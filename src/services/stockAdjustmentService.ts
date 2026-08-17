@@ -51,6 +51,8 @@ export interface StockAdjustmentItemDto {
   productType?: number;
   baseUnitName?: string;
   consumableQuantityBefore?: number;
+  lotNumber?: string;
+  manufacturerName?: string;
 }
 
 export interface StockAdjustmentDto extends StockAdjustmentListDto {
@@ -72,6 +74,8 @@ export interface CreateUpdateStockAdjustmentItemDto {
   actualUnitId?: string;
   reason?: string;
   expectedStock?: number;
+  lotNumber?: string;
+  manufacturerName?: string;
 }
 
 export interface ConfirmPreviewItemDto {
@@ -87,6 +91,23 @@ export interface ConfirmPreviewItemDto {
 export interface ConfirmPreviewDto {
   hasChanges: boolean;
   items: ConfirmPreviewItemDto[];
+}
+
+export interface WarehouseProductLotDto {
+  productId: string;
+  productName: string;
+  productType: number;
+  lotNumber: string | null;
+  manufacturerName: string | null;
+  remainingBaseQuantity: number;
+  volumePerUnit: number | null;
+  volumeUnitName: string | null;
+  packagingUnitName: string | null;
+  baseUnitName: string | null;
+  volumeUnitId: string | null;
+  baseUnitId: string | null;
+  consumableQuantity: number;
+  theoreticalConsumption: number;
 }
 
 export interface GetStockAdjustmentListInput {
@@ -144,6 +165,11 @@ export const stockAdjustmentService = {
 
   getConfirmPreview: async (id: string): Promise<ConfirmPreviewDto> => {
     const response = await api.get<ConfirmPreviewDto>(`${BASE_URL}/${id}/confirm-preview`);
+    return response.data;
+  },
+
+  getWarehouseProductLots: async (warehouseId: string): Promise<WarehouseProductLotDto[]> => {
+    const response = await api.get<WarehouseProductLotDto[]>(`${BASE_URL}/warehouse-product-lots/${warehouseId}`);
     return response.data;
   },
 };

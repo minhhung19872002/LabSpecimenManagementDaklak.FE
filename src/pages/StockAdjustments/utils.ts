@@ -1,11 +1,11 @@
 import React from "react";
 
 export interface StockUnitInfo {
-  volumePerUnit?: number;
-  packagingUnitName?: string;
-  volumeUnitName?: string;
-  unitName?: string;
-  baseUnitName?: string;
+  volumePerUnit?: number | null;
+  packagingUnitName?: string | null;
+  volumeUnitName?: string | null;
+  unitName?: string | null;
+  baseUnitName?: string | null;
 }
 
 export function formatStockPackaging(qty: number, info: StockUnitInfo): string {
