@@ -8,8 +8,26 @@ interface BarcodeListModalProps {
   onClose: () => void;
 }
 
+const printStyle = `
+@media print {
+  .barcode-list-modal .barcode-value-wrapper svg {
+    max-width: 280px !important;
+  }
+}
+`;
+
 const BarcodeListModal: React.FC<BarcodeListModalProps> = ({ open, barcodes, onClose }) => (
-  <Modal title="Danh sách barcode" open={open} onCancel={onClose} footer={null} width={720} centered styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}>
+  <Modal
+    title="Danh sách barcode"
+    open={open}
+    onCancel={onClose}
+    footer={null}
+    width={900}
+    centered
+    className="barcode-list-modal"
+    styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
+  >
+    <style>{printStyle}</style>
     <List
       bordered
       size="small"
@@ -18,7 +36,9 @@ const BarcodeListModal: React.FC<BarcodeListModalProps> = ({ open, barcodes, onC
       renderItem={(barcode, index) => (
         <List.Item>
           <div style={{ width: "100%" }}>
-            <Typography.Text type="secondary">Barcode {index + 1}</Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 14, marginBottom: 4, display: "block" }}>
+              Barcode {index + 1}
+            </Typography.Text>
             <BarcodeValue value={barcode} />
           </div>
         </List.Item>
