@@ -150,7 +150,7 @@ const BarcodeQRModal: React.FC<BarcodeQRModalProps> = ({
           }
           .barcode {
             font-family: 'Libre Barcode 39', cursive;
-            font-size: 48px;
+            font-size: 72px;
             letter-spacing: 0;
             margin: 8px 0;
           }
@@ -352,7 +352,7 @@ const BarcodeQRModal: React.FC<BarcodeQRModalProps> = ({
             <div
               style={{
                 fontFamily: "'Libre Barcode 39', cursive",
-                fontSize: 48,
+                fontSize: 72,
                 letterSpacing: 0,
                 margin: "8px 0",
               }}
@@ -401,6 +401,7 @@ const BarcodeQRModal: React.FC<BarcodeQRModalProps> = ({
       open={visible}
       onCancel={onClose}
       width={450}
+      centered
       footer={
         <Space>
           <Button onClick={onClose}>Đóng</Button>

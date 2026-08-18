@@ -27,7 +27,7 @@ const BarcodeValue: React.FC<BarcodeValueProps> = ({ value, displayValue = true 
   }, [value]);
 
   return (
-    <div className="barcode-value-wrapper" style={{ maxWidth: "100%", overflowX: "auto", textAlign: "center" }}>
+    <div className="barcode-value-wrapper" style={{ maxWidth: "100%", overflowX: "auto" }}>
       <svg
         ref={svgRef}
         aria-label={`Barcode ${value}`}

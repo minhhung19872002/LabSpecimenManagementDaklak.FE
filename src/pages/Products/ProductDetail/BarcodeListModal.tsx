@@ -39,7 +39,9 @@ const BarcodeListModal: React.FC<BarcodeListModalProps> = ({ open, barcodes, onC
             <Typography.Text type="secondary" style={{ fontSize: 14, marginBottom: 4, display: "block" }}>
               Barcode {index + 1}
             </Typography.Text>
-            <BarcodeValue value={barcode} />
+            <div style={{ textAlign: "center" }}>
+              <BarcodeValue value={barcode} />
+            </div>
           </div>
         </List.Item>
       )}

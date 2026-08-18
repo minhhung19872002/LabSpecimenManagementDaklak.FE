@@ -97,7 +97,16 @@ const calcBarcodeCountFromImportUnit = (
   return Math.max(1, Math.ceil(qty));
 };
 
-const BARCODE_OPTIONS = {
+const BARCODE_SCREEN_OPTIONS = {
+  format: "CODE128" as const,
+  width: 2,
+  height: 60,
+  displayValue: true,
+  fontSize: 14,
+  margin: 4,
+};
+
+const BARCODE_PRINT_OPTIONS = {
   format: "CODE128" as const,
   width: 1.5,
   height: 50,
@@ -109,7 +118,7 @@ const BARCODE_OPTIONS = {
 const generateBarcodeSvgMarkup = (content: string): string => {
   try {
     const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    JsBarcode(svgEl, content, BARCODE_OPTIONS);
+    JsBarcode(svgEl, content, BARCODE_PRINT_OPTIONS);
     return svgEl.outerHTML;
   } catch {
     return `<div style="color:red;font-size:12px">Không thể tạo barcode: ${content}</div>`;
@@ -123,7 +132,7 @@ const BarcodeDisplay: React.FC<{ content: string }> = ({ content }) => {
   useEffect(() => {
     if (svgRef.current) {
       try {
-        JsBarcode(svgRef.current, content, BARCODE_OPTIONS);
+        JsBarcode(svgRef.current, content, BARCODE_SCREEN_OPTIONS);
         setError(false);
       } catch {
         setError(true);
@@ -352,7 +361,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
       title={printOnly ? "In barcode" : "In nhãn và nhập kho"}
       open={open}
       onCancel={onClose}
-      width={650}
+      width={900}
       centered
       styles={{ body: { maxHeight: "85vh", overflowY: "auto" } }}
       footer={
