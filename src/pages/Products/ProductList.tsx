@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Card, Button, Space, Tree, Spin, Tooltip, Typography, message } from "antd";
 import type { TreeDataNode } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useProductList, useProductActions } from "./hooks";
 import { ProductTable, ProductModal, ColumnConfigPopover } from "./components";
 import { getProductColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
@@ -75,6 +75,8 @@ const buildTree = (warehouses: WarehouseDto[]): TreeDataNode[] => {
 
 const ProductList: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as { warehouseId?: string } | null;
   const {
     products,
     totalCount,
@@ -92,7 +94,7 @@ const ProductList: React.FC = () => {
     handleSortChange,
     fetchData,
     handlePageChange,
-  } = useProductList();
+  } = useProductList(locationState?.warehouseId);
 
   const {
     modalOpen,

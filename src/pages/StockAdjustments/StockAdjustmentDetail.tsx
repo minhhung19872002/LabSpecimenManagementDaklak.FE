@@ -77,6 +77,13 @@ const StockAdjustmentDetail: React.FC = () => {
     }
   };
 
+  const handleBack = () => {
+    const warehouseIds = [...new Set((adjustment?.items ?? []).map(i => i.warehouseId).filter(Boolean))];
+    navigate(PATH_ROUTES.products.index, {
+      state: warehouseIds.length === 1 ? { warehouseId: warehouseIds[0] } : undefined,
+    });
+  };
+
   const handleDelete = async () => {
     if (!adjustment) return;
     try {
@@ -252,7 +259,7 @@ const StockAdjustmentDetail: React.FC = () => {
   return (
     <div className="stock-adjustment-detail">
       <div className="back-button-bar">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+        <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
           Quay lại
         </Button>
       </div>

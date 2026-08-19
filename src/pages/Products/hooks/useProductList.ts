@@ -4,7 +4,7 @@ import { productService, ProductDto, ProductType } from "../../../services/produ
 
 const DEFAULT_PAGE_SIZE = 50;
 
-export const useProductList = () => {
+export const useProductList = (initialWarehouseId?: string) => {
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -12,7 +12,7 @@ export const useProductList = () => {
   const [productTypeFilter, setProductTypeFilter] = useState<ProductType | undefined>(undefined);
   const [isDraftFilter, setIsDraftFilter] = useState<boolean | undefined>(undefined);
   const [sorting, setSorting] = useState<string | undefined>(undefined);
-  const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
+  const [warehouseId, setWarehouseId] = useState<string | undefined>(initialWarehouseId);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const abortRef = useRef<AbortController | null>(null);
