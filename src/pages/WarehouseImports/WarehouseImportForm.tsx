@@ -51,6 +51,8 @@ interface LineItem {
   baseUnitName?: string;
   baseOrderedQuantity?: number;
   remainingOrderableQuantity: number;
+  remainingInStorageQuantity?: number;
+  storageUnitName?: string;
   actualReceivedQuantity: number;
   lotNumber?: string;
   lotExpiryDate?: string;
@@ -238,6 +240,8 @@ const WarehouseImportForm: React.FC = () => {
           baseUnitName: imp.baseUnitName,
           baseOrderedQuantity: imp.baseOrderedQuantity,
           remainingOrderableQuantity: imp.remainingOrderableQuantity,
+          remainingInStorageQuantity: imp.remainingInStorageQuantity,
+          storageUnitName: imp.storageUnitName,
           availableSkus: imp.skus || [],
           casNumber: imp.casNumber,
           packagingSpec: imp.packagingSpec,
@@ -263,7 +267,9 @@ const WarehouseImportForm: React.FC = () => {
             });
           });
 
-        if (imp.remainingOrderableQuantity <= 0 && matches.length === 0) {
+        if (imp.remainingOrderableQuantity <= 0
+          && (imp.remainingInStorageQuantity == null || imp.remainingInStorageQuantity <= 0)
+          && matches.length === 0) {
           return;
         }
 
@@ -442,6 +448,20 @@ const WarehouseImportForm: React.FC = () => {
     return qty;
   };
 
+  const convertToStorageUnit = (qty: number, item: LineItem): number => {
+    const sku = (item.availableSkus || []).find(s => s.skuId === item.skuId);
+    if (!sku || !sku.packagingQuantity) return qty;
+    const isPurchaseUnit = item.selectedUnitId
+      ? item.selectedUnitId === sku.purchaseUnitId
+      : item.selectedUnitName === sku.purchaseUnitName ||
+        item.selectedUnitName === `${sku.purchaseUnitName} (mua hàng)`;
+    if (isPurchaseUnit && sku.storageUnitId !== sku.purchaseUnitId) return qty * sku.packagingQuantity;
+    if (item.selectedUnitId && item.selectedUnitId === sku.storageUnitId) return qty;
+    if (item.selectedUnitId && item.selectedUnitId === sku.consumableUnitId && sku.volumePerUnit && sku.volumePerUnit > 0)
+      return qty / sku.volumePerUnit;
+    return qty;
+  };
+
   // Convert purchase/order qty → record's selected unit
   const convertFromOrderUnit = (qtyInOrder: number, record: LineItem): number => {
     const sku = (record.availableSkus || []).find(s => s.skuId === record.skuId);
@@ -454,7 +474,35 @@ const WarehouseImportForm: React.FC = () => {
   };
 
   const getRemainingForRow = (record: LineItem): number => {
-    const siblingCheckedSum = lineItems
+    const siblingCheckedInStorage = lineItems
+      .filter(
+        (it) =>
+          it.goodsReceiptItemId === record.goodsReceiptItemId &&
+          it.key !== record.key &&
+          !it.isHistorical &&
+          it.status === WarehouseImportLineStatus.Checked
+      )
+      .reduce((sum, it) => sum + convertToStorageUnit(it.actualReceivedQuantity || 0, it), 0);
+
+    if (record.remainingInStorageQuantity != null) {
+      const remainStorage = record.remainingInStorageQuantity - siblingCheckedInStorage;
+      const sku = (record.availableSkus || []).find(s => s.skuId === record.skuId);
+      if (sku?.packagingQuantity) {
+        const isPurchaseUnit = record.selectedUnitId
+          ? record.selectedUnitId === sku.purchaseUnitId
+          : record.selectedUnitName === sku.purchaseUnitName ||
+            record.selectedUnitName === `${sku.purchaseUnitName} (mua hàng)`;
+        if (isPurchaseUnit && sku.storageUnitId !== sku.purchaseUnitId)
+          return Math.max(0, remainStorage / sku.packagingQuantity);
+        if (record.selectedUnitId && record.selectedUnitId === sku.storageUnitId)
+          return Math.max(0, remainStorage);
+        if (record.selectedUnitId && record.selectedUnitId === sku.consumableUnitId && sku.volumePerUnit && sku.volumePerUnit > 0)
+          return Math.max(0, remainStorage * sku.volumePerUnit);
+      }
+      return Math.max(0, remainStorage);
+    }
+
+    const siblingCheckedOrder = lineItems
       .filter(
         (it) =>
           it.goodsReceiptItemId === record.goodsReceiptItemId &&
@@ -463,7 +511,7 @@ const WarehouseImportForm: React.FC = () => {
           it.status === WarehouseImportLineStatus.Checked
       )
       .reduce((sum, it) => sum + convertToOrderUnit(it.actualReceivedQuantity || 0, it), 0);
-    const remainingPurchase = record.remainingOrderableQuantity - siblingCheckedSum;
+    const remainingPurchase = record.remainingOrderableQuantity - siblingCheckedOrder;
     return Math.max(0, convertFromOrderUnit(remainingPurchase, record));
   };
 
@@ -549,7 +597,11 @@ const WarehouseImportForm: React.FC = () => {
     let targetUnit: string | undefined;
     let hasSkuConversion = false;
 
-    if (skuWithPkg?.packagingQuantity) {
+    if (record.remainingInStorageQuantity != null) {
+      targetBase = record.remainingInStorageQuantity;
+      targetUnit = record.storageUnitName ?? skuWithPkg?.storageUnitName ?? record.baseUnitName ?? record.unitName;
+      hasSkuConversion = true;
+    } else if (skuWithPkg?.packagingQuantity) {
       targetBase = record.remainingOrderableQuantity * skuWithPkg.packagingQuantity;
       targetUnit = skuWithPkg.storageUnitName ?? record.baseUnitName ?? record.unitName;
       hasSkuConversion = true;
@@ -586,6 +638,8 @@ const WarehouseImportForm: React.FC = () => {
       baseUnitName: record.baseUnitName,
       baseOrderedQuantity: record.baseOrderedQuantity,
       remainingOrderableQuantity: record.remainingOrderableQuantity,
+      remainingInStorageQuantity: record.remainingInStorageQuantity,
+      storageUnitName: record.storageUnitName,
       actualReceivedQuantity: 0,
       status: WarehouseImportLineStatus.Checked,
       availableSkus: record.availableSkus,
@@ -690,13 +744,14 @@ const WarehouseImportForm: React.FC = () => {
     const byLine = new Map<string, number>();
     for (const item of editableItems) {
       if (item.status !== WarehouseImportLineStatus.Checked || !item.actualReceivedQuantity) continue;
-      const inOrderUnit = convertToOrderUnit(item.actualReceivedQuantity, item);
-      byLine.set(item.goodsReceiptItemId, (byLine.get(item.goodsReceiptItemId) || 0) + inOrderUnit);
+      const inStorage = convertToStorageUnit(item.actualReceivedQuantity, item);
+      byLine.set(item.goodsReceiptItemId, (byLine.get(item.goodsReceiptItemId) || 0) + inStorage);
     }
     for (const [goodsReceiptItemId, sum] of byLine) {
       const imp = importableItems.find((i) => i.goodsReceiptItemId === goodsReceiptItemId);
-      if (imp && sum > imp.remainingOrderableQuantity + 1e-9) {
-        message.warning(`Số lượng "Đã kiểm tra" của ${imp.productName} vượt quá số lượng còn lại có thể nhận.`);
+      const maxInStorage = imp?.remainingInStorageQuantity ?? imp?.remainingOrderableQuantity;
+      if (imp && maxInStorage != null && sum > maxInStorage + 1e-9) {
+        message.warning(`Số lượng "Đã kiểm tra" của ${imp.productName} vượt quá số lượng còn lại có thể nhận (quy đổi theo đơn vị lưu kho).`);
         return false;
       }
     }

@@ -276,6 +276,8 @@ export interface GoodsReceiptItemForImportDto {
   orderedQuantity: number;
   alreadyReceivedQuantity: number;
   remainingOrderableQuantity: number;
+  remainingInStorageQuantity?: number;
+  storageUnitName?: string;
   /** Đơn vị lưu kho, chỉ có giá trị khi khác đơn vị mua hàng (unitId/unitName). */
   baseUnitName?: string;
   baseOrderedQuantity?: number;
