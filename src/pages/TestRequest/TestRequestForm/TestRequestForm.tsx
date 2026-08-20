@@ -418,6 +418,7 @@ const TestRequestForm: React.FC = () => {
               samplingRequirement: SamplingRequirement.CustomerSampling,
               sampleStorageOption: SampleStorageOption.No,
               sampleType: ["service"],
+              separatePassedResults: true,
             }}
           >
             {/* Top sections row: Hợp đồng (bao gồm Loại hình mẫu), Khách hàng */}
