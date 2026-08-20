@@ -45,6 +45,7 @@ export interface DashboardOverviewDto {
   totalIndicators: number;
   totalNCRs: number;
   totalRevenue: number;
+  totalGrossRevenue: number;
   onTimeTests: number;
   lateTests: number;
   pendingApproval: number;

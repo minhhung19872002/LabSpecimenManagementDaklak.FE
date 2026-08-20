@@ -532,6 +532,11 @@
   color: #389E0D;
 }
 
+.dashboard-stat-icon.gross-revenue {
+  background: #52C41A;
+  color: #FFFFFF;
+}
+
 .dashboard-stat-icon.cyan {
   background: #E6FFFB;
   color: #13C2C2;
