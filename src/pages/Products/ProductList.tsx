@@ -112,6 +112,7 @@ const ProductList: React.FC = () => {
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [exporting, setExporting] = useState(false);
+  const [exportingAppendix, setExportingAppendix] = useState(false);
 
   useEffect(() => {
     const loadWarehouses = async () => {
@@ -186,6 +187,29 @@ const ProductList: React.FC = () => {
     }
   }, [warehouseId, searchText, productTypeFilter, isDraftFilter]);
 
+  const handleExportProductAppendix = useCallback(async () => {
+    if (!warehouseId) {
+      message.warning("Vui lòng chọn kho trước khi xuất phụ lục vật tư.");
+      return;
+    }
+    setExportingAppendix(true);
+    const newTab = window.open("about:blank", "_blank");
+    try {
+      const result = await productService.exportProductAppendix(warehouseId);
+      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
+      if (newTab) {
+        newTab.location.href = editorUrl;
+      } else {
+        window.open(editorUrl, "_blank");
+      }
+    } catch {
+      if (newTab) newTab.close();
+      message.error("Không thể xuất phụ lục vật tư.");
+    } finally {
+      setExportingAppendix(false);
+    }
+  }, [warehouseId]);
+
   const columns = useMemo(
     () => getProductColumns(visibleKeys),
     [visibleKeys]
@@ -237,6 +261,15 @@ const ProductList: React.FC = () => {
           title="Quản lý danh sách vật tư"
           extra={
             <Space>
+              {canExport && (
+                <Button
+                  loading={exportingAppendix}
+                  disabled={!warehouseId}
+                  onClick={handleExportProductAppendix}
+                >
+                  Xuất phụ lục vật tư
+                </Button>
+              )}
               {canExport && (
                 <Button
                   loading={exporting}

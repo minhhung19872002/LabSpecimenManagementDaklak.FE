@@ -521,6 +521,13 @@ export const productService = {
     return response.data;
   },
 
+  exportProductAppendix: async (warehouseId: string): Promise<{ fileName: string }> => {
+    const response = await api.get<{ fileName: string }>(`${BASE_URL}/export-product-appendix`, {
+      params: { WarehouseId: warehouseId },
+    });
+    return response.data;
+  },
+
   // File upload via existing file API
   uploadFile: async (file: File): Promise<{ fileId: string; fileName: string; fileSize: number; url: string }> => {
     const formData = new FormData();
