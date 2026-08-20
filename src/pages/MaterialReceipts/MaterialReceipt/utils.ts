@@ -100,13 +100,23 @@ export const isQuantityExceedingCentralStock = (
 export const buildLineItemFromProduct = (
   product: CentralWarehouseProductDto,
 ): MaterialReceiptLineItem => {
-  const defaultUnit = product.availableUnits.find((u) => !u.isConsumable) ||
-    product.availableUnits[0];
-  const defaultSku = product.skus.find(
-    (sku) =>
-      sku.consumableUnitId === defaultUnit?.unitId ||
-      sku.storageUnitId === defaultUnit?.unitId,
-  );
+  const manufacturerSku = product.manufacturerName
+    ? product.skus.find((sku) => sku.manufacturerName === product.manufacturerName)
+    : null;
+
+  const defaultUnit = manufacturerSku?.storageUnitId
+    ? product.availableUnits.find((u) => u.unitId === manufacturerSku.storageUnitId)
+      || product.availableUnits.find((u) => !u.isConsumable)
+      || product.availableUnits[0]
+    : product.availableUnits.find((u) => !u.isConsumable)
+      || product.availableUnits[0];
+
+  const defaultSku = manufacturerSku
+    || product.skus.find(
+      (sku) =>
+        sku.consumableUnitId === defaultUnit?.unitId ||
+        sku.storageUnitId === defaultUnit?.unitId,
+    );
 
   return {
     key: product.productId,

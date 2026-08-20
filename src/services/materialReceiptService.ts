@@ -122,6 +122,8 @@ export interface ProductUnitOptionDto {
 
 export interface CentralWarehouseProductSkuDto {
   skuId: string;
+  manufacturerId?: string;
+  manufacturerName?: string;
   storageUnitId?: string;
   storageUnitName?: string;
   consumableUnitId?: string;
