@@ -112,18 +112,17 @@ const getAllStats = (overview: DashboardOverviewDto | null) => {
       valueColor: "#722ED1",
     },
     {
-      title: "Tổng doanh thu",
+      title: "Tổng doanh thu (Thực thu)",
       value: formatCurrency(overview?.totalRevenue || 0),
       iconBg: "revenue",
       icon: <Icon name="currency-dollar" />,
       valueColor: "#FAAD14",
     },
     {
-      title: "Báo cáo NCT",
-      value: overview?.totalNCRs || 0,
-      iconBg: "ncr",
-      icon: <Icon name="exclamation-diamond" />,
-      valueColor: "#F5222D",
+      title: "Tổng doanh thu thuần",
+      value: formatCurrency(overview?.totalGrossRevenue || 0),
+      iconBg: "gross-revenue",
+      icon: <Icon name="cash-stack" />,
     },
     {
       title: "TN Đúng hạn",
