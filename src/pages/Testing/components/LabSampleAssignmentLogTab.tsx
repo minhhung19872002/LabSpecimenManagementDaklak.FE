@@ -3,6 +3,8 @@ import { Table, AutoComplete, Input, Select, Tag, Row, Col, Pagination, DatePick
 import {
   SearchOutlined,
   SortAscendingOutlined,
+  CaretRightOutlined,
+  CaretDownOutlined,
   SendOutlined,
   StopOutlined,
 } from '@ant-design/icons';
@@ -173,14 +175,6 @@ const getRowColorClass = (record: DisplayRow): string => {
 // ---------- Column options (exported for visibility selector) ----------
 
 export const COLUMN_OPTIONS: ColumnOption[] = [
-  { key: 'contractNumber', label: 'Số hợp đồng', disabled: true },
-  { key: 'sampleCode', label: 'Mã số mẫu', disabled: true },
-  { key: 'sampleName', label: 'Tên mẫu' },
-  { key: 'sampleQuantity', label: 'Lượng mẫu gửi' },
-  { key: 'sampleStatusText', label: 'Tình trạng mẫu' },
-  { key: 'transferDate', label: 'Ngày nhận mẫu' },
-  { key: 'requestCompletionDate', label: 'Ngày YC xong' },
-  { key: 'testDate', label: 'Thời gian TN' },
   { key: 'indicatorName', label: 'Tên chỉ tiêu' },
   { key: 'methodName', label: 'Phương pháp' },
   { key: 'technicianName', label: 'Người thực hiện' },
@@ -371,9 +365,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     reload();
   }, [reload]);
 
-  // Count visible leaf columns for header-row colSpan
-  const visibleLeafCount = visibleColumns.length;
-
   const columns: ColumnsType<DisplayRow> = useMemo(() => {
     const isVisible = (key: string) => visibleColumns.includes(key);
 
@@ -382,7 +373,56 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       if (record._rowType === 'contract' || record._rowType === 'sample') return { colSpan: 0 };
       return {};
     };
+
     const leafColumns: ColumnsType<DisplayRow> = [];
+
+    leafColumns.push({
+      title: 'STT',
+      key: 'stt',
+      width: 60,
+      onCell: (record) => {
+        if (record._rowType === 'contract' || record._rowType === 'sample')
+          return { colSpan: leafColumns.length };
+        return {};
+      },
+      render: (_: any, record: DisplayRow) => {
+        if (record._rowType === 'contract') {
+          const collapsed = collapsedContracts.has(record._groupContractNumber || '');
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+              <span
+                style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                onClick={() => toggleContract(record._groupContractNumber || '')}
+              >
+                {collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />}
+              </span>
+              <strong>{record._groupContractNumber || '-'}</strong>
+              {record._groupCustomerName && (
+                <span style={{ color: '#555', marginLeft: 4 }}>{record._groupCustomerName}</span>
+              )}
+              <span style={{ color: '#999', marginLeft: 8 }}>· {record._indicatorCount} chỉ tiêu</span>
+            </div>
+          );
+        }
+        if (record._rowType === 'sample') {
+          const collapsed = collapsedSamples.has(record._groupSampleId || '');
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 24, whiteSpace: 'nowrap' }}>
+              <span
+                style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                onClick={() => toggleSample(record._groupSampleId || '')}
+              >
+                {collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />}
+              </span>
+              <strong>{record._groupSampleCode || '-'}</strong>
+              <span style={{ color: '#555' }}>{record._groupSampleName || ''}</span>
+              <span style={{ color: '#999', marginLeft: 8 }}>· {record._indicatorCount} chỉ tiêu</span>
+            </div>
+          );
+        }
+        return record._stt;
+      },
+    });
 
     if (isVisible('indicatorName')) {
       leafColumns.push({
@@ -659,7 +699,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     return grouped;
   }, [
     visibleColumns,
-    visibleLeafCount,
     collapsedContracts,
     collapsedSamples,
     toggleContract,
