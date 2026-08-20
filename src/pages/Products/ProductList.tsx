@@ -4,14 +4,17 @@ import type { TreeDataNode } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProductList, useProductActions } from "./hooks";
+import type { UploadFile } from "antd/es/upload/interface";
 import { ProductTable, ProductModal, ColumnConfigPopover } from "./components";
+import ImportProductModal from "./components/ImportProductModal";
 import { getProductColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { PATH_ROUTES } from "../../constants/routes";
 import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import { productService } from "../../services/productService";
-import { downloadBlobAsFile } from "../../services/importService";
+import importService, { downloadBlobAsFile } from "../../services/importService";
+import type { ProductImportPreviewDto } from "../../services/importService";
 import "../../styles/ListCard.css";
 import "./ProductList.css";
 
@@ -113,6 +116,11 @@ const ProductList: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [exporting, setExporting] = useState(false);
   const [exportingAppendix, setExportingAppendix] = useState(false);
+  const [productImportOpen, setProductImportOpen] = useState(false);
+  const [productImportLoading, setProductImportLoading] = useState(false);
+  const [productImportFileList, setProductImportFileList] = useState<UploadFile[]>([]);
+  const [productImportPreview, setProductImportPreview] = useState<ProductImportPreviewDto | null>(null);
+  const canImport = authService.hasPermission(PERMISSIONS.Products.Create);
 
   useEffect(() => {
     const loadWarehouses = async () => {
@@ -210,6 +218,42 @@ const ProductList: React.FC = () => {
     }
   }, [warehouseId]);
 
+  const handleProductImportPreview = useCallback(async () => {
+    if (!productImportFileList.length) return;
+    setProductImportLoading(true);
+    try {
+      const file = productImportFileList[0].originFileObj as File;
+      const result = await importService.previewProducts(file);
+      setProductImportPreview(result);
+    } catch {
+      message.error("Không thể xem trước dữ liệu import");
+    } finally {
+      setProductImportLoading(false);
+    }
+  }, [productImportFileList]);
+
+  const handleProductImportConfirm = useCallback(async () => {
+    if (!productImportFileList.length) return;
+    setProductImportLoading(true);
+    try {
+      const file = productImportFileList[0].originFileObj as File;
+      const result = await importService.importProducts(file);
+      if (result.success) {
+        message.success(result.message || "Import thành công");
+        setProductImportOpen(false);
+        setProductImportFileList([]);
+        setProductImportPreview(null);
+        fetchData();
+      } else {
+        message.error(result.message || "Import thất bại");
+      }
+    } catch {
+      message.error("Không thể import dữ liệu");
+    } finally {
+      setProductImportLoading(false);
+    }
+  }, [productImportFileList, fetchData]);
+
   const columns = useMemo(
     () => getProductColumns(visibleKeys),
     [visibleKeys]
@@ -261,6 +305,14 @@ const ProductList: React.FC = () => {
           title="Quản lý danh sách vật tư"
           extra={
             <Space>
+              {canImport && (
+                <Button
+                  type="primary"
+                  onClick={() => setProductImportOpen(true)}
+                >
+                  Nhập danh sách vật tư
+                </Button>
+              )}
               {canExport && (
                 <Button
                   loading={exportingAppendix}
@@ -342,6 +394,26 @@ const ProductList: React.FC = () => {
         editingProduct={editingProduct}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
+      />
+
+      <ImportProductModal
+        open={productImportOpen}
+        loading={productImportLoading}
+        warehouseId={warehouseId}
+        fileList={productImportFileList}
+        previewData={productImportPreview}
+        onFileListChange={setProductImportFileList}
+        onPreview={handleProductImportPreview}
+        onConfirm={handleProductImportConfirm}
+        onCancel={() => {
+          setProductImportOpen(false);
+          setProductImportFileList([]);
+          setProductImportPreview(null);
+        }}
+        onReset={() => {
+          setProductImportFileList([]);
+          setProductImportPreview(null);
+        }}
       />
     </div>
   );

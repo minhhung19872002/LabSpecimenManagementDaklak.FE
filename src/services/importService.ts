@@ -541,7 +541,71 @@ export const importService = {
     const url = `${import.meta.env.VITE_API_URL || ''}${BASE_URL}/test-result-values/template`;
     window.open(url, '_blank');
   },
+  // ==================== Product Import (Stock Data Import) ====================
+
+  downloadProductTemplate: async (warehouseId: string): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/products/template?warehouseId=${warehouseId}`);
+    return response.data;
+  },
+
+  previewProducts: async (file: File): Promise<ProductImportPreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ProductImportPreviewDto>(`${BASE_URL}/products/preview`, formData);
+    return response.data;
+  },
+
+  importProducts: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/products`, formData);
+    return response.data;
+  },
 };
+
+// ==================== Product Import DTOs ====================
+
+export enum ProductImportItemStatus {
+  New = 0,
+  Update = 1,
+  Skipped = 2,
+}
+
+export interface ProductImportPreviewItem {
+  rowNumber: number;
+  identificationCode: string;
+  productName: string;
+  productTypeName?: string;
+  lotNumber?: string;
+  quantity: number;
+  storageUnitName?: string;
+  consumedStorageQty?: number;
+  endingStorageQty?: number;
+  expiryDate?: string;
+  receivedDate?: string;
+  manufacturerName?: string;
+  notes?: string;
+  status: ProductImportItemStatus;
+  existingProductId?: string;
+  isValid: boolean;
+  skipReason?: string;
+  errors: string[];
+}
+
+export interface ProductImportPreviewDto {
+  validationResult: ImportValidationResult;
+  items: ProductImportPreviewItem[];
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  skippedRows: number;
+  newItems: number;
+  updateItems: number;
+  warehouseId?: string;
+  warehouseName?: string;
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
 
 // ==================== Helper Functions ====================
 
