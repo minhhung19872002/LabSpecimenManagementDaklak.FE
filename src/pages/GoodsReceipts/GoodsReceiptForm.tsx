@@ -329,8 +329,14 @@ const handleRemoveLine = (key: string) => {
     );
   };
 
+  const addedProductIds = new Set([
+    ...lineItems.map((i) => i.productId),
+    ...equipmentItems.map((i) => i.productId),
+  ]);
+
   const filteredProductOptions = products
     .filter((p) => productTypeFilter === "all" || p.productType === Number(productTypeFilter))
+    .filter((p) => !addedProductIds.has(p.id))
     .map((p) => ({
       value: p.id,
       label: p.identificationCode
