@@ -1,5 +1,5 @@
 import { Tag, Tooltip, Button, Space } from "antd";
-import { EditOutlined, EyeOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
   GoodsReceiptListDto,
@@ -32,7 +32,9 @@ export const getGoodsReceiptColumns = (
   canEdit: boolean,
   _canDelete: boolean,
   currentPage: number,
-  pageSize: number
+  pageSize: number,
+  handleCancel?: (record: GoodsReceiptListDto) => void,
+  canCancel?: boolean
 ): ColumnsType<GoodsReceiptListDto> => {
   const columns: ColumnsType<GoodsReceiptListDto> = [
     {
@@ -124,13 +126,28 @@ export const getGoodsReceiptColumns = (
         {canEdit &&
           record.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported &&
           record.orderStatus !== GoodsReceiptOrderStatus.PendingApproval &&
-          record.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
+          record.orderStatus !== GoodsReceiptOrderStatus.Rejected &&
+          record.orderStatus !== GoodsReceiptOrderStatus.Cancelled && (
             <Tooltip title="Sửa">
               <Button
                 type="link"
                 size="small"
                 icon={<EditOutlined />}
                 onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+          )}
+        {canCancel &&
+          record.orderStatus !== GoodsReceiptOrderStatus.Cancelled &&
+          !(record.orderStatus === GoodsReceiptOrderStatus.Completed &&
+            record.warehouseStatus === GoodsReceiptWarehouseStatus.Imported) && (
+            <Tooltip title="Hủy đặt hàng">
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleCancel?.(record)}
               />
             </Tooltip>
           )}

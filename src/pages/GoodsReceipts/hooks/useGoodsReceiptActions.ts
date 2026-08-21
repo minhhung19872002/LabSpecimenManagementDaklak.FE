@@ -9,9 +9,10 @@ import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 interface UseGoodsReceiptActionsProps {
   fetchData: () => Promise<void>;
+  loadStats?: () => Promise<void>;
 }
 
-export const useGoodsReceiptActions = ({ fetchData }: UseGoodsReceiptActionsProps) => {
+export const useGoodsReceiptActions = ({ fetchData, loadStats }: UseGoodsReceiptActionsProps) => {
   const navigate = useNavigate();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -47,6 +48,27 @@ export const useGoodsReceiptActions = ({ fetchData }: UseGoodsReceiptActionsProp
     });
   }, [fetchData]);
 
+  const handleCancel = useCallback((record: GoodsReceiptListDto) => {
+    Modal.confirm({
+      title: "Xác nhận hủy đặt hàng",
+      content: `Bạn có chắc chắn muốn hủy đặt hàng "${record.code}"?`,
+      okText: "Hủy đặt hàng",
+      okButtonProps: { danger: true },
+      cancelText: "Đóng",
+      centered: true,
+      onOk: async () => {
+        try {
+          await goodsReceiptService.cancel(record.id);
+          message.success("Đã hủy đặt hàng");
+          await fetchData();
+          loadStats?.();
+        } catch (error: any) {
+          message.error(getApiErrorMessage(error, "Không thể hủy đặt hàng."));
+        }
+      },
+    });
+  }, [fetchData]);
+
   const handleBatchDelete = useCallback(() => {
     if (selectedRowKeys.length === 0) return;
 
@@ -77,6 +99,7 @@ export const useGoodsReceiptActions = ({ fetchData }: UseGoodsReceiptActionsProp
     handleView,
     handleEdit,
     handleDelete,
+    handleCancel,
     handleBatchDelete,
   };
 };

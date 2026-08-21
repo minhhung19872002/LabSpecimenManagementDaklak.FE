@@ -44,6 +44,13 @@ const STAT_CARDS = [
     icon: "box-seam",
     filterValue: GoodsReceiptOrderStatus.WaitingReceipt,
   },
+  {
+    key: "cancelled",
+    title: "Hủy đặt hàng",
+    iconBg: "red",
+    icon: "x-circle",
+    filterValue: GoodsReceiptOrderStatus.Cancelled,
+  },
 ];
 
 const GoodsReceiptList: React.FC = () => {
@@ -61,6 +68,7 @@ const GoodsReceiptList: React.FC = () => {
     handleDateRangeChange,
     handleSortChange,
     fetchData,
+    loadStats,
     handlePageChange,
   } = useGoodsReceiptList();
 
@@ -71,7 +79,8 @@ const GoodsReceiptList: React.FC = () => {
     handleView,
     handleEdit,
     handleDelete,
-  } = useGoodsReceiptActions({ fetchData });
+    handleCancel,
+  } = useGoodsReceiptActions({ fetchData, loadStats });
 
   const canCreate = authService.hasPermission(PERMISSIONS.GoodsReceipts.Create);
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
@@ -150,9 +159,11 @@ const GoodsReceiptList: React.FC = () => {
         canEdit,
         canDelete,
         currentPage,
-        pageSize
+        pageSize,
+        handleCancel,
+        canDelete
       ),
-    [visibleKeys, handleView, handleEdit, handleDelete, canEdit, canDelete, currentPage, pageSize]
+    [visibleKeys, handleView, handleEdit, handleDelete, canEdit, canDelete, currentPage, pageSize, handleCancel]
   );
 
   return (

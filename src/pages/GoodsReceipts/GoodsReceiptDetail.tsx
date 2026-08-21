@@ -69,9 +69,11 @@ const GoodsReceiptDetail: React.FC = () => {
   const [rejectNotes, setRejectNotes] = useState("");
   const [snapshot, setSnapshot] = useState<ApprovalSnapshotDto | null>(null);
   const [printingPurchaseRequest, setPrintingPurchaseRequest] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
   const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
+  const canCancel = authService.hasPermission(PERMISSIONS.GoodsReceipts.Delete);
 
   const loadSnapshot = useCallback(async () => {
     if (!id) return;
@@ -160,6 +162,30 @@ const GoodsReceiptDetail: React.FC = () => {
     } finally {
       setPrintingPurchaseRequest(false);
     }
+  };
+
+  const handleCancel = () => {
+    if (!id) return;
+    Modal.confirm({
+      title: "Xác nhận hủy đặt hàng",
+      content: `Bạn có chắc chắn muốn hủy đặt hàng "${receipt?.code}"?`,
+      okText: "Hủy đặt hàng",
+      okButtonProps: { danger: true },
+      cancelText: "Đóng",
+      centered: true,
+      onOk: async () => {
+        setCancelling(true);
+        try {
+          await goodsReceiptService.cancel(id);
+          message.success("Đã hủy đặt hàng");
+          await loadData();
+        } catch (error: any) {
+          message.error(getApiErrorMessage(error, "Không thể hủy đặt hàng."));
+        } finally {
+          setCancelling(false);
+        }
+      },
+    });
   };
 
   const materialItems = receipt?.items?.filter((i) => !i.isEquipment) || [];
@@ -299,13 +325,26 @@ const GoodsReceiptDetail: React.FC = () => {
       {canEdit &&
         receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported &&
         receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval &&
-        receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
+        receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected &&
+        receipt.orderStatus !== GoodsReceiptOrderStatus.Cancelled && (
           <Button
             type="primary"
             icon={<EditOutlined />}
             onClick={() => navigate(`/goods-receipts/edit/${id}`)}
           >
             Chỉnh sửa
+          </Button>
+        )}
+      {canCancel &&
+        receipt.orderStatus !== GoodsReceiptOrderStatus.Cancelled &&
+        !(receipt.orderStatus === GoodsReceiptOrderStatus.Completed &&
+          receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported) && (
+          <Button
+            danger
+            onClick={handleCancel}
+            loading={cancelling}
+          >
+            Hủy đặt hàng
           </Button>
         )}
       <Button

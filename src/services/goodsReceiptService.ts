@@ -11,6 +11,7 @@ export enum GoodsReceiptOrderStatus {
   WaitingReceipt = 2,
   Rejected = 3,
   Completed = 4,
+  Cancelled = 5,
 }
 
 export enum GoodsReceiptPaymentStatus {
@@ -52,6 +53,7 @@ export const OrderStatusLabels: Record<number, string> = {
   [GoodsReceiptOrderStatus.WaitingReceipt]: "Chờ nhận & Nghiệm thu",
   [GoodsReceiptOrderStatus.Rejected]: "Từ chối",
   [GoodsReceiptOrderStatus.Completed]: "Hoàn thành",
+  [GoodsReceiptOrderStatus.Cancelled]: "Hủy đặt hàng",
 };
 
 export const PaymentStatusLabels: Record<number, string> = {
@@ -71,6 +73,7 @@ export const OrderStatusColors: Record<number, string> = {
   [GoodsReceiptOrderStatus.WaitingReceipt]: "green",
   [GoodsReceiptOrderStatus.Rejected]: "red",
   [GoodsReceiptOrderStatus.Completed]: "cyan",
+  [GoodsReceiptOrderStatus.Cancelled]: "red",
 };
 
 export const PaymentStatusColors: Record<number, string> = {
@@ -239,6 +242,7 @@ export interface GoodsReceiptStatisticsDto {
   ordering: number;
   waitingReceipt: number;
   rejected: number;
+  cancelled: number;
 }
 
 export interface LatestSupplierInfoDto {
@@ -338,6 +342,11 @@ export const goodsReceiptService = {
         ? { lotNumber: item, lotExpiryDate: undefined }
         : item
     );
+  },
+
+  cancel: async (id: string): Promise<GoodsReceiptDto> => {
+    const response = await api.post<GoodsReceiptDto>(`${BASE_URL}/${id}/cancel`);
+    return response.data;
   },
 
   generatePurchaseRequest: async (id: string): Promise<{ fileName: string }> => {

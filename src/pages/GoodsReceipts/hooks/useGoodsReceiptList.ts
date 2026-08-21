@@ -22,7 +22,7 @@ export const useGoodsReceiptList = () => {
   const [sorting, setSorting] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [stats, setStats] = useState<GoodsReceiptStatisticsDto>({ pendingApproval: 0, ordering: 0, waitingReceipt: 0, rejected: 0 });
+  const [stats, setStats] = useState<GoodsReceiptStatisticsDto>({ pendingApproval: 0, ordering: 0, waitingReceipt: 0, rejected: 0, cancelled: 0 });
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const loadStats = useCallback(async () => {
