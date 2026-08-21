@@ -132,6 +132,8 @@ const WarehouseImportForm: React.FC = () => {
     reset,
     setValue,
     watch,
+    trigger,
+    getValues,
   } = useForm<WarehouseImportReceiptFormData>({
     resolver: yupResolver(warehouseImportReceiptSchema) as any,
     defaultValues: {
@@ -821,14 +823,11 @@ const WarehouseImportForm: React.FC = () => {
     ],
   });
 
-  const handleSaveDraft = handleSubmit(async (data: WarehouseImportReceiptFormData) => {
+  const handleSaveDraft = async () => {
+    const isValid = await trigger(["goodsReceiptId", "actualImportDate"]);
+    if (!isValid) return;
     if (!validateHeader()) return;
-    const itemsOk = validateItems();
-    const equipOk = validateEquipmentItems();
-    if (!itemsOk || !equipOk) {
-      message.warning("Vui lòng điền đầy đủ thông tin bắt buộc cho các dòng đã nhập.");
-      return;
-    }
+    const data = getValues();
     setSaving(true);
     try {
       const payload = buildPayload(data);
@@ -846,7 +845,7 @@ const WarehouseImportForm: React.FC = () => {
     } finally {
       setSaving(false);
     }
-  });
+  };
 
   const handleConfirm = handleSubmit(async (data: WarehouseImportReceiptFormData) => {
     if (!validateHeader()) return;
