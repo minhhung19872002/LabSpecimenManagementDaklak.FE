@@ -35,7 +35,9 @@ export interface ImportValidationResult {
 
 export interface WarehouseImportPreviewItem {
   rowNumber: number;
+  code: string;
   name: string;
+  parentWarehouseCode?: string;
   physicalLocation?: string;
   isNew: boolean;
   existingId?: string;
@@ -133,9 +135,10 @@ const ImportWarehouseModal: React.FC<ImportWarehouseModalProps> = ({
       width: 60,
     },
     {
-      title: "Tên kho",
-      dataIndex: "name",
-      key: "name",
+      title: "Mã kho",
+      dataIndex: "code",
+      key: "code",
+      width: 120,
       render: (text: string, record: WarehouseImportPreviewItem) => (
         <Space>
           <span>{text}</span>
@@ -146,6 +149,17 @@ const ImportWarehouseModal: React.FC<ImportWarehouseModalProps> = ({
           )}
         </Space>
       ),
+    },
+    {
+      title: "Tên kho",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Kho cha",
+      dataIndex: "parentWarehouseCode",
+      key: "parentWarehouseCode",
+      width: 120,
     },
     {
       title: "Vị trí vật lý",
@@ -170,7 +184,7 @@ const ImportWarehouseModal: React.FC<ImportWarehouseModalProps> = ({
       title="Import Danh mục kho từ Excel"
       open={open}
       onCancel={onCancel}
-      width={700}
+      width={900}
       centered
       styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
       footer={[
@@ -307,7 +321,7 @@ const ImportWarehouseModal: React.FC<ImportWarehouseModalProps> = ({
               columns={columns}
               pagination={false}
               rowKey="rowNumber"
-              scroll={{ x: 500 }}
+              scroll={{ x: 700 }}
               rowClassName={(record) =>
                 record.isValid ? "" : "ant-table-row-error"
               }
