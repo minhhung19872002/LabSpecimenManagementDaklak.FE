@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Modal, Collapse, Button, Space, Spin, message, Empty } from "antd";
+import { Modal, Collapse, Button, Space, Spin, message, Empty, Tag } from "antd";
 import dayjs from "dayjs";
+import "../../Products/ProductDetail.css";
 import JsBarcode from "jsbarcode";
 import removeAccents from "remove-accents";
 import {
@@ -25,6 +26,8 @@ interface BarcodeItem {
   isEquipment?: boolean;
   barcodeCount: number;
   barcodeContents: string[];
+  lotNumber?: string;
+  lotExpiryDate?: string;
 }
 
 const stripAllHtml = (html: string) => html.replace(/<[^>]*>/g, "").trim();
@@ -37,13 +40,15 @@ const formatDateForBarcode = (date?: string): string => {
 const generateBarcodeContent = (
   item: GoodsReceiptItemDto,
   sequence: number,
-  fallbackDate?: string
+  fallbackDate?: string,
+  opts?: { lotNumber?: string; importDate?: string }
 ): string => {
   const parts: string[] = [];
   if (item.identificationCode) parts.push(item.identificationCode);
-  const dateStr = formatDateForBarcode(item.receivedDate || fallbackDate);
+  const dateStr = formatDateForBarcode(opts?.importDate || item.receivedDate || fallbackDate);
   if (dateStr) parts.push(dateStr);
-  if (item.lotNumber) parts.push(item.lotNumber);
+  const lot = opts?.lotNumber || item.lotNumber;
+  if (lot) parts.push(lot);
   parts.push(String(sequence).padStart(4, "0"));
   const raw = removeAccents(parts.join(""));
   return raw.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "");
@@ -216,33 +221,51 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
         for (const item of nonEquipmentItems) {
           const product = productMap.get(item.productId);
           const matchedImportItems = importItemsMap.get(item.id) ?? [];
-          const persistedBarcodes = matchedImportItems.flatMap((importItem) => importItem.barcodeValues ?? []);
-          if (persistedBarcodes.length > 0) {
+
+          if (matchedImportItems.length > 0) {
+            for (const imp of matchedImportItems) {
+              const lotNumber = imp.lotNumber || item.lotNumber;
+              const lotExpiryDate = imp.lotExpiryDate || item.lotExpiryDate;
+
+              if (imp.barcodeValues?.length) {
+                items.push({
+                  item,
+                  product,
+                  barcodeCount: imp.barcodeValues.length,
+                  barcodeContents: imp.barcodeValues,
+                  lotNumber,
+                  lotExpiryDate,
+                });
+                continue;
+              }
+
+              const sku = imp.skuId ? product?.skus?.find((s) => s.id === imp.skuId) : undefined;
+              const count = product
+                ? Math.max(1, calcBarcodeCountFromImportUnit(imp.unitId, product, imp.actualReceivedQuantity, sku))
+                : Math.max(1, Math.floor(imp.actualReceivedQuantity));
+              const contents: string[] = [];
+              for (let i = 1; i <= count; i++) {
+                contents.push(generateBarcodeContent(item, i, receipt.documentDate, { lotNumber: imp.lotNumber, importDate: importReceipt?.actualImportDate }));
+              }
+              items.push({ item, product, barcodeCount: count, barcodeContents: contents, lotNumber, lotExpiryDate });
+            }
+          } else {
+            const count = product
+              ? calculateBarcodeCount(item, product, item.quantity)
+              : Math.max(1, Math.floor(item.quantity));
+            const contents: string[] = [];
+            for (let i = 1; i <= count; i++) {
+              contents.push(generateBarcodeContent(item, i, receipt.documentDate));
+            }
             items.push({
               item,
               product,
-              barcodeCount: persistedBarcodes.length,
-              barcodeContents: persistedBarcodes,
+              barcodeCount: count,
+              barcodeContents: contents,
+              lotNumber: item.lotNumber,
+              lotExpiryDate: item.lotExpiryDate,
             });
-            continue;
           }
-          let count: number;
-          if (matchedImportItems.length > 0 && product) {
-            const total = matchedImportItems.reduce((sum, imp) => {
-              const sku = imp.skuId ? product.skus?.find((s) => s.id === imp.skuId) : undefined;
-              return sum + calcBarcodeCountFromImportUnit(imp.unitId, product, imp.actualReceivedQuantity, sku);
-            }, 0);
-            count = Math.max(1, total);
-          } else {
-            count = product
-              ? calculateBarcodeCount(item, product, item.quantity)
-              : Math.max(1, Math.floor(item.quantity));
-          }
-          const contents: string[] = [];
-          for (let i = 1; i <= count; i++) {
-            contents.push(generateBarcodeContent(item, i, receipt.documentDate));
-          }
-          items.push({ item, product, barcodeCount: count, barcodeContents: contents });
         }
       }
 
@@ -259,17 +282,22 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
   }, [open, loadProducts]);
 
   useEffect(() => {
-    setActiveKeys(barcodeItems.map((_, i) => `item-${i}`));
+    if (barcodeItems.length === 1) setActiveKeys(["item-0"]);
+    else setActiveKeys([]);
   }, [barcodeItems]);
 
-  const getSectionHeader = (bi: BarcodeItem) => {
+  const getPrintSectionHeader = (bi: BarcodeItem) => {
     const name = stripAllHtml(bi.item.productName);
     if (bi.isEquipment) {
       const serial = bi.barcodeContents[0] || "";
       return serial ? `${serial} — ${name}` : name;
     }
-    const lot = bi.item.lotNumber;
-    return lot ? `${lot} - ${name}` : name;
+    const lot = bi.lotNumber || bi.item.lotNumber;
+    const expiry = bi.lotExpiryDate || bi.item.lotExpiryDate;
+    const lotPart = lot
+      ? `${lot} - ${expiry ? dayjs(expiry).format("DD/MM/YYYY") : "—"}`
+      : name;
+    return `${lotPart} (${bi.barcodeContents.length} barcode)`;
   };
 
   const handlePrint = () => {
@@ -287,7 +315,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
 
     const barcodeHtml = barcodeItems
       .map((bi) => {
-        const header = getSectionHeader(bi);
+        const header = getPrintSectionHeader(bi);
         const barcodes = bi.barcodeContents
           .map((content) => {
             const svgMarkup = generateBarcodeSvgMarkup(content);
@@ -332,29 +360,51 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
     printWindow.document.close();
   };
 
+  const collapseItems = barcodeItems.map((bi, idx) => {
+    let headerLabel: React.ReactNode;
+    if (bi.isEquipment) {
+      const serial = bi.barcodeContents[0] || "";
+      const name = stripAllHtml(bi.item.productName);
+      headerLabel = <span>{serial ? `${serial} — ${name}` : name}</span>;
+    } else {
+      const lot = bi.lotNumber;
+      const expiry = bi.lotExpiryDate;
+      const titleText = lot
+        ? `${lot} - ${expiry ? dayjs(expiry).format("DD/MM/YYYY") : "—"}`
+        : stripAllHtml(bi.item.productName);
+      headerLabel = (
+        <Space>
+          <span>{titleText}</span>
+          <Tag style={{ color: "#fff", borderColor: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.2)", borderRadius: 18, padding: "2px 8px" }}>
+            {bi.barcodeContents.length} barcode
+          </Tag>
+        </Space>
+      );
+    }
 
-  const collapseItems = barcodeItems.map((bi, idx) => ({
-    key: `item-${idx}`,
-    label: <span style={{ fontWeight: 600 }}>{getSectionHeader(bi)}</span>,
-    children: (
-      <div>
-        {bi.barcodeContents.map((content, i) => (
-          <div
-            key={i}
-            style={{
-              textAlign: "center",
-              margin: "16px 0",
-              padding: "12px",
-              border: "1px solid #f0f0f0",
-              borderRadius: 4,
-            }}
-          >
-            <BarcodeDisplay content={content} />
-          </div>
-        ))}
-      </div>
-    ),
-  }));
+    return {
+      key: `item-${idx}`,
+      label: headerLabel,
+      children: (
+        <div>
+          {bi.barcodeContents.map((content, i) => (
+            <div
+              key={i}
+              style={{
+                textAlign: "center",
+                margin: "16px 0",
+                padding: "12px",
+                border: "1px solid #f0f0f0",
+                borderRadius: 4,
+              }}
+            >
+              <BarcodeDisplay content={content} />
+            </div>
+          ))}
+        </div>
+      ),
+    };
+  });
 
   return (
     <Modal
@@ -379,10 +429,10 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
           <Empty description="Không có mục nào để tạo barcode" />
         ) : (
           <Collapse
+            className="barcode-lot-collapse"
             items={collapseItems}
             activeKey={activeKeys}
             onChange={(keys) => setActiveKeys(keys as string[])}
-            expandIconPosition="end"
           />
         )}
       </Spin>
