@@ -16,6 +16,9 @@ import ImportWarehouseModal, {
 import ImportManufacturerModal, {
   type ManufacturerImportPreviewDto,
 } from "./components/ImportManufacturerModal";
+import ImportUnitModal, {
+  type UnitImportPreviewDto,
+} from "./components/ImportUnitModal";
 import IndicatorsTab, { type IndicatorsActions } from "../Indicators";
 import FormTemplatesTab from "../FormTemplatesTab";
 import TestMethodsTab, { type TestMethodsActions } from "../TestMethods";
@@ -150,6 +153,12 @@ const MasterDataList: React.FC = () => {
   const [manufacturerImportFileList, setManufacturerImportFileList] = useState<UploadFile[]>([]);
   const [manufacturerImportPreview, setManufacturerImportPreview] = useState<ManufacturerImportPreviewDto | null>(null);
 
+  // Unit import state
+  const [unitImportOpen, setUnitImportOpen] = useState(false);
+  const [unitImportLoading, setUnitImportLoading] = useState(false);
+  const [unitImportFileList, setUnitImportFileList] = useState<UploadFile[]>([]);
+  const [unitImportPreview, setUnitImportPreview] = useState<UnitImportPreviewDto | null>(null);
+
   const handleWarehouseImportPreview = async () => {
     if (!warehouseImportFileList.length || !warehouseImportFileList[0].originFileObj) {
       return;
@@ -252,6 +261,58 @@ const MasterDataList: React.FC = () => {
   const handleManufacturerImportReset = () => {
     setManufacturerImportFileList([]);
     setManufacturerImportPreview(null);
+  };
+
+  const handleUnitImportPreview = async () => {
+    if (!unitImportFileList.length || !unitImportFileList[0].originFileObj) {
+      return;
+    }
+    setUnitImportLoading(true);
+    try {
+      const result = await importService.previewUnits(unitImportFileList[0].originFileObj);
+      setUnitImportPreview(result);
+    } catch (err: unknown) {
+      console.error("Failed to preview unit import:", err);
+      message.error("Không thể xem trước dữ liệu import");
+    } finally {
+      setUnitImportLoading(false);
+    }
+  };
+
+  const handleUnitImportConfirm = async () => {
+    if (!unitImportFileList.length || !unitImportFileList[0].originFileObj) {
+      return;
+    }
+    setUnitImportLoading(true);
+    try {
+      const result = await importService.importUnits(unitImportFileList[0].originFileObj);
+      if (result.success) {
+        message.success(result.message || "Import thành công");
+        setUnitImportOpen(false);
+        setUnitImportFileList([]);
+        setUnitImportPreview(null);
+        setUnitsRefreshKey((prev) => prev + 1);
+        fetchStatistics();
+      } else {
+        message.error(result.message || "Import thất bại");
+      }
+    } catch (err: unknown) {
+      console.error("Failed to import units:", err);
+      message.error("Không thể import dữ liệu");
+    } finally {
+      setUnitImportLoading(false);
+    }
+  };
+
+  const handleUnitImportCancel = () => {
+    setUnitImportOpen(false);
+    setUnitImportFileList([]);
+    setUnitImportPreview(null);
+  };
+
+  const handleUnitImportReset = () => {
+    setUnitImportFileList([]);
+    setUnitImportPreview(null);
   };
 
   const hasVisibleCategories = visibleCategories.length > 0;
@@ -558,13 +619,28 @@ const MasterDataList: React.FC = () => {
 
               {/* Units Tab */}
               {activeCategory === "units" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => unitsRef.current?.handleCreate()}
-                >
-                  Thêm đơn vị
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    loading={downloadingTemplate}
+                    onClick={handleDownloadTemplate}
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setUnitImportOpen(true)}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => unitsRef.current?.handleCreate()}
+                  >
+                    Thêm đơn vị
+                  </Button>
+                </>
               )}
 
               {/* Products Tab */}
@@ -872,6 +948,19 @@ const MasterDataList: React.FC = () => {
         onConfirm={handleManufacturerImportConfirm}
         onCancel={handleManufacturerImportCancel}
         onReset={handleManufacturerImportReset}
+      />
+
+      {/* Import Unit Modal */}
+      <ImportUnitModal
+        open={unitImportOpen}
+        loading={unitImportLoading}
+        fileList={unitImportFileList}
+        previewData={unitImportPreview}
+        onFileListChange={setUnitImportFileList}
+        onPreview={handleUnitImportPreview}
+        onConfirm={handleUnitImportConfirm}
+        onCancel={handleUnitImportCancel}
+        onReset={handleUnitImportReset}
       />
     </div>
   );

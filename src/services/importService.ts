@@ -541,6 +541,27 @@ export const importService = {
     const url = `${import.meta.env.VITE_API_URL || ''}${BASE_URL}/test-result-values/template`;
     window.open(url, '_blank');
   },
+  // ==================== Unit Import ====================
+
+  downloadUnitTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/units/template`);
+    return response.data;
+  },
+
+  previewUnits: async (file: File): Promise<UnitImportPreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<UnitImportPreviewDto>(`${BASE_URL}/units/preview`, formData);
+    return response.data;
+  },
+
+  importUnits: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/units`, formData);
+    return response.data;
+  },
+
   // ==================== Product Import (Stock Data Import) ====================
 
   downloadProductTemplate: async (warehouseId: string): Promise<Blob> => {
@@ -603,6 +624,32 @@ export interface ProductImportPreviewDto {
   updateItems: number;
   warehouseId?: string;
   warehouseName?: string;
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
+
+// ==================== Unit Import DTOs ====================
+
+export interface UnitImportPreviewItem {
+  rowNumber: number;
+  category?: number;
+  categoryLabel: string;
+  code: string;
+  name: string;
+  isNew: boolean;
+  existingId?: string;
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface UnitImportPreviewDto {
+  validationResult: ImportValidationResult;
+  items: UnitImportPreviewItem[];
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  newUnits: number;
+  updateUnits: number;
   errorFileBase64?: string;
   errorFileName?: string;
 }

@@ -389,6 +389,9 @@ export const useMasterDataActions = ({
       } else if (activeCategory === "manufacturers") {
         blob = await importService.downloadManufacturerTemplate();
         filename = "Danh_muc_hang_san_xuat.xlsx";
+      } else if (activeCategory === "units") {
+        blob = await importService.downloadUnitTemplate();
+        filename = "Don_vi_hang_hoa.xlsx";
       } else {
         throw new Error("Unsupported category for template download");
       }
