@@ -843,6 +843,205 @@ const TestingDetail: React.FC = () => {
     }
   }, [id, detail, reloadData]);
 
+  const handleGlobalBulkTestDateChange = useCallback(async (date: string) => {
+    if (!id || !detail) return;
+
+    const allSaveResults: SaveIndicatorResultDto[] = [];
+
+    for (const [sampleId, indicatorIds] of selectedIndicators) {
+      if (indicatorIds.length === 0) continue;
+      const sample = detail.samples.find((s) => s.sampleId === sampleId);
+      if (!sample) continue;
+
+      const editableIds = indicatorIds.filter((indId) => {
+        const ind = sample.indicators.find((i) => i.id === indId);
+        return ind && ind.canEdit &&
+          ind.testingStatus !== IndicatorTestingStatus.Done &&
+          ind.testingStatus !== IndicatorTestingStatus.Cancelled;
+      });
+      if (editableIds.length === 0) continue;
+
+      const currentSampleResults = sampleResultsRef.current.get(sampleId) || [];
+
+      const resultsForSample: SaveIndicatorResultDto[] = editableIds.map((indicatorId) => {
+        const indicator = sample.indicators.find((i) => i.id === indicatorId);
+        const existingResult = currentSampleResults.find((r) => r.indicatorId === indicatorId);
+        return {
+          indicatorId,
+          result: existingResult?.result ?? indicator?.result,
+          testDate: date,
+        };
+      });
+      allSaveResults.push(...resultsForSample);
+
+      setSampleResults((prev) => {
+        const newResults = new Map(prev);
+        const sampleResultList = [...(newResults.get(sampleId) || [])];
+
+        editableIds.forEach((indicatorId) => {
+          const existingIdx = sampleResultList.findIndex((r) => r.indicatorId === indicatorId);
+          if (existingIdx >= 0) {
+            sampleResultList[existingIdx] = { ...sampleResultList[existingIdx], testDate: date };
+          } else {
+            const indicator = sample.indicators.find((i) => i.id === indicatorId);
+            if (indicator) {
+              sampleResultList.push({ indicatorId, result: indicator.result, testDate: date });
+            }
+          }
+        });
+
+        newResults.set(sampleId, sampleResultList);
+        return newResults;
+      });
+    }
+
+    setDetail((prev) => {
+      if (!prev) return prev;
+      const allEditableIds = new Set(allSaveResults.map((r) => r.indicatorId));
+      return {
+        ...prev,
+        samples: prev.samples.map((s) => ({
+          ...s,
+          indicators: s.indicators.map((ind) =>
+            allEditableIds.has(ind.id) ? { ...ind, testDate: date } : ind
+          ),
+        })),
+      };
+    });
+
+    if (allSaveResults.length > 0) {
+      try {
+        await testingService.saveResults(id, { results: allSaveResults });
+      } catch (error: any) {
+        console.error("Failed to save global bulk test dates:", error);
+        message.error(getApiErrorMessage(error, "Không thể lưu ngày thử nghiệm"));
+        await reloadData();
+      }
+    }
+  }, [id, detail, selectedIndicators, reloadData]);
+
+  const handleGlobalSubmitResults = useCallback(async () => {
+    if (!id || !detail) return;
+
+    const allValidIndicators: { sampleId: string; indicatorId: string; testDate: string }[] = [];
+    const missingResultNames: string[] = [];
+    const missingTestDateNames: string[] = [];
+
+    for (const [sampleId, selected] of selectedIndicators) {
+      if (selected.length === 0) continue;
+      const sample = detail.samples.find((s) => s.sampleId === sampleId);
+      if (!sample) continue;
+
+      const results = sampleResultsRef.current.get(sampleId) || [];
+
+      for (const indicatorId of selected) {
+        const indicator = sample.indicators.find((i) => i.id === indicatorId);
+        if (!indicator) continue;
+        if (
+          indicator.testingStatus !== IndicatorTestingStatus.Todo &&
+          indicator.testingStatus !== IndicatorTestingStatus.Testing &&
+          indicator.testingStatus !== IndicatorTestingStatus.Rejected &&
+          indicator.testingStatus !== IndicatorTestingStatus.PendingApproval
+        ) continue;
+
+        const editedResult = results.find((r) => r.indicatorId === indicatorId);
+        const resultValue = editedResult?.result ?? indicator.result;
+        const testDate = editedResult?.testDate ?? indicator.testDate;
+
+        if (!resultValue || resultValue.trim() === "") {
+          missingResultNames.push(indicator.indicatorName || indicatorId);
+          continue;
+        }
+        if (!testDate) {
+          missingTestDateNames.push(indicator.indicatorName || indicatorId);
+          continue;
+        }
+
+        allValidIndicators.push({ sampleId, indicatorId, testDate });
+      }
+    }
+
+    if (missingResultNames.length > 0) {
+      message.warning(`Vui lòng nhập kết quả cho: ${missingResultNames.join(", ")}`);
+      return;
+    }
+    if (missingTestDateNames.length > 0) {
+      message.warning(`Vui lòng chọn ngày thử nghiệm cho: ${missingTestDateNames.join(", ")}`);
+      return;
+    }
+    if (allValidIndicators.length === 0) {
+      message.warning("Không có chỉ tiêu hợp lệ để gửi kết quả");
+      return;
+    }
+
+    const bySample = new Map<string, { indicatorId: string; testDate: string }[]>();
+    for (const item of allValidIndicators) {
+      const list = bySample.get(item.sampleId) || [];
+      list.push({ indicatorId: item.indicatorId, testDate: item.testDate });
+      bySample.set(item.sampleId, list);
+    }
+
+    setSubmitting(true);
+    try {
+      const allResultsToSave: SaveIndicatorResultDto[] = [];
+      for (const [sampleId, indicators] of bySample) {
+        const validIds = indicators.map((v) => v.indicatorId);
+        const results = sampleResultsRef.current.get(sampleId) || [];
+        allResultsToSave.push(...results.filter((r) => validIds.includes(r.indicatorId)));
+      }
+      if (allResultsToSave.length > 0) {
+        await testingService.saveResults(id, { results: allResultsToSave });
+      }
+
+      for (const [sampleId, indicators] of bySample) {
+        await testingService.submitResults(id, {
+          sampleId,
+          indicators: indicators.map((v) => ({ indicatorId: v.indicatorId, testDate: v.testDate })),
+        });
+      }
+
+      const allValidIds = allValidIndicators.map((v) => v.indicatorId);
+      const now = new Date().toISOString();
+      updateIndicatorsOptimistically(allValidIds, {
+        testingStatus: IndicatorTestingStatus.PendingApproval,
+        submitDate: now,
+        canSubmit: false,
+      });
+
+      await reloadData();
+
+      message.success(`Gửi kết quả thành công cho ${allValidIndicators.length} chỉ tiêu`);
+
+      setSelectedIndicators(new Map());
+    } catch (error: any) {
+      console.error("Failed to global submit results:", error);
+      message.error(getApiErrorMessage(error, "Không thể gửi kết quả"));
+      await loadDetail();
+    } finally {
+      setSubmitting(false);
+    }
+  }, [id, detail, selectedIndicators, updateIndicatorsOptimistically, reloadData, loadDetail]);
+
+  const hasGlobalSubmittableIndicators = useMemo(() => {
+    for (const [sampleId, ids] of selectedIndicators) {
+      const sample = detail?.samples.find((s) => s.sampleId === sampleId);
+      if (!sample) continue;
+      for (const indId of ids) {
+        const ind = sample.indicators.find((i) => i.id === indId);
+        if (
+          ind &&
+          (ind.testingStatus === IndicatorTestingStatus.Todo ||
+            ind.testingStatus === IndicatorTestingStatus.Testing ||
+            ind.testingStatus === IndicatorTestingStatus.Rejected ||
+            ind.testingStatus === IndicatorTestingStatus.PendingApproval)
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }, [selectedIndicators, detail]);
+
   // Check if deadline is urgent (<=3 days)
   const isUrgent = detail?.requestCompletionDate
     ? (() => {
@@ -1107,6 +1306,10 @@ const TestingDetail: React.FC = () => {
       onOpenMethodModal={handleOpenMethodModal}
       onCloseMethodModal={handleCloseMethodModal}
       onBulkMethodConfirm={handleBulkMethodConfirm}
+      onGlobalBulkTestDateChange={handleGlobalBulkTestDateChange}
+      onGlobalSubmitResults={handleGlobalSubmitResults}
+      globalSubmitting={submitting}
+      hasGlobalSubmittableIndicators={hasGlobalSubmittableIndicators}
     />
   );
 };
