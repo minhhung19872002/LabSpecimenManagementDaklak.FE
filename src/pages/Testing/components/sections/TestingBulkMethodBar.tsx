@@ -1,8 +1,11 @@
-import React from "react";
-import { Button, Checkbox, Col, Form, Modal, Row, Select } from "antd";
+import React, { useState } from "react";
+import { Button, Checkbox, Col, DatePicker, Form, Modal, Row, Select, Typography } from "antd";
 import type { FormInstance } from "antd";
-import { SwapOutlined } from "../../../../components/common/Icon";
+import { SendOutlined, SwapOutlined } from "../../../../components/common/Icon";
 import { MethodLookupDto } from "../../../../types/laboratoryTask";
+import dayjs from "dayjs";
+
+const { Text } = Typography;
 
 export interface TestingBulkMethodBarProps {
   /** Filter hiển thị theo chỉ tiêu (indicatorId) */
@@ -26,6 +29,12 @@ export interface TestingBulkMethodBarProps {
   onOpenMethodModal: () => void;
   onCloseMethodModal: () => void;
   onConfirmMethod: () => void;
+  /** Bulk chọn ngày thử nghiệm cho tất cả chỉ tiêu đã chọn (cross-sample) */
+  onGlobalBulkTestDateChange?: (date: string) => void;
+  /** Gửi kết quả cho tất cả chỉ tiêu đã chọn (cross-sample) */
+  onGlobalSubmitResults?: () => Promise<void>;
+  globalSubmitting?: boolean;
+  hasGlobalSubmittableIndicators?: boolean;
 }
 
 const TestingBulkMethodBar: React.FC<TestingBulkMethodBarProps> = ({
@@ -46,7 +55,32 @@ const TestingBulkMethodBar: React.FC<TestingBulkMethodBarProps> = ({
   onOpenMethodModal,
   onCloseMethodModal,
   onConfirmMethod,
-}) => (
+  onGlobalBulkTestDateChange,
+  onGlobalSubmitResults,
+  globalSubmitting = false,
+  hasGlobalSubmittableIndicators = false,
+}) => {
+  const [submitLoading, setSubmitLoading] = useState(false);
+
+  const handleGlobalSubmit = async () => {
+    if (!onGlobalSubmitResults) return;
+    setSubmitLoading(true);
+    try {
+      await onGlobalSubmitResults();
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleDateChange = (date: dayjs.Dayjs | null) => {
+    if (date && onGlobalBulkTestDateChange) {
+      onGlobalBulkTestDateChange(date.format("YYYY-MM-DD"));
+    }
+  };
+
+  const isSubmitting = globalSubmitting || submitLoading;
+
+  return (
   <div
     style={{
       marginTop: 16,
@@ -87,7 +121,21 @@ const TestingBulkMethodBar: React.FC<TestingBulkMethodBarProps> = ({
           </div>
         </Col>
       )}
-      <Col style={{ marginLeft: "auto" }}>
+      <Col style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+        {onGlobalBulkTestDateChange && (
+          <>
+            <Text type="secondary" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+              Ngày thử nghiệm:
+            </Text>
+            <DatePicker
+              format="DD/MM/YYYY"
+              placeholder="Chọn ngày"
+              disabled={totalGlobalSelected === 0}
+              onChange={handleDateChange}
+              style={{ width: 140 }}
+            />
+          </>
+        )}
         <Button
           icon={<SwapOutlined />}
           disabled={totalMethodEditableSelected === 0}
@@ -99,6 +147,22 @@ const TestingBulkMethodBar: React.FC<TestingBulkMethodBarProps> = ({
             ? ` (${totalMethodEditableSelected})`
             : ""}
         </Button>
+        {onGlobalSubmitResults && (
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            loading={isSubmitting}
+            disabled={
+              isSubmitting ||
+              totalGlobalSelected === 0 ||
+              !hasGlobalSubmittableIndicators
+            }
+            onClick={handleGlobalSubmit}
+          >
+            Gửi kết quả
+            {totalGlobalSelected > 0 ? ` (${totalGlobalSelected})` : ""}
+          </Button>
+        )}
       </Col>
     </Row>
 
@@ -131,6 +195,7 @@ const TestingBulkMethodBar: React.FC<TestingBulkMethodBarProps> = ({
       </Form>
     </Modal>
   </div>
-);
+  );
+};
 
 export default TestingBulkMethodBar;

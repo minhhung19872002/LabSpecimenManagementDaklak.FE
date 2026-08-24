@@ -202,6 +202,10 @@ interface TestingDetailContainerProps {
   onOpenMethodModal?: () => void;
   onCloseMethodModal?: () => void;
   onBulkMethodConfirm?: () => void;
+  onGlobalBulkTestDateChange?: (date: string) => void;
+  onGlobalSubmitResults?: () => Promise<void>;
+  globalSubmitting?: boolean;
+  hasGlobalSubmittableIndicators?: boolean;
 }
 
 const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
@@ -258,6 +262,10 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   onOpenMethodModal,
   onCloseMethodModal,
   onBulkMethodConfirm,
+  onGlobalBulkTestDateChange,
+  onGlobalSubmitResults,
+  globalSubmitting = false,
+  hasGlobalSubmittableIndicators = false,
 }) => {
   if (loading) {
     return (
@@ -358,6 +366,10 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               onOpenMethodModal={onOpenMethodModal}
               onCloseMethodModal={onCloseMethodModal}
               onConfirmMethod={onBulkMethodConfirm}
+              onGlobalBulkTestDateChange={onGlobalBulkTestDateChange}
+              onGlobalSubmitResults={onGlobalSubmitResults}
+              globalSubmitting={globalSubmitting}
+              hasGlobalSubmittableIndicators={hasGlobalSubmittableIndicators}
             />
           )}
 

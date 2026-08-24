@@ -940,9 +940,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         <Col flex="auto" style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Select value={sorting} onChange={handleSortChange} prefix={<SortAscendingOutlined />}>
             <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
-            <Select.Option value="RequestCompletionDate desc">
-              Ngày yêu cầu xong mới nhất
-            </Select.Option>
+            <Select.Option value="TransferDate desc">Ngày nhận mẫu mới nhất</Select.Option>
+            <Select.Option value="TransferDate">Ngày nhận mẫu cũ nhất</Select.Option>
+            <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
             <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
           </Select>
         </Col>

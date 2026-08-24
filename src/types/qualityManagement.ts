@@ -423,6 +423,7 @@ export interface SampleAssignmentLogDto {
   methodName?: string;
   methodFormattedName?: string;
   unit?: string;
+  contractDate?: string;
   transferDate?: string;
   testDate?: string;
   result?: string;
