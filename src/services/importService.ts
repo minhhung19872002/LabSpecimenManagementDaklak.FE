@@ -562,6 +562,27 @@ export const importService = {
     return response.data;
   },
 
+  // ==================== Product Master Data Import/Export (Admin) ====================
+
+  exportProductMasterData: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/products-master-data/export`);
+    return response.data;
+  },
+
+  previewProductMasterData: async (file: File): Promise<ProductMasterDataImportPreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ProductMasterDataImportPreviewDto>(`${BASE_URL}/products-master-data/preview`, formData);
+    return response.data;
+  },
+
+  importProductMasterData: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/products-master-data/import`, formData);
+    return response.data;
+  },
+
   // ==================== Product Import (Stock Data Import) ====================
 
   downloadProductTemplate: async (warehouseId: string): Promise<Blob> => {
@@ -650,6 +671,39 @@ export interface UnitImportPreviewDto {
   invalidRows: number;
   newUnits: number;
   updateUnits: number;
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
+
+// ==================== Product Master Data Import DTOs ====================
+
+export enum ProductMasterDataImportItemStatus {
+  New = 0,
+  Update = 1,
+  Skipped = 2,
+}
+
+export interface ProductMasterDataImportPreviewItem {
+  rowNumber: number;
+  identificationCode: string;
+  productName: string;
+  productTypeName?: string;
+  status: ProductMasterDataImportItemStatus;
+  existingProductId?: string;
+  isValid: boolean;
+  skipReason?: string;
+  errors: string[];
+}
+
+export interface ProductMasterDataImportPreviewDto {
+  validationResult: ImportValidationResult;
+  items: ProductMasterDataImportPreviewItem[];
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  skippedRows: number;
+  newItems: number;
+  updateItems: number;
   errorFileBase64?: string;
   errorFileName?: string;
 }

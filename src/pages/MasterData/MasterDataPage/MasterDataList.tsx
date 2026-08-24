@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, Button, Space, Tag, Alert, Tabs, Form, Empty, message } from "antd";
 import {
@@ -36,6 +36,7 @@ import SampleConditionsTab, {
 } from "../SampleStatuses";
 import UnitsTab, { type UnitActions } from "../Units";
 import ProductCatalogTab, { type ProductCatalogActions } from "../ProductCatalog";
+import ImportProductMasterDataModal from "./components/ImportProductMasterDataModal";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -362,6 +363,28 @@ const MasterDataList: React.FC = () => {
   const notesRef = useRef<NotesActions>(null);
   const unitsRef = useRef<UnitActions>(null);
   const productCatalogRef = useRef<ProductCatalogActions>(null);
+  const [productMasterImportOpen, setProductMasterImportOpen] = useState(false);
+  const [exportingProductMaster, setExportingProductMaster] = useState(false);
+
+  const handleExportProductMasterData = useCallback(async () => {
+    setExportingProductMaster(true);
+    try {
+      const blob = await importService.exportProductMasterData();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Danh_muc_vat_tu.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      message.success("Xuất danh sách vật tư thành công");
+    } catch {
+      message.error("Không thể xuất danh sách vật tư");
+    } finally {
+      setExportingProductMaster(false);
+    }
+  }, []);
 
   // Permission check - All Master Data uses unified permissions now
   const canCreate = authService.hasPermission(PERMISSIONS.MasterData.Create);
@@ -645,13 +668,34 @@ const MasterDataList: React.FC = () => {
 
               {/* Products Tab */}
               {activeCategory === "products" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => productCatalogRef.current?.handleCreate()}
-                >
-                  Thêm vật tư
-                </Button>
+                <>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => productCatalogRef.current?.handleCreate()}
+                  >
+                    Thêm vật tư
+                  </Button>
+                  {authService.isAdmin() && (
+                    <>
+                      <Button
+                        icon={<DownloadOutlined />}
+                        loading={exportingProductMaster}
+                        onClick={handleExportProductMasterData}
+                        style={{ borderColor: "#faad14", color: "#faad14" }}
+                      >
+                        Xuất danh sách vật tư
+                      </Button>
+                      <Button
+                        icon={<UploadOutlined />}
+                        onClick={() => setProductMasterImportOpen(true)}
+                        style={{ borderColor: "#faad14", color: "#faad14" }}
+                      >
+                        Nhập danh sách vật tư
+                      </Button>
+                    </>
+                  )}
+                </>
               )}
 
               {/* Notes Tab */}
@@ -961,6 +1005,11 @@ const MasterDataList: React.FC = () => {
         onConfirm={handleUnitImportConfirm}
         onCancel={handleUnitImportCancel}
         onReset={handleUnitImportReset}
+      />
+      <ImportProductMasterDataModal
+        open={productMasterImportOpen}
+        onClose={() => setProductMasterImportOpen(false)}
+        onSuccess={() => setProductsRefreshKey((k) => k + 1)}
       />
     </div>
   );
