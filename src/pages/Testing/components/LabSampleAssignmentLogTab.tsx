@@ -40,7 +40,6 @@ const getDateKey = (date?: string): string => {
 interface ProcessedLogItem extends SampleAssignmentLogDto {
   contractRowSpan: number;
   sampleRowSpan: number;
-  transferDateRowSpan: number;
   requestCompletionDateRowSpan: number;
   testDateRowSpan: number;
   technicalManagerRowSpan: number;
@@ -60,7 +59,6 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
 
   // Pre-compute date keys once to avoid repeated dayjs() calls during span calculation.
   const dateKeys = data.map(item => ({
-    transferDate: getDateKey(item.transferDate),
     requestCompletionDate: getDateKey(item.requestCompletionDate),
     testDate: getDateKey(item.testDate),
     entryDate: getDateKey(item.entryDate),
@@ -158,7 +156,6 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
         return span;
       };
 
-      let transferDateSpan = calcDateSpan('transferDate');
       let requestDateSpan = calcDateSpan('requestCompletionDate');
       let testDateSpan = calcDateSpan('testDate');
       let entryDateSpan = calcDateSpan('entryDate');
@@ -171,8 +168,6 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
 
       if (isPrevSameSample) {
         const prevKeys = dateKeys[idx - 1];
-        if (currentKeys.transferDate === prevKeys.transferDate)
-          transferDateSpan = 0;
         if (currentKeys.requestCompletionDate === prevKeys.requestCompletionDate)
           requestDateSpan = 0;
         if (currentKeys.testDate === prevKeys.testDate)
@@ -187,7 +182,6 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
         ...currentItem,
         contractRowSpan: idx === group.start ? contractSpan : 0,
         sampleRowSpan: sampleSpans[idx],
-        transferDateRowSpan: transferDateSpan,
         requestCompletionDateRowSpan: requestDateSpan,
         testDateRowSpan: testDateSpan,
         technicalManagerRowSpan: technicalManagerSpans[idx],
@@ -543,9 +537,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       }),
       withResize('transferDate', {
         title: 'Ngày nhận mẫu',
-        dataIndex: 'transferDate',
+        dataIndex: 'contractDate',
         key: 'transferDate',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.transferDateRowSpan),
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.contractRowSpan),
         render: (date: string) => {
           const formatted = formatDate(date);
           return (
