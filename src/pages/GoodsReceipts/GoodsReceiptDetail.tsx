@@ -20,6 +20,7 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   FileTextOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -42,6 +43,7 @@ import approvalProcessService, {
   ApprovalSnapshotStatus,
 } from "../../services/approvalProcessService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
+import ImportHistoryModal from "./components/ImportHistoryModal";
 import "../../styles/ListCard.css";
 import "./GoodsReceiptDetail.css";
 
@@ -70,6 +72,7 @@ const GoodsReceiptDetail: React.FC = () => {
   const [snapshot, setSnapshot] = useState<ApprovalSnapshotDto | null>(null);
   const [printingPurchaseRequest, setPrintingPurchaseRequest] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [importHistoryOpen, setImportHistoryOpen] = useState(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
   const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
@@ -385,7 +388,15 @@ const GoodsReceiptDetail: React.FC = () => {
       >
         <div className="detail-sections-row">
           <div className="detail-section">
-            <div className="detail-section-title">Thông tin phiếu</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="detail-section-title">Thông tin phiếu</div>
+              <Button
+                icon={<HistoryOutlined />}
+                onClick={() => setImportHistoryOpen(true)}
+              >
+                Lịch sử nhập hàng
+              </Button>
+            </div>
             <Row gutter={16}>
               <Col xs={24} sm={12}>
                 <DetailItem
@@ -488,6 +499,12 @@ const GoodsReceiptDetail: React.FC = () => {
           />
         </Card>
       </Card>
+
+      <ImportHistoryModal
+        open={importHistoryOpen}
+        onClose={() => setImportHistoryOpen(false)}
+        goodsReceiptId={id!}
+      />
 
       <Modal
         title="Từ chối phiếu đặt hàng"

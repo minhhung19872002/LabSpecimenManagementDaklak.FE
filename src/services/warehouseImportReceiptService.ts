@@ -307,6 +307,35 @@ export interface DefectiveHistoryItemDto {
   receiptCreationTime: string;
 }
 
+export interface WarehouseImportReceiptHistoryItemDto {
+  id: string;
+  productName: string;
+  unitName?: string;
+  purchaseUnitName?: string;
+  orderedQuantity: number;
+  actualReceivedQuantity: number;
+  manufacturerName?: string;
+  lotNumber?: string;
+  lotExpiryDate?: string;
+  storageWarehouseName?: string;
+  status: WarehouseImportLineStatus;
+  qualityDocumentFileId?: string;
+  qualityDocumentFileName?: string;
+  unitPrice?: number;
+  vatPercent?: number;
+  totalLineAmount?: number;
+  notes?: string;
+}
+
+export interface WarehouseImportReceiptHistoryDto {
+  id: string;
+  code: string;
+  actualImportDate: string;
+  status: WarehouseImportReceiptStatus;
+  totalAmount?: number;
+  items: WarehouseImportReceiptHistoryItemDto[];
+}
+
 const BASE_URL = "/api/v1/warehouse-import-receipts";
 
 export const warehouseImportReceiptService = {
@@ -379,6 +408,13 @@ export const warehouseImportReceiptService = {
   getDefectiveHistory: async (goodsReceiptId: string): Promise<DefectiveHistoryItemDto[]> => {
     const response = await api.get<DefectiveHistoryItemDto[]>(
       `${BASE_URL}/defective-history/${goodsReceiptId}`
+    );
+    return response.data;
+  },
+
+  getByGoodsReceiptId: async (goodsReceiptId: string): Promise<WarehouseImportReceiptHistoryDto[]> => {
+    const response = await api.get<WarehouseImportReceiptHistoryDto[]>(
+      `${BASE_URL}/by-goods-receipt/${goodsReceiptId}`
     );
     return response.data;
   },
