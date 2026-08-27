@@ -5,12 +5,14 @@ import {
   ProductDetailDto,
   ProductImportHistoryDto,
   ProductMaterialReceiptHistoryDto,
+  ProductLotStockDto,
   BarcodeLotGroupDto,
 } from "../../../services/productService";
 import ProductInfoPanel from "./ProductInfoPanel";
+import StockSummaryPanel from "./StockSummaryPanel";
 import ImportHistoryToolbar from "./ImportHistoryToolbar";
 import ImportHistoryTable from "./ImportHistoryTable";
-import UsageHistoryTab from "./UsageHistoryTab";
+import LotStockTab from "./LotStockTab";
 import MaterialReceiptHistoryToolbar from "./MaterialReceiptHistoryToolbar";
 import MaterialReceiptHistoryTable from "./MaterialReceiptHistoryTable";
 import BarcodeListModal from "./BarcodeListModal";
@@ -34,6 +36,8 @@ export interface ProductDetailViewProps {
   onReceiptClick: (receiptId: string) => void;
   warehouseId?: string;
   warehouseName?: string;
+  lotStocks: ProductLotStockDto[];
+  lotStocksLoading: boolean;
   materialHistoryItems: ProductMaterialReceiptHistoryDto[];
   materialHistoryTotal: number;
   materialHistoryLoading: boolean;
@@ -68,6 +72,8 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onHistoryPageChange,
   onReceiptClick,
   warehouseId,
+  lotStocks,
+  lotStocksLoading,
   materialHistoryItems,
   materialHistoryTotal,
   materialHistoryLoading,
@@ -88,9 +94,16 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 }) => {
   const tabItems = [
     {
-      key: "usage-history",
-      label: "Lịch sử sử dụng",
-      children: <UsageHistoryTab productId={productId} warehouseId={warehouseId} />,
+      key: "lot-stock",
+      label: "Tồn kho & lịch sử sử dụng",
+      children: (
+        <LotStockTab
+          lots={lotStocks}
+          lotsLoading={lotStocksLoading}
+          productId={productId}
+          warehouseId={warehouseId}
+        />
+      ),
     },
     {
       key: "import-history",
@@ -146,10 +159,11 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     <Card className="list-card" title={pageTitle}>
       <Row gutter={20}>
         <Col xs={24} md={8} lg={7} className="detail-left-col">
+          <StockSummaryPanel lots={lotStocks} loading={lotStocksLoading} warehouseId={warehouseId} />
           <ProductInfoPanel detail={detail} loading={detailLoading} onOpenLotHistory={onOpenLotHistory} />
         </Col>
         <Col xs={24} md={16} lg={17}>
-          <Tabs defaultActiveKey="usage-history" items={tabItems} />
+          <Tabs defaultActiveKey="lot-stock" items={tabItems} />
         </Col>
       </Row>
       <BarcodeListModal

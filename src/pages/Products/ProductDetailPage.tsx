@@ -8,6 +8,7 @@ import {
   ProductDetailDto,
   ProductImportHistoryDto,
   ProductMaterialReceiptHistoryDto,
+  ProductLotStockDto,
   ProductTypeLabels,
   BarcodeLotGroupDto,
 } from "../../services/productService";
@@ -45,6 +46,8 @@ const ProductDetailPage: React.FC = () => {
   const [lotHistoryOpen, setLotHistoryOpen] = useState(false);
   const [lotHistoryGroups, setLotHistoryGroups] = useState<BarcodeLotGroupDto[]>([]);
   const [lotHistoryLoading, setLotHistoryLoading] = useState(false);
+  const [lotStocks, setLotStocks] = useState<ProductLotStockDto[]>([]);
+  const [lotStocksLoading, setLotStocksLoading] = useState(false);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -99,9 +102,29 @@ const ProductDetailPage: React.FC = () => {
     }
   }, [id, materialHistoryPage, materialHistoryPageSize, materialDateRange, warehouseId]);
 
+  const loadLotStocks = useCallback(async () => {
+    if (!id || !warehouseId) {
+      setLotStocks([]);
+      return;
+    }
+    setLotStocksLoading(true);
+    try {
+      const data = await productService.getLotStocks(id, warehouseId);
+      setLotStocks(data);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không thể tải tồn kho theo lô"));
+    } finally {
+      setLotStocksLoading(false);
+    }
+  }, [id, warehouseId]);
+
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
+
+  useEffect(() => {
+    loadLotStocks();
+  }, [loadLotStocks]);
 
   useEffect(() => {
     loadHistory();
@@ -185,6 +208,8 @@ const ProductDetailPage: React.FC = () => {
         onReceiptClick={handleReceiptClick}
         warehouseId={warehouseId}
         warehouseName={warehouseName}
+        lotStocks={lotStocks}
+        lotStocksLoading={lotStocksLoading}
         materialHistoryItems={materialHistoryItems}
         materialHistoryTotal={materialHistoryTotal}
         materialHistoryLoading={materialHistoryLoading}

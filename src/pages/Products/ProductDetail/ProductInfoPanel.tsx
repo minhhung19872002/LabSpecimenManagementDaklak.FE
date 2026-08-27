@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Spin, Button } from "antd";
+import { Spin, Button } from "antd";
 import { HistoryOutlined } from "@ant-design/icons";
 import DOMPurify from "dompurify";
 import { ProductDetailDto } from "../../../services/productService";
@@ -11,181 +11,58 @@ export interface ProductInfoPanelProps {
   onOpenLotHistory?: () => void;
 }
 
-const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
-  <div className="detail-item">
-    <span className="detail-item-label">{label}</span>
-    <span className="detail-item-value">
-      {value != null && value !== "" ? value : "-"}
-    </span>
-  </div>
-);
-
 const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading, onOpenLotHistory }) => {
-  const qtyUnit = detail?.packagingUnitName || detail?.baseUnitName || "";
-
   return (
-    <div className="detail-section">
-      <div className="detail-section-title">Thông tin chung</div>
+    <div className="info-panel">
       <Spin spinning={!!loading}>
         {detail && (
           <>
-            <DetailItem
-              label="Tên vật tư/ hóa chất"
-              value={
-                detail.formattedName ? (
-                  <IndicatorName name={detail.name} formattedName={detail.formattedName} />
-                ) : (
-                  detail.name
-                )
-              }
-            />
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <DetailItem label="Mã nhận dạng" value={detail.identificationCode} />
-              </Col>
-              <Col span={12}>
-                <DetailItem label="CAS" value={detail.casNumber} />
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <DetailItem
-                  label="Tồn kho đầu kỳ"
-                  value={(() => {
-                    if (detail.stockByUnits && detail.stockByUnits.length >= 2) {
-                      return (
-                        <div>
-                          {detail.stockByUnits.map((entry, i) => {
-                            const unit = entry.packagingUnitName || "";
-                            const intPart = Math.floor(entry.quantity);
-                            const decPart = entry.quantity - intPart;
-                            if (decPart === 0 || !entry.volumePerUnit || !entry.volumeUnitName) {
-                              return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
-                            }
-                            const vol = Math.round(decPart * entry.volumePerUnit);
-                            return <div key={i}>{`${intPart} ${unit} - ${vol} ${entry.volumeUnitName}`}</div>;
-                          })}
-                        </div>
-                      );
-                    }
-                    const qty = detail.warehouseAvailableQuantity ?? 0;
-                    const intPart = Math.floor(qty);
-                    const decPart = qty - intPart;
-                    if (decPart === 0 || !detail.volumePerUnit || !detail.volumeUnitName) {
-                      return `${qty.toLocaleString("vi-VN")} ${qtyUnit}`;
-                    }
-                    const consumableAmount = Math.round(decPart * detail.volumePerUnit);
-                    return `${intPart} ${qtyUnit} - ${consumableAmount} ${detail.volumeUnitName}`;
-                  })()}
-                />
-              </Col>
-              {detail.consumableImportedQuantity > 0 && detail.volumeUnitName && (
-                <Col span={12}>
-                  <DetailItem
-                    label="Tồn kho đầu kỳ (số lượng)"
-                    value={`${detail.consumableImportedQuantity.toLocaleString("vi-VN")} ${detail.volumeUnitName}`}
-                  />
-                </Col>
+            <div className="info-panel__name">
+              {detail.formattedName ? (
+                <IndicatorName name={detail.name} formattedName={detail.formattedName} />
+              ) : (
+                detail.name
               )}
-            </Row>
+            </div>
+            <div className="info-panel__code">
+              Mã: {detail.identificationCode || "—"}
+            </div>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <DetailItem
-                  label="Tiêu hao trong kỳ"
-                  value={(() => {
-                    const vol = detail.theoreticalConsumption;
-                    if (!vol || !detail.volumePerUnit || !detail.volumeUnitName) return null;
-                    const baseQty = vol / detail.volumePerUnit;
-                    const intPart = Math.floor(baseQty);
-                    const decPart = baseQty - intPart;
-                    if (decPart === 0) {
-                      return `${intPart.toLocaleString("vi-VN")} ${qtyUnit}`;
-                    }
-                    const remainingVol = Math.round(decPart * detail.volumePerUnit);
-                    return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${remainingVol.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;
-                  })()}
-                />
-              </Col>
-              <Col span={12}>
-                <DetailItem
-                  label="Tồn kho cuối kỳ (Dự tính)"
-                  value={(() => {
-                    const expected = detail.expectedStockConsumable;
+            <div className="info-panel__kv-box">
+              <div className="info-panel__kv-row">
+                <span className="info-panel__kv-label">CAS</span>
+                <span className="info-panel__kv-value">{detail.casNumber || "—"}</span>
+              </div>
+              <div className="info-panel__kv-row">
+                <span className="info-panel__kv-label">Mã nhận dạng</span>
+                <span className="info-panel__kv-value">{detail.identificationCode || "—"}</span>
+              </div>
+            </div>
 
-                    if (detail.stockByUnits && detail.stockByUnits.length >= 2) {
-                      const totalVolume = detail.stockByUnits.reduce(
-                        (s, e) => s + e.quantity * (e.volumePerUnit || 0), 0,
-                      );
-                      const firstVolumeUnit = detail.stockByUnits.find(e => e.volumeUnitName)?.volumeUnitName || "";
-
-                      if (expected < 0) {
-                        return <span style={{ color: "#ff4d4f" }}>{`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}</span>;
-                      }
-
-                      if (totalVolume > 0) {
-                        return (
-                          <div>
-                            {detail.stockByUnits.map((entry, i) => {
-                              const entryVol = entry.quantity * (entry.volumePerUnit || 0);
-                              if (entryVol <= 0 || !entry.volumePerUnit) return null;
-                              const unitExpectedVol = expected * (entryVol / totalVolume);
-                              const unitExpectedBase = unitExpectedVol / entry.volumePerUnit;
-                              const unit = entry.packagingUnitName || "";
-                              const intPart = Math.floor(unitExpectedBase);
-                              const decPart = unitExpectedBase - intPart;
-                              if (decPart === 0) {
-                                return <div key={i}>{`${unitExpectedBase.toLocaleString("vi-VN")} ${unit}`.trim()}</div>;
-                              }
-                              const vol = Math.round(decPart * entry.volumePerUnit);
-                              return <div key={i}>{`${intPart.toLocaleString("vi-VN")} ${unit} - ${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName || ""}`}</div>;
-                            })}
-                            {firstVolumeUnit && (
-                              <div style={{ fontSize: 12, color: "#888" }}>
-                                {`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                    }
-
-                    if (!detail.volumePerUnit || !detail.volumeUnitName) return null;
-                    if (expected < 0) {
-                      return <span style={{ color: "#ff4d4f" }}>{`${expected.toLocaleString("vi-VN")} ${detail.volumeUnitName}`}</span>;
-                    }
-                    const baseQty = expected / detail.volumePerUnit;
-                    const intPart = Math.floor(baseQty);
-                    const decPart = baseQty - intPart;
-                    if (decPart === 0) {
-                      return `${intPart.toLocaleString("vi-VN")} ${qtyUnit}`;
-                    }
-                    const remainingVol = Math.round(decPart * detail.volumePerUnit);
-                    return `${intPart.toLocaleString("vi-VN")} ${qtyUnit} - ${remainingVol.toLocaleString("vi-VN")} ${detail.volumeUnitName}`;
-                  })()}
-                />
-              </Col>
-            </Row>
-
-            <DetailItem
-              label="Điều kiện bảo quản"
-              value={
-                detail.formattedStorageConditions ? (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(detail.formattedStorageConditions) }} />
-                ) : (
-                  detail.storageConditions
-                )
-              }
-            />
-
-            <DetailItem label="Cấu hình kỹ thuật" value={detail.mainTechnicalSpecs} />
+            <div className="info-panel__detail-box">
+              <div className="info-panel__detail-item">
+                <div className="info-panel__detail-label">Điều kiện bảo quản</div>
+                <div className="info-panel__detail-value">
+                  {detail.formattedStorageConditions ? (
+                    <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(detail.formattedStorageConditions) }} />
+                  ) : (
+                    detail.storageConditions || "—"
+                  )}
+                </div>
+              </div>
+              <div className="info-panel__detail-item">
+                <div className="info-panel__detail-label">Cấu hình kỹ thuật</div>
+                <div className="info-panel__detail-value">
+                  {detail.mainTechnicalSpecs || "—"}
+                </div>
+              </div>
+            </div>
 
             {onOpenLotHistory && (
-              <div style={{ marginTop: 16 }}>
+              <div style={{ marginTop: 12 }}>
                 <Button
                   icon={<HistoryOutlined />}
+                  size="small"
                   onClick={onOpenLotHistory}
                 >
                   Xem lịch sử

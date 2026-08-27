@@ -1,0 +1,304 @@
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { Table, Typography } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import dayjs, { Dayjs } from "dayjs";
+import {
+  productService,
+  ProductLotStockDto,
+  ProductUsageLogItemDto,
+} from "../../../services/productService";
+import {
+  getLotStatus,
+  getLotCountdownText,
+  formatLotBaseQty,
+  getLotVolumeQty,
+  getLotVolumeUnit,
+  LOT_STATUS_CONFIG,
+  LOT_BAR_COLORS,
+} from "./utils";
+import type { TimeRange } from "./LotStockFilterBar";
+
+const { Text } = Typography;
+
+export interface LotStockCardProps {
+  lot: ProductLotStockDto;
+  productId: string;
+  warehouseId?: string;
+  timeRange: TimeRange;
+  isNextFEFO: boolean;
+}
+
+function buildDateRange(range: TimeRange): [Dayjs, Dayjs] | null {
+  if (range === "7d") return [dayjs().subtract(6, "day").startOf("day"), dayjs().endOf("day")];
+  if (range === "30d") return [dayjs().subtract(29, "day").startOf("day"), dayjs().endOf("day")];
+  return null;
+}
+
+const LotStockCard: React.FC<LotStockCardProps> = ({
+  lot,
+  productId,
+  warehouseId,
+  timeRange,
+  isNextFEFO,
+}) => {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<ProductUsageLogItemDto[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const pageSize = 20;
+
+  const status = getLotStatus(lot);
+  const statusCfg = LOT_STATUS_CONFIG[status];
+  const barColor = LOT_BAR_COLORS[status];
+  const volumeUnit = getLotVolumeUnit(lot);
+  const remainingVolume = getLotVolumeQty(lot);
+  const receivedVolume = lot.volumePerUnit && lot.volumePerUnit > 0
+    ? lot.receivedBaseQuantity * lot.volumePerUnit
+    : lot.receivedBaseQuantity;
+  const usedPct = receivedVolume > 0
+    ? Math.min(100, Math.round(((receivedVolume - remainingVolume) / receivedVolume) * 100))
+    : 0;
+  const remainPct = 100 - usedPct;
+
+  const loadUsage = useCallback(
+    (currentPage: number) => {
+      const lotNumber = lot.lotNumber;
+      if (!lotNumber) return;
+      const range = buildDateRange(timeRange);
+      setLoading(true);
+      productService
+        .getUsageLog(productId, {
+          lotNumber,
+          warehouseId,
+          skipCount: (currentPage - 1) * pageSize,
+          maxResultCount: pageSize,
+          dateFrom: range?.[0]?.toISOString(),
+          dateTo: range?.[1]?.toISOString(),
+        })
+        .then((result) => {
+          setItems(result.items);
+          setTotalCount(result.totalCount);
+        })
+        .catch(() => { setItems([]); setTotalCount(0); })
+        .finally(() => setLoading(false));
+    },
+    [productId, warehouseId, lot.lotNumber, timeRange]
+  );
+
+  const prevTimeRange = useRef(timeRange);
+  useEffect(() => {
+    if (open && prevTimeRange.current !== timeRange) {
+      setPage(1);
+      loadUsage(1);
+    }
+    prevTimeRange.current = timeRange;
+  }, [timeRange, open, loadUsage]);
+
+  const handleToggle = () => {
+    if (!open) {
+      setPage(1);
+      loadUsage(1);
+    }
+    setOpen(!open);
+  };
+
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    loadUsage(p);
+  };
+
+  const columns: ColumnsType<ProductUsageLogItemDto> = [
+    {
+      title: "Thời gian",
+      dataIndex: "resultSubmissionDate",
+      width: 130,
+      render: (v) => (v ? dayjs(v).format("DD/MM/YY HH:mm") : "—"),
+    },
+    { title: "Mã mẫu", dataIndex: "sampleCode", width: 110, render: (v) => v || "—" },
+    { title: "Chỉ tiêu", dataIndex: "indicatorName", ellipsis: true, render: (v) => v || "—" },
+    { title: "Người TH", dataIndex: "technicianName", width: 130, render: (v) => v || "—" },
+    {
+      title: "Tiêu hao",
+      dataIndex: "consumptionAmount",
+      width: 100,
+      align: "right",
+      render: (_, r) =>
+        r.consumptionAmount != null
+          ? <Text type="danger">{`-${r.consumptionAmount} ${r.consumptionUnitName || ""}`.trim()}</Text>
+          : "—",
+    },
+    {
+      title: "Tồn của lô",
+      dataIndex: "consumableStockBefore",
+      width: 120,
+      align: "right",
+      render: (_, r) =>
+        r.consumableStockBefore != null
+          ? <Text strong>{`${r.consumableStockBefore.toLocaleString("vi-VN")} ${r.consumableStockUnitName || ""}`.trim()}</Text>
+          : "—",
+    },
+  ];
+
+  const theoreticalVol = lot.volumePerUnit && lot.volumePerUnit > 0
+    ? lot.theoreticalConsumption * lot.volumePerUnit
+    : lot.theoreticalConsumption;
+
+  return (
+    <div
+      className={`lot-card lot-card--${status}`}
+      style={{ borderColor: statusCfg.border }}
+    >
+      <div className="lot-card__header" onClick={handleToggle} style={{ cursor: "pointer" }}>
+        <div className="lot-card__title-row">
+          <div className="lot-card__title-left">
+            <div className="lot-card__badges">
+              <span className="lot-card__lot-number">{lot.lotNumber || "Không có số lô"}</span>
+              <span
+                className="lot-card__status-badge"
+                style={{ background: statusCfg.bg, color: statusCfg.color }}
+              >
+                {statusCfg.label}
+              </span>
+              {isNextFEFO && status === "ok" && (
+                <span className="lot-card__fefo-badge">Dùng tiếp theo</span>
+              )}
+            </div>
+            {lot.manufacturerName && (
+              <div className="lot-card__manufacturer">{lot.manufacturerName}</div>
+            )}
+          </div>
+
+          <div className="lot-card__title-right">
+            <div className="lot-card__meta-block">
+              <div className="lot-card__meta-label">Hạn sử dụng</div>
+              <div className="lot-card__meta-value">
+                {lot.lotExpiryDate ? dayjs(lot.lotExpiryDate).format("DD/MM/YYYY") : "—"}
+              </div>
+              {lot.lotExpiryDate && (
+                <div className="lot-card__meta-sub" style={{ color: statusCfg.color }}>
+                  {getLotCountdownText(lot.lotExpiryDate)}
+                </div>
+              )}
+            </div>
+            <div className="lot-card__meta-block">
+              <div className="lot-card__meta-label">Tồn của lô</div>
+              <div className="lot-card__qty-display">
+                <span className="lot-card__qty-number" style={{ color: status === "ok" ? "#096DD9" : statusCfg.color }}>
+                  {remainingVolume.toLocaleString("vi-VN")}
+                </span>
+                <span className="lot-card__qty-unit">{volumeUnit}</span>
+              </div>
+              <div className="lot-card__meta-sub">
+                {formatLotBaseQty(lot.remainingBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="lot-card__stock-breakdown">
+        <div className="lot-card__stock-item">
+          <div className="lot-card__stock-label">Tồn kho đầu kỳ</div>
+          <div className="lot-card__stock-value">
+            <span className="lot-card__stock-number">
+              {(lot.volumePerUnit && lot.volumePerUnit > 0
+                ? lot.receivedBaseQuantity * lot.volumePerUnit
+                : lot.receivedBaseQuantity
+              ).toLocaleString("vi-VN")}
+            </span>
+            <span className="lot-card__stock-unit">{volumeUnit}</span>
+          </div>
+          <div className="lot-card__stock-sub">
+            {formatLotBaseQty(lot.receivedBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+          </div>
+        </div>
+        <div className="lot-card__stock-operator">&minus;</div>
+        <div className="lot-card__stock-item">
+          <div className="lot-card__stock-label">Tiêu hao trong kỳ</div>
+          <div className="lot-card__stock-value">
+            <span className="lot-card__stock-number" style={{ color: "#CF1322" }}>
+              {theoreticalVol.toLocaleString("vi-VN")}
+            </span>
+            <span className="lot-card__stock-unit">{volumeUnit}</span>
+          </div>
+        </div>
+        <div className="lot-card__stock-operator">=</div>
+        <div className="lot-card__stock-item lot-card__stock-item--result">
+          <div className="lot-card__stock-label" style={{ color: "#096DD9" }}>Tồn cuối kỳ</div>
+          <div className="lot-card__stock-value">
+            <span className="lot-card__stock-number" style={{ color: "#096DD9" }}>
+              {remainingVolume.toLocaleString("vi-VN")}
+            </span>
+            <span className="lot-card__stock-unit" style={{ color: "#40a9ff" }}>{volumeUnit}</span>
+          </div>
+          <div className="lot-card__stock-sub" style={{ color: "#40a9ff" }}>
+            {formatLotBaseQty(lot.remainingBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+          </div>
+        </div>
+      </div>
+
+      <div className="lot-card__progress">
+        <div className="lot-card__progress-bar">
+          <div
+            className="lot-card__progress-fill"
+            style={{ width: `${usedPct}%`, background: barColor }}
+          />
+        </div>
+        <div className="lot-card__progress-text">
+          Đã dùng <strong>{usedPct}%</strong> &middot; còn {remainPct}%
+        </div>
+      </div>
+
+      <div className="lot-card__footer">
+        <span>
+          <span className="lot-card__footer-label">Quy cách</span> &middot;{" "}
+          {lot.volumePerUnit && lot.volumeUnitName
+            ? `${lot.volumePerUnit} ${lot.volumeUnitName}/${lot.packagingUnitName || lot.baseUnitName || ""}`
+            : "—"}
+        </span>
+        <span>
+          <span className="lot-card__footer-label">Nhập</span> &middot;{" "}
+          {formatLotBaseQty(lot.receivedBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+        </span>
+      </div>
+
+      {open && (
+        <div className="lot-card__usage">
+          <div className="lot-card__usage-header">
+            <Text strong style={{ fontSize: 13 }}>Lịch sử sử dụng của riêng lô này</Text>
+          </div>
+          {!lot.lotNumber ? (
+            <div style={{ padding: "16px 0", textAlign: "center", fontSize: 12, color: "rgba(0,0,0,0.45)" }}>
+              Lô không có số lô — không thể truy vết lịch sử sử dụng
+            </div>
+          ) : (
+            <Table
+              size="small"
+              rowKey={(r, i) => `${r.sampleCode}-${r.indicatorName}-${i}`}
+              dataSource={items}
+              columns={columns}
+              loading={loading}
+              locale={{ emptyText: "Không có dữ liệu" }}
+              pagination={
+                totalCount > pageSize
+                  ? {
+                      current: page,
+                      pageSize,
+                      total: totalCount,
+                      showSizeChanger: false,
+                      size: "small",
+                      onChange: handlePageChange,
+                    }
+                  : false
+              }
+              scroll={{ x: 620 }}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LotStockCard;

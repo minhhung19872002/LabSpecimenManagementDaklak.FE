@@ -372,8 +372,23 @@ export interface GetProductUsageLogParams {
   dateFrom?: string;
   dateTo?: string;
   warehouseId?: string;
+  lotNumber?: string;
   skipCount?: number;
   maxResultCount?: number;
+}
+
+export interface ProductLotStockDto {
+  lotNumber?: string;
+  manufacturerName?: string;
+  lotExpiryDate?: string;
+  receivedBaseQuantity: number;
+  consumedBaseQuantity: number;
+  remainingBaseQuantity: number;
+  theoreticalConsumption: number;
+  volumePerUnit?: number;
+  volumeUnitName?: string;
+  packagingUnitName?: string;
+  baseUnitName?: string;
 }
 
 interface PagedResult<T> {
@@ -446,6 +461,13 @@ export const productService = {
     const params: Record<string, any> = {};
     if (warehouseId) params.WarehouseId = warehouseId;
     const response = await api.get<ProductDetailDto>(`${BASE_URL}/${id}/detail`, { params });
+    return response.data;
+  },
+
+  getLotStocks: async (id: string, warehouseId?: string): Promise<ProductLotStockDto[]> => {
+    const params: Record<string, any> = {};
+    if (warehouseId) params.WarehouseId = warehouseId;
+    const response = await api.get<ProductLotStockDto[]>(`${BASE_URL}/${id}/lot-stocks`, { params });
     return response.data;
   },
 
