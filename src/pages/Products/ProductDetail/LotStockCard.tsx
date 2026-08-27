@@ -53,13 +53,6 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   const barColor = LOT_BAR_COLORS[status];
   const volumeUnit = getLotVolumeUnit(lot);
   const remainingVolume = getLotVolumeQty(lot);
-  const receivedVolume = lot.volumePerUnit && lot.volumePerUnit > 0
-    ? lot.receivedBaseQuantity * lot.volumePerUnit
-    : lot.receivedBaseQuantity;
-  const usedPct = receivedVolume > 0
-    ? Math.min(100, Math.round(((receivedVolume - remainingVolume) / receivedVolume) * 100))
-    : 0;
-  const remainPct = 100 - usedPct;
 
   const loadUsage = useCallback(
     (currentPage: number) => {
@@ -146,6 +139,10 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   const openingVolume = lot.volumePerUnit && lot.volumePerUnit > 0
     ? lot.openingBaseQuantity * lot.volumePerUnit
     : lot.openingBaseQuantity;
+  const usedPct = openingVolume > 0
+    ? Math.min(100, Math.round((theoreticalVol / openingVolume) * 100))
+    : 0;
+  const remainPct = 100 - usedPct;
 
   return (
     <div
