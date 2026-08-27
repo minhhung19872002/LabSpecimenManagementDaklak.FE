@@ -385,6 +385,7 @@ export interface ProductLotStockDto {
   consumedBaseQuantity: number;
   remainingBaseQuantity: number;
   theoreticalConsumption: number;
+  openingBaseQuantity: number;
   volumePerUnit?: number;
   volumeUnitName?: string;
   packagingUnitName?: string;

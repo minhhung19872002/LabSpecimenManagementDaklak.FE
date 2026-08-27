@@ -143,6 +143,9 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   const theoreticalVol = lot.volumePerUnit && lot.volumePerUnit > 0
     ? lot.theoreticalConsumption * lot.volumePerUnit
     : lot.theoreticalConsumption;
+  const openingVolume = lot.volumePerUnit && lot.volumePerUnit > 0
+    ? lot.openingBaseQuantity * lot.volumePerUnit
+    : lot.openingBaseQuantity;
 
   return (
     <div
@@ -202,15 +205,9 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
           <div className="lot-card__stock-label">Tồn kho đầu kỳ</div>
           <div className="lot-card__stock-value">
             <span className="lot-card__stock-number">
-              {(lot.volumePerUnit && lot.volumePerUnit > 0
-                ? lot.receivedBaseQuantity * lot.volumePerUnit
-                : lot.receivedBaseQuantity
-              ).toLocaleString("vi-VN")}
+              {openingVolume.toLocaleString("vi-VN")}
             </span>
             <span className="lot-card__stock-unit">{volumeUnit}</span>
-          </div>
-          <div className="lot-card__stock-sub">
-            {formatLotBaseQty(lot.receivedBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
           </div>
         </div>
         <div className="lot-card__stock-operator">&minus;</div>
