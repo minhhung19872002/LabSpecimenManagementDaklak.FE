@@ -572,14 +572,14 @@ export const importService = {
   previewProductMasterData: async (file: File): Promise<ProductMasterDataImportPreviewDto> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.upload<ProductMasterDataImportPreviewDto>(`${BASE_URL}/products-master-data/preview`, formData);
+    const response = await api.upload<ProductMasterDataImportPreviewDto>(`${BASE_URL}/products-master-data/preview`, formData, { timeout: 300000 });
     return response.data;
   },
 
   importProductMasterData: async (file: File): Promise<ImportResultDto> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.upload<ImportResultDto>(`${BASE_URL}/products-master-data/import`, formData);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/products-master-data/import`, formData, { timeout: 300000 });
     return response.data;
   },
 
@@ -600,7 +600,7 @@ export const importService = {
   importProducts: async (file: File): Promise<ImportResultDto> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.upload<ImportResultDto>(`${BASE_URL}/products`, formData);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/products`, formData, { timeout: 300000 });
     return response.data;
   },
 };
