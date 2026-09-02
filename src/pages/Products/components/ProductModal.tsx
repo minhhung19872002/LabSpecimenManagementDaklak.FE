@@ -95,28 +95,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const [categoryTagInput, setCategoryTagInput] = useState("");
   const [hasBaseSubstance, setHasBaseSubstance] = useState(false);
 
-  const loadUnits = (signal?: AbortSignal) => {
-    const includeIds = editingProduct
-      ? [
-          editingProduct.baseUnitId,
-          editingProduct.packagingUnitId,
-          editingProduct.volumeUnitId,
-          ...(editingProduct.skus || []).flatMap((s) => [
-            s.baseUnitId,
-            s.packagingUnitId,
-            s.volumeUnitId,
-          ]),
-        ].filter(Boolean) as string[]
-      : undefined;
-    unitService
-      .getActive(includeIds?.length ? includeIds : undefined)
-      .then((items) => {
-        if (signal?.aborted) return;
-        setUnits(items);
-      })
-      .catch(() => {});
-  };
-
   const methods = useForm<ProductFormData>({
     resolver: yupResolver(productSchema) as any,
     defaultValues: {
@@ -244,28 +222,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
       });
   }, [watchedIdentificationCode, allProducts]);
 
-  useEffect(() => {
-    if (open) {
-      const controller = new AbortController();
-      loadUnits(controller.signal);
-      manufacturerService
-        .getActive()
-        .then((items) => {
-          if (controller.signal.aborted) return;
-          setManufacturers(items);
-        })
-        .catch(() => {});
-      productService
-        .getActive()
-        .then((items) => {
-          if (controller.signal.aborted) return;
-          setAllProducts(items.filter((p) => p.id !== editingProduct?.id));
-        })
-        .catch(() => {});
-      return () => controller.abort();
-    }
-  }, [open]);
-
   const migrateOldStorageConditions = (jsonStr?: string): string => {
     if (!jsonStr) return "";
     try {
@@ -275,127 +231,159 @@ const ProductModal: React.FC<ProductModalProps> = ({
     return jsonStr;
   };
 
+  const resetForm = () => {
+    if (editingProduct) {
+      const storageText = editingProduct.formattedStorageConditions
+        ? ""
+        : migrateOldStorageConditions(editingProduct.storageConditions);
+      reset({
+        name: editingProduct.name,
+        formattedName: editingProduct.formattedName || "",
+        identificationCode: editingProduct.identificationCode || "",
+        productType: editingProduct.productType,
+        baseUnitId: editingProduct.baseUnitId,
+        packagingQuantity: editingProduct.packagingQuantity ?? undefined,
+        packagingUnitId: editingProduct.packagingUnitId || "",
+        volumePerUnit: editingProduct.volumePerUnit ?? undefined,
+        volumeUnitId: editingProduct.volumeUnitId || "",
+        packagingSpec: editingProduct.packagingSpec || "",
+        casNumber: editingProduct.casNumber || "",
+        manufacturer: editingProduct.manufacturer || "",
+        origin: editingProduct.origin || "",
+        concentration: editingProduct.concentration || "",
+        formattedConcentration: editingProduct.formattedConcentration || "",
+        formattedOrigin: editingProduct.formattedOrigin || "",
+        ghsCode: editingProduct.ghsCode || "",
+        standardCertificationType: editingProduct.standardCertificationType ?? undefined,
+        formattedChemicalFormula: editingProduct.formattedChemicalFormula || "",
+        certifiedValue: editingProduct.certifiedValue || "",
+        formattedCertifiedValue: editingProduct.formattedCertifiedValue || "",
+        measurementUncertainty: editingProduct.measurementUncertainty || "",
+        formattedMeasurementUncertainty: editingProduct.formattedMeasurementUncertainty || "",
+        standardLink: editingProduct.standardLink || "",
+        analysisGrade: editingProduct.analysisGrade || "",
+        formattedPackagingSpec: editingProduct.formattedPackagingSpec || "",
+        materialComposition: editingProduct.materialComposition || "",
+        formattedMaterialComposition: editingProduct.formattedMaterialComposition || "",
+        isReusable: editingProduct.isReusable ?? undefined,
+        maxReuseCount: editingProduct.maxReuseCount ?? undefined,
+        isSterile: editingProduct.isSterile ?? undefined,
+        usagePurpose: editingProduct.usagePurpose || "",
+        shelfLifeDays: editingProduct.shelfLifeDays ?? undefined,
+        baseProductId: editingProduct.baseProductId || undefined,
+        chemicalFormula: editingProduct.chemicalFormula || "",
+        minStockLevel: editingProduct.minStockLevel ?? undefined,
+        equipmentModel: editingProduct.equipmentModel || "",
+        powerConsumption: editingProduct.powerConsumption ?? undefined,
+        manufactureYear: editingProduct.manufactureYear ?? undefined,
+        mainTechnicalSpecs: editingProduct.mainTechnicalSpecs || "",
+        installationLocation: editingProduct.installationLocation || "",
+        storageConditions: editingProduct.storageConditions || "",
+        formattedStorageConditions:
+          editingProduct.formattedStorageConditions || storageText,
+        categories: editingProduct.categories || "",
+        isActive: editingProduct.isActive,
+        skus: (editingProduct.skus || []).map((s) => ({
+          id: s.id,
+          manufacturerId: s.manufacturerId,
+          baseUnitId: s.baseUnitId || undefined,
+          packagingQuantity: s.packagingQuantity ?? undefined,
+          packagingUnitId: s.packagingUnitId || undefined,
+          volumePerUnit: s.volumePerUnit ?? undefined,
+          volumeUnitId: s.volumeUnitId || undefined,
+        })),
+      });
+      setExistingAttachments(editingProduct.attachments || []);
+    } else {
+      reset({
+        name: "",
+        formattedName: "",
+        identificationCode: "",
+        productType: ProductType.Chemical,
+        baseUnitId: "",
+        packagingQuantity: undefined,
+        packagingUnitId: "",
+        volumePerUnit: undefined,
+        volumeUnitId: "",
+        packagingSpec: "",
+        casNumber: "",
+        manufacturer: "",
+        origin: "",
+        concentration: "",
+        formattedConcentration: "",
+        formattedOrigin: "",
+        ghsCode: "",
+        standardCertificationType: undefined,
+        formattedChemicalFormula: "",
+        certifiedValue: "",
+        formattedCertifiedValue: "",
+        measurementUncertainty: "",
+        formattedMeasurementUncertainty: "",
+        standardLink: "",
+        analysisGrade: "",
+        formattedPackagingSpec: "",
+        materialComposition: "",
+        formattedMaterialComposition: "",
+        isReusable: undefined,
+        maxReuseCount: undefined,
+        isSterile: undefined,
+        usagePurpose: "",
+        shelfLifeDays: undefined,
+        baseProductId: undefined,
+        chemicalFormula: "",
+        minStockLevel: undefined,
+        equipmentModel: "",
+        powerConsumption: undefined,
+        manufactureYear: undefined,
+        mainTechnicalSpecs: "",
+        installationLocation: "",
+        storageConditions: "",
+        formattedStorageConditions: "",
+        categories: "",
+        isActive: true,
+        skus: [],
+      });
+      setExistingAttachments([]);
+    }
+    setNewAttachments([]);
+    setRemovedAttachmentIds([]);
+    setCategoryTagInput("");
+    setHasBaseSubstance(editingProduct ? !!editingProduct.baseProductId : false);
+  };
+
   useEffect(() => {
     if (open) {
-      if (editingProduct) {
-        const storageText = editingProduct.formattedStorageConditions
-          ? ""
-          : migrateOldStorageConditions(editingProduct.storageConditions);
-        reset({
-          name: editingProduct.name,
-          formattedName: editingProduct.formattedName || "",
-          identificationCode: editingProduct.identificationCode || "",
-          productType: editingProduct.productType,
-          baseUnitId: editingProduct.baseUnitId,
-          packagingQuantity: editingProduct.packagingQuantity ?? undefined,
-          packagingUnitId: editingProduct.packagingUnitId || "",
-          volumePerUnit: editingProduct.volumePerUnit ?? undefined,
-          volumeUnitId: editingProduct.volumeUnitId || "",
-          packagingSpec: editingProduct.packagingSpec || "",
-          casNumber: editingProduct.casNumber || "",
-          manufacturer: editingProduct.manufacturer || "",
-          origin: editingProduct.origin || "",
-          concentration: editingProduct.concentration || "",
-          formattedConcentration: editingProduct.formattedConcentration || "",
-          formattedOrigin: editingProduct.formattedOrigin || "",
-          ghsCode: editingProduct.ghsCode || "",
-          standardCertificationType: editingProduct.standardCertificationType ?? undefined,
-          formattedChemicalFormula: editingProduct.formattedChemicalFormula || "",
-          certifiedValue: editingProduct.certifiedValue || "",
-          formattedCertifiedValue: editingProduct.formattedCertifiedValue || "",
-          measurementUncertainty: editingProduct.measurementUncertainty || "",
-          formattedMeasurementUncertainty: editingProduct.formattedMeasurementUncertainty || "",
-          standardLink: editingProduct.standardLink || "",
-          analysisGrade: editingProduct.analysisGrade || "",
-          formattedPackagingSpec: editingProduct.formattedPackagingSpec || "",
-          materialComposition: editingProduct.materialComposition || "",
-          formattedMaterialComposition: editingProduct.formattedMaterialComposition || "",
-          isReusable: editingProduct.isReusable ?? undefined,
-          maxReuseCount: editingProduct.maxReuseCount ?? undefined,
-          isSterile: editingProduct.isSterile ?? undefined,
-          usagePurpose: editingProduct.usagePurpose || "",
-          shelfLifeDays: editingProduct.shelfLifeDays ?? undefined,
-          baseProductId: editingProduct.baseProductId || undefined,
-          chemicalFormula: editingProduct.chemicalFormula || "",
-          minStockLevel: editingProduct.minStockLevel ?? undefined,
-          equipmentModel: editingProduct.equipmentModel || "",
-          powerConsumption: editingProduct.powerConsumption ?? undefined,
-          manufactureYear: editingProduct.manufactureYear ?? undefined,
-          mainTechnicalSpecs: editingProduct.mainTechnicalSpecs || "",
-          installationLocation: editingProduct.installationLocation || "",
-          storageConditions: editingProduct.storageConditions || "",
-          formattedStorageConditions:
-            editingProduct.formattedStorageConditions || storageText,
-          categories: editingProduct.categories || "",
-          isActive: editingProduct.isActive,
-          skus: (editingProduct.skus || []).map((s) => ({
-            id: s.id,
-            manufacturerId: s.manufacturerId,
-            baseUnitId: s.baseUnitId || undefined,
-            packagingQuantity: s.packagingQuantity ?? undefined,
-            packagingUnitId: s.packagingUnitId || undefined,
-            volumePerUnit: s.volumePerUnit ?? undefined,
-            volumeUnitId: s.volumeUnitId || undefined,
-          })),
-        });
-        setExistingAttachments(editingProduct.attachments || []);
-      } else {
-        reset({
-          name: "",
-          formattedName: "",
-          identificationCode: "",
-          productType: ProductType.Chemical,
-          baseUnitId: "",
-          packagingQuantity: undefined,
-          packagingUnitId: "",
-          volumePerUnit: undefined,
-          volumeUnitId: "",
-          packagingSpec: "",
-          casNumber: "",
-          manufacturer: "",
-          origin: "",
-          concentration: "",
-          formattedConcentration: "",
-          formattedOrigin: "",
-          ghsCode: "",
-          standardCertificationType: undefined,
-          formattedChemicalFormula: "",
-          certifiedValue: "",
-          formattedCertifiedValue: "",
-          measurementUncertainty: "",
-          formattedMeasurementUncertainty: "",
-          standardLink: "",
-          analysisGrade: "",
-          formattedPackagingSpec: "",
-          materialComposition: "",
-          formattedMaterialComposition: "",
-          isReusable: undefined,
-          maxReuseCount: undefined,
-          isSterile: undefined,
-          usagePurpose: "",
-          shelfLifeDays: undefined,
-          baseProductId: undefined,
-          chemicalFormula: "",
-          minStockLevel: undefined,
-          equipmentModel: "",
-          powerConsumption: undefined,
-          manufactureYear: undefined,
-          mainTechnicalSpecs: "",
-          installationLocation: "",
-          storageConditions: "",
-          formattedStorageConditions: "",
-          categories: "",
-          isActive: true,
-          skus: [],
-        });
-        setExistingAttachments([]);
-      }
-      setNewAttachments([]);
-      setRemovedAttachmentIds([]);
-      setCategoryTagInput("");
-      setHasBaseSubstance(editingProduct ? !!editingProduct.baseProductId : false);
+      const controller = new AbortController();
+      const includeIds = editingProduct
+        ? [
+            editingProduct.baseUnitId,
+            editingProduct.packagingUnitId,
+            editingProduct.volumeUnitId,
+            ...(editingProduct.skus || []).flatMap((s) => [
+              s.baseUnitId,
+              s.packagingUnitId,
+              s.volumeUnitId,
+            ]),
+          ].filter(Boolean) as string[]
+        : undefined;
+
+      Promise.all([
+        unitService
+          .getActive(includeIds?.length ? includeIds : undefined)
+          .catch(() => null),
+        manufacturerService.getActive().catch(() => null),
+        productService.getActive().catch(() => null),
+      ]).then(([unitItems, mfItems, prodItems]) => {
+        if (controller.signal.aborted) return;
+        if (unitItems) setUnits(unitItems);
+        if (mfItems) setManufacturers(mfItems);
+        if (prodItems) setAllProducts(prodItems.filter((p) => p.id !== editingProduct?.id));
+        resetForm();
+      });
+
+      return () => controller.abort();
     }
-  }, [open, editingProduct, reset]);
+  }, [open, editingProduct]);
 
   const parseTags = (jsonStr?: string): string[] => {
     if (!jsonStr) return [];
