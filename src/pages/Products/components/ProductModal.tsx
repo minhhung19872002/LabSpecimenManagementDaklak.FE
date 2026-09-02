@@ -257,7 +257,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
         : migrateOldStorageConditions(editingProduct.storageConditions);
       reset({
         name: editingProduct.name,
-        formattedName: editingProduct.formattedName || "",
+        formattedName: editingProduct.formattedName || editingProduct.name || "",
         identificationCode: editingProduct.identificationCode || "",
         productType: editingProduct.productType,
         baseUnitId: editingProduct.baseUnitId,
