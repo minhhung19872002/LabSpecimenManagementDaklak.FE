@@ -160,28 +160,46 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const watchedType = watched.productType;
   const watchedCategories = watched.categories;
 
-  const toOptions = (list: UnitDto[]) =>
-    list.map((u) => ({
-      value: u.id,
-      label: u.isActive ? (
-        u.name
-      ) : (
-        <span style={{ color: "#ff4d4f", textDecoration: "line-through" }}>{u.name}</span>
-      ),
-      title: u.name,
-    }));
+  const toOption = (u: UnitDto) => ({
+    value: u.id,
+    label: u.isActive ? (
+      u.name
+    ) : (
+      <span style={{ color: "#ff4d4f", textDecoration: "line-through" }}>{u.name}</span>
+    ),
+    title: u.name,
+  });
+
+  const buildOptionsWithFallback = (category: UnitCategory, usedIds: (string | undefined | null)[]) => {
+    const filtered = units.filter((u) => u.category === category);
+    const filteredIdSet = new Set(filtered.map((u) => u.id));
+    const missing = usedIds
+      .filter((id): id is string => !!id && !filteredIdSet.has(id))
+      .map((id) => units.find((u) => u.id === id))
+      .filter((u): u is UnitDto => !!u);
+    return [...filtered, ...missing].map(toOption);
+  };
+
+  const skuUnitIds = useMemo(() => {
+    const skus = editingProduct?.skus || [];
+    return {
+      baseUnitIds: [editingProduct?.baseUnitId, ...skus.map((s) => s.baseUnitId)],
+      packagingUnitIds: [editingProduct?.packagingUnitId, ...skus.map((s) => s.packagingUnitId)],
+      volumeUnitIds: [editingProduct?.volumeUnitId, ...skus.map((s) => s.volumeUnitId)],
+    };
+  }, [editingProduct]);
 
   const purchaseUnitOptions = useMemo(
-    () => toOptions(units.filter((u) => u.category === UnitCategory.PurchaseUnit)),
-    [units],
+    () => buildOptionsWithFallback(UnitCategory.PurchaseUnit, skuUnitIds.baseUnitIds),
+    [units, skuUnitIds],
   );
   const storageUnitOptions = useMemo(
-    () => toOptions(units.filter((u) => u.category === UnitCategory.StorageUnit)),
-    [units],
+    () => buildOptionsWithFallback(UnitCategory.StorageUnit, skuUnitIds.packagingUnitIds),
+    [units, skuUnitIds],
   );
   const consumableUnitOptions = useMemo(
-    () => toOptions(units.filter((u) => u.category === UnitCategory.ConsumableUnit)),
-    [units],
+    () => buildOptionsWithFallback(UnitCategory.ConsumableUnit, skuUnitIds.volumeUnitIds),
+    [units, skuUnitIds],
   );
 
   const manufacturerOptions = useMemo(
