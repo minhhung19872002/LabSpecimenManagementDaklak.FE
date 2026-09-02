@@ -64,7 +64,7 @@ export const productSchema = yup.object({
   casNumber: yup.string().nullable().max(100),
   manufacturer: yup.string().nullable().max(256),
   origin: yup.string().nullable().max(256),
-  concentration: yup.string().nullable().max(256),
+  concentration: yup.string().nullable(),
   formattedConcentration: yup.string().nullable(),
   formattedOrigin: yup.string().nullable(),
   ghsCode: yup.string().nullable().max(128),
