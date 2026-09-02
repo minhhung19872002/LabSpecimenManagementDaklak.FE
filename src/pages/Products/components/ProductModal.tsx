@@ -8,6 +8,7 @@ import {
   Col,
   Divider,
   Button,
+  message,
 } from "antd";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -511,6 +512,20 @@ const ProductModal: React.FC<ProductModalProps> = ({
     return true;
   };
 
+  const onValidationError = (formErrors: any) => {
+    console.warn("Form validation errors:", formErrors);
+    const fieldNames = Object.keys(formErrors);
+    const firstField = fieldNames[0];
+    const firstMsg = formErrors[firstField]?.message
+      || formErrors[firstField]?.[0]?.message
+      || (Array.isArray(formErrors[firstField])
+        ? Object.values(formErrors[firstField].find((e: any) => e) || {}).find((v: any) => v?.message)
+        : undefined)
+      || "Vui lòng kiểm tra lại các trường bắt buộc";
+    const displayMsg = typeof firstMsg === "string" ? firstMsg : "Vui lòng kiểm tra lại các trường bắt buộc";
+    message.error(displayMsg);
+  };
+
   const onSaveDraft = (data: ProductFormData) => {
     if (!validateBaseProduct(data)) return;
     onOk(buildPayload(data, true), removedAttachmentIds);
@@ -544,10 +559,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
         footer={
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <Button onClick={onCancel}>Hủy bỏ</Button>
-            <Button onClick={handleSubmit(onSaveDraft)} loading={loading}>
+            <Button onClick={handleSubmit(onSaveDraft, onValidationError)} loading={loading}>
               Lưu nháp
             </Button>
-            <Button type="primary" onClick={handleSubmit(onSaveAndClose)} loading={loading}>
+            <Button type="primary" onClick={handleSubmit(onSaveAndClose, onValidationError)} loading={loading}>
               Lưu &amp; Đóng
             </Button>
           </div>
