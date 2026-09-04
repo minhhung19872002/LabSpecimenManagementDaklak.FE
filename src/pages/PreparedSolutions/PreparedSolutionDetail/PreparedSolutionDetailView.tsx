@@ -2,10 +2,11 @@ import React from "react";
 import { Button, Card, Space, Spin, Tag } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { PreparedSolutionBatchDto } from "../../../services/preparedSolutionService";
-import { STATUS_COLOR, STATUS_LABEL } from "../PreparedSolutions/utils";
+import { STATUS_COLOR, STATUS_LABEL, formatDate } from "../PreparedSolutions/utils";
 import PreparedSolutionIngredientList from "../PreparedSolutions/PreparedSolutionIngredientList";
 import PreparedSolutionInfoSection from "./PreparedSolutionInfoSection";
 import PreparedSolutionDetailTable from "./PreparedSolutionDetailTable";
+import BarcodePrintModal, { BarcodePrintSection } from "../../../components/common/BarcodePrintModal";
 import "../../../styles/ListCard.css";
 import "../../WarehouseImports/WarehouseImportDetail.css";
 
@@ -13,12 +14,18 @@ export interface PreparedSolutionDetailViewProps {
   loading: boolean;
   item: PreparedSolutionBatchDto | null;
   onBack: () => void;
+  printBarcodeOpen: boolean;
+  onOpenPrintBarcode: () => void;
+  onClosePrintBarcode: () => void;
 }
 
 const PreparedSolutionDetailView: React.FC<PreparedSolutionDetailViewProps> = ({
   loading,
   item,
   onBack,
+  printBarcodeOpen,
+  onOpenPrintBarcode,
+  onClosePrintBarcode,
 }) => {
   if (loading) {
     return (
@@ -41,6 +48,17 @@ const PreparedSolutionDetailView: React.FC<PreparedSolutionDetailViewProps> = ({
     );
   }
 
+  const barcodeSections: BarcodePrintSection[] =
+    item.barcodeValues?.length > 0
+      ? [
+          {
+            key: item.lotCode ?? item.id,
+            header: `${item.lotCode ?? "—"} - ${formatDate(item.expiryDate)}`,
+            barcodes: item.barcodeValues,
+          },
+        ]
+      : [];
+
   return (
     <div className="warehouse-import-detail">
       <div className="back-button-bar">
@@ -58,6 +76,9 @@ const PreparedSolutionDetailView: React.FC<PreparedSolutionDetailViewProps> = ({
               <Tag className="receipt-code-tag">{item.preparedSolutionReceiptCode ?? item.lotCode}</Tag>
               <Tag color={STATUS_COLOR[item.computedStatus]}>{STATUS_LABEL[item.computedStatus]}</Tag>
             </Space>
+            <Button onClick={onOpenPrintBarcode}>
+              In barcode
+            </Button>
           </div>
         }
       >
@@ -69,6 +90,15 @@ const PreparedSolutionDetailView: React.FC<PreparedSolutionDetailViewProps> = ({
 
         <PreparedSolutionIngredientList ingredients={item.ingredients} />
       </Card>
+
+      <BarcodePrintModal
+        open={printBarcodeOpen}
+        onClose={onClosePrintBarcode}
+        title="In barcode"
+        printTitle={item.preparedSolutionReceiptCode ?? item.lotCode ?? ""}
+        sections={barcodeSections}
+        emptyText="Phiếu pha này chưa có barcode"
+      />
     </div>
   );
 };

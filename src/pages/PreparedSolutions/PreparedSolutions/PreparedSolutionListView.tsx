@@ -30,7 +30,7 @@ export interface PreparedSolutionListViewProps {
   createModalOpen: boolean;
   editingItem?: PreparedSolutionBatchDto;
   onCreateModalClose: () => void;
-  onSaved: () => void;
+  onSaved: (created?: PreparedSolutionBatchDto) => void;
   processModalOpen: boolean;
   processItem?: PreparedSolutionBatchDto;
   onProcessModalClose: () => void;

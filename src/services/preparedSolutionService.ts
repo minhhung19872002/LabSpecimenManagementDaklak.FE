@@ -53,6 +53,7 @@ export interface PreparedSolutionBatchDto {
   /** Phiếu nhập kho ảo (PSB-xxx) sinh ra khi pha — chỉ có ở getById */
   preparedSolutionReceiptId?: string;
   preparedSolutionReceiptCode?: string;
+  barcodeValues: string[];
   daysRemaining: number;
   ingredients: PreparedSolutionIngredientDto[];
 }

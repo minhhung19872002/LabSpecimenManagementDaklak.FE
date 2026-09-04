@@ -112,10 +112,17 @@ const PreparedSolutionListPage: React.FC = () => {
     setProcessItem(undefined);
   }, []);
 
-  const handleSaved = useCallback(() => {
-    loadList();
-    loadWarnings();
-  }, [loadList, loadWarnings]);
+  const handleSaved = useCallback(
+    (created?: PreparedSolutionBatchDto) => {
+      if (created) {
+        navigate(PATH_ROUTES.preparedSolutions.detail(created.id));
+      } else {
+        loadList();
+        loadWarnings();
+      }
+    },
+    [navigate, loadList, loadWarnings]
+  );
 
   const handleProcessed = useCallback(() => {
     loadList();

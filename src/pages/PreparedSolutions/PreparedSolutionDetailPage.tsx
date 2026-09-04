@@ -15,6 +15,7 @@ const PreparedSolutionDetailPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState<PreparedSolutionBatchDto | null>(null);
+  const [printBarcodeOpen, setPrintBarcodeOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -35,8 +36,6 @@ const PreparedSolutionDetailPage: React.FC = () => {
   }, [loadData]);
 
   const handleBack = useCallback(() => {
-    // Mặc định về danh sách pha dung dịch. Nếu bị redirect từ phiếu nhập kho PSB- (mở từ trang khác),
-    // state được chuyển tiếp nguyên vẹn nên tôn trọng `from` giống WarehouseImportDetail.
     const stateData = location.state as
       | { from?: string; supplierId?: string; productDetailPath?: string; productDetailState?: unknown }
       | null;
@@ -49,7 +48,16 @@ const PreparedSolutionDetailPage: React.FC = () => {
     }
   }, [location.state, navigate]);
 
-  return <PreparedSolutionDetailView loading={loading} item={item} onBack={handleBack} />;
+  return (
+    <PreparedSolutionDetailView
+      loading={loading}
+      item={item}
+      onBack={handleBack}
+      printBarcodeOpen={printBarcodeOpen}
+      onOpenPrintBarcode={() => setPrintBarcodeOpen(true)}
+      onClosePrintBarcode={() => setPrintBarcodeOpen(false)}
+    />
+  );
 };
 
 export default PreparedSolutionDetailPage;

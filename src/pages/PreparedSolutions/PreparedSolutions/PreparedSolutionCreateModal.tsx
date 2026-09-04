@@ -41,7 +41,7 @@ export interface PreparedSolutionCreateModalProps {
   open: boolean;
   editingItem?: PreparedSolutionBatchDto;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (created?: PreparedSolutionBatchDto) => void;
 }
 
 interface FormIngredient {
@@ -271,10 +271,11 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
     try {
       if (isEdit && editingItem) {
         await preparedSolutionService.update(editingItem.id, payload);
+        onSaved();
       } else {
-        await preparedSolutionService.create(payload);
+        const created = await preparedSolutionService.create(payload);
+        onSaved(created);
       }
-      onSaved();
       onClose();
     } catch (error) {
       message.error(getApiErrorMessage(error, "Không thể lưu phiếu pha dung dịch"));
