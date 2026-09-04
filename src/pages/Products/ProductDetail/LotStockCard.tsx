@@ -206,6 +206,9 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
             </span>
             <span className="lot-card__stock-unit">{volumeUnit}</span>
           </div>
+          <div className="lot-card__stock-sub">
+            {formatLotBaseQty(lot.openingBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+          </div>
         </div>
         <div className="lot-card__stock-operator">&minus;</div>
         <div className="lot-card__stock-item">
