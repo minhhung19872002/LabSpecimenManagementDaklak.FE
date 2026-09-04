@@ -9,7 +9,6 @@ import {
 } from "../../../services/preparedSolutionService";
 import { STATUS_COLOR, STATUS_LABEL, formatDate, formatVolume } from "./utils";
 import DaysRemainingText from "./DaysRemainingText";
-import PreparedSolutionIngredientList from "./PreparedSolutionIngredientList";
 
 export interface PreparedSolutionTableProps {
   items: PreparedSolutionBatchDto[];
@@ -182,12 +181,6 @@ const PreparedSolutionTable: React.FC<PreparedSolutionTableProps> = ({
           style: { backgroundColor: bg, cursor: "pointer" },
           onDoubleClick: () => onRowDoubleClick(row),
         };
-      }}
-      expandable={{
-        expandedRowRender: (row: PreparedSolutionBatchDto) => (
-          <PreparedSolutionIngredientList ingredients={row.ingredients} />
-        ),
-        rowExpandable: (row: PreparedSolutionBatchDto) => row.ingredients.length > 0,
       }}
       pagination={{
         current: page,
