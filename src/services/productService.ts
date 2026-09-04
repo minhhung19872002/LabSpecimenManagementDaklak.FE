@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { WarehouseImportReceiptType } from "./warehouseImportReceiptService";
 
 // Enums
 export enum ProductType {
@@ -292,6 +293,13 @@ export interface ProductImportHistoryDto {
   unitPrice?: number;
   vatPercent?: number;
   totalLineAmount?: number;
+  receiptType: WarehouseImportReceiptType;
+  /** Số lượng theo đơn vị lưu kho (chai/bình) — dùng cho phiếu pha dung dịch (PSB-) */
+  receivedBaseQuantity: number;
+  /** Quy cách SKU "Tự pha": thể tích 1 đơn vị lưu kho (chỉ có ở phiếu PSB-) */
+  volumePerUnit?: number;
+  volumeUnitName?: string;
+  skuId?: string;
 }
 
 export interface GetProductImportHistoryInput {

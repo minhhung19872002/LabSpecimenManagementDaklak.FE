@@ -3,6 +3,8 @@ import { Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { ProductImportHistoryDto } from "../../../services/productService";
+import { WarehouseImportReceiptType } from "../../../services/warehouseImportReceiptService";
+import { formatLotBaseQty } from "./utils";
 
 const { Link } = Typography;
 
@@ -25,6 +27,9 @@ const formatCurrency = (value?: number | null) => {
   if (value == null) return "-";
   return value.toLocaleString("vi-VN") + " đ";
 };
+
+const isPreparedSolution = (record: ProductImportHistoryDto) =>
+  record.receiptType === WarehouseImportReceiptType.PreparedSolutionProduction;
 
 const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
   items,
@@ -68,6 +73,8 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
       width: 120,
       align: "right" as const,
       render: (_: any, record: ProductImportHistoryDto) => {
+        // Phiếu pha dung dịch không có đơn đặt hàng
+        if (isPreparedSolution(record)) return "-";
         const unit = record.purchaseUnitName || record.unitName || "";
         return `${record.orderedQuantity} ${unit}`.trim();
       },
@@ -78,6 +85,15 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
       width: 120,
       align: "right" as const,
       render: (_: any, record: ProductImportHistoryDto) => {
+        // Phiếu pha dung dịch: quy đổi ra đơn vị lưu kho theo quy cách SKU "Tự pha" → "10 Chai" / "9 Chai - 100 mL"
+        if (isPreparedSolution(record)) {
+          return formatLotBaseQty(
+            record.receivedBaseQuantity,
+            record.unitName,
+            record.volumePerUnit,
+            record.volumeUnitName,
+          );
+        }
         const unit = record.unitName || record.purchaseUnitName || "";
         return `${record.actualReceivedQuantity} ${unit}`.trim();
       },
