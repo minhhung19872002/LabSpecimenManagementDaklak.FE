@@ -40,6 +40,7 @@ const PRODUCT_TYPE_OPTIONS = [
   { value: String(ProductType.Standard), label: "Chất chuẩn" },
   { value: String(ProductType.Solvent), label: "Dung môi" },
   { value: String(ProductType.Equipment), label: "Thiết bị phòng Lab" },
+  { value: String(ProductType.PreparedSolution), label: "Dung dịch pha" },
 ];
 
 interface LineItem {
