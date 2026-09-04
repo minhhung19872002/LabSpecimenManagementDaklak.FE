@@ -29,18 +29,32 @@ export function formatLotBaseQty(
   volumePerUnit?: number,
   volumeUnitName?: string,
 ): string {
+  const unit = packagingUnitName || "";
+  const fmt = (n: number) => n.toLocaleString("vi-VN");
+  if (!Number.isFinite(baseQty)) {
+    return `0 ${unit}`.trim();
+  }
   if (!volumePerUnit || volumePerUnit <= 0 || !volumeUnitName) {
-    const unit = packagingUnitName || "";
-    return `${baseQty.toLocaleString("vi-VN")} ${unit}`.trim();
+    return `${fmt(baseQty)} ${unit}`.trim();
   }
-  const totalVolume = baseQty * volumePerUnit;
-  const intPart = Math.floor(baseQty);
-  const decPart = baseQty - intPart;
-  if (decPart === 0) {
-    return `${intPart.toLocaleString("vi-VN")} ${packagingUnitName || ""} - ${totalVolume.toLocaleString("vi-VN")} ${volumeUnitName}`.trim();
+  // Chuẩn hoá sai số float (20.9999999999 → 21) trước khi tách phần nguyên/lẻ.
+  const sign = baseQty < 0 ? "-" : "";
+  const absQty = Math.round(Math.abs(baseQty) * 1e6) / 1e6;
+  const intPart = Math.floor(absQty);
+  const decPart = absQty - intPart;
+  // Thể tích của bình lẻ, làm tròn 2 chữ số thập phân.
+  const remainingVol = Math.round(decPart * volumePerUnit * 100) / 100;
+
+  // Số chẵn (hoặc phần lẻ quá nhỏ không hiển thị được) → chỉ hiện số bình: "20 Bình".
+  if (remainingVol === 0) {
+    return `${sign}${fmt(intPart)} ${unit}`.trim();
   }
-  const remainingVol = Math.round(decPart * volumePerUnit);
-  return `${intPart.toLocaleString("vi-VN")} ${packagingUnitName || ""} - ${remainingVol.toLocaleString("vi-VN")} ${volumeUnitName}`.trim();
+  // Chưa đủ 1 bình → chỉ hiện thể tích: "5 Lít".
+  if (intPart === 0) {
+    return `${sign}${fmt(remainingVol)} ${volumeUnitName}`;
+  }
+  // Số lẻ → "20 Bình - 5 Lít": số phía sau là thể tích còn lại của bình lẻ.
+  return `${sign}${fmt(intPart)} ${unit} - ${fmt(remainingVol)} ${volumeUnitName}`.trim();
 }
 
 export function getLotVolumeQty(lot: ProductLotStockDto): number {
