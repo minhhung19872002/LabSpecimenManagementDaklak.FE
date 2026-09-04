@@ -107,7 +107,7 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     },
     {
       key: "import-history",
-      label: "Lịch sử nhập hàng",
+      label: "Lịch sử nhập hàng / pha dung dịch",
       children: (
         <div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>

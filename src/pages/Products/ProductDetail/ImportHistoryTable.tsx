@@ -37,7 +37,7 @@ const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
 }) => {
   const columns: ColumnsType<ProductImportHistoryDto> = [
     {
-      title: "Phiếu nhập kho",
+      title: "ID Phiếu nhập/ pha",
       dataIndex: "warehouseImportReceiptCode",
       key: "warehouseImportReceiptCode",
       width: 160,
