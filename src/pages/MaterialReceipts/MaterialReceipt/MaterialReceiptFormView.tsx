@@ -8,14 +8,16 @@ import MaterialReceiptHeader, {
 import MaterialReceiptItemTable, {
   type MaterialReceiptItemTableProps,
 } from "./MaterialReceiptItemTable";
+import { ProductType } from "../../../services/productService";
 import "../../../styles/ListCard.css";
 
 const PRODUCT_TYPE_OPTIONS = [
   { value: "all", label: "Tất cả" },
-  { value: "0", label: "Hóa chất" },
-  { value: "1", label: "Vật tư tiêu hao" },
-  { value: "2", label: "Chất chuẩn" },
-  { value: "3", label: "Dung môi" },
+  { value: String(ProductType.Chemical), label: "Hóa chất" },
+  { value: String(ProductType.Supply), label: "Vật tư tiêu hao" },
+  { value: String(ProductType.Standard), label: "Chất chuẩn" },
+  { value: String(ProductType.Solvent), label: "Dung môi" },
+  { value: String(ProductType.PreparedSolution), label: "Dung dịch pha" },
 ];
 
 export interface MaterialReceiptFormViewProps
