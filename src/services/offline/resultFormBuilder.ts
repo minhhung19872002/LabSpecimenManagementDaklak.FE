@@ -183,13 +183,15 @@ export interface MixedResultTableRow {
 
 /**
  * Build BM02 mixed-result rows, mirroring the backend (online) layout:
- *  - rows are grouped by sample (sampleCode), in first-seen order;
+ *  - rows are grouped by sample (sampleCode), sorted ascending by sampleCode
+ *    (natural/numeric order, matches the backend `NaturalSampleCodeComparer`);
  *  - within a sample, a parent + its children collapse into ONE row whose
  *    Parameters cell lists the parent then each child ("- child") and whose
  *    Result cell stacks the children's results — standalone indicators become
  *    one row each;
- *  - rows inside a sample are ordered by TestMethod (matches the backend
- *    `OrderBy(TestMethod)`).
+ *  - rows inside a sample keep indicator sortOrder (standalone first, then
+ *    parent groups); no grouping by TestMethod (BA decision 2026-09-04; the
+ *    backend additionally orders by lab, which offline data lacks).
  *
  * Parent indicators are NOT selectable/approved, so they arrive via
  * `parentLookup` (indicatorId -> parent) purely to supply the group header
@@ -215,7 +217,11 @@ export function buildMixedResultTableRows(
     sampleMap.get(key)!.inds.push(ind);
   }
 
-  // Intermediate row (pre-render) so we can sort by method before building XML.
+  sampleOrder.sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
+
+  // Intermediate row (pre-render) built before rendering XML.
   interface BuiltRow {
     paramHtml: string;
     unit: string;
@@ -271,11 +277,6 @@ export function buildMixedResultTableRows(
         result: sortedChildren.map((c) => c.result ?? '').join('\n'),
       });
     }
-
-    // Order rows within the sample by TestMethod (matches backend behaviour).
-    built.sort((a, b) =>
-      a.method.localeCompare(b.method, undefined, { sensitivity: 'base' })
-    );
 
     for (const b of built) {
       rows.push({
