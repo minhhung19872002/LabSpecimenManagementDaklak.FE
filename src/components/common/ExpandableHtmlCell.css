@@ -1,0 +1,8 @@
+.expandable-html-cell__toggle {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.expandable-html-cell__toggle:hover {
+  text-decoration: underline;
+}

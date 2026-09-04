@@ -25,6 +25,7 @@ import {
 } from "../../services/productService";
 import { unitService, UnitDto, UnitCategory } from "../../services/masterDataService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
+import ExpandableHtmlCell from "../../components/common/ExpandableHtmlCell";
 import "../../styles/ListCard.css";
 import "./GoodsReceiptList.css";
 
@@ -523,7 +524,14 @@ const handleRemoveLine = (key: string) => {
       render: (_: any, record: LineItem) => {
         const product = products.find((p) => p.id === record.productId);
         if (product?.formattedConcentration) {
-          return <div className="gr-concentration-cell" style={{ color: "#555", fontSize: 13 }} dangerouslySetInnerHTML={{ __html: product.formattedConcentration }} />;
+          return (
+            <ExpandableHtmlCell
+              html={product.formattedConcentration}
+              rows={5}
+              className="gr-concentration-cell"
+              style={{ color: "#555", fontSize: 13 }}
+            />
+          );
         }
         return <span style={{ color: "#555" }}>{product?.concentration || "-"}</span>;
       },
