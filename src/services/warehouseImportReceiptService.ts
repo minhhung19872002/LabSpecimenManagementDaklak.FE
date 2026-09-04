@@ -108,9 +108,19 @@ export interface WarehouseImportReceiptListDto {
   creationTime: string;
 }
 
+export enum WarehouseImportReceiptType {
+  Normal = 0,
+  PreparedSolutionProduction = 1,
+  MaterialReceipt = 2,
+  DataImport = 3,
+}
+
 export interface WarehouseImportReceiptDto {
   id: string;
   code: string;
+  receiptType: WarehouseImportReceiptType;
+  /** Batch pha dung dịch đã sinh ra phiếu này (chỉ có khi receiptType = PreparedSolutionProduction) */
+  preparedSolutionBatchId?: string;
   goodsReceiptId: string;
   goodsReceiptCode: string;
   actualImportDate: string;

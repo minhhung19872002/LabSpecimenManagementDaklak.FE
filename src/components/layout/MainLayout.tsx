@@ -499,7 +499,7 @@ const MainLayout: React.FC = () => {
           key: "preparedSolutions",
           icon: <Icon name="eyedropper" />,
           label: menuLabel("Quản lý Pha dung dịch"),
-          onClick: () => navigate(PATH_ROUTES.preparedSolutions),
+          onClick: () => navigate(PATH_ROUTES.preparedSolutions.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
       ],

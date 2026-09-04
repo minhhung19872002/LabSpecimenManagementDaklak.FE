@@ -26,6 +26,7 @@ export interface PreparedSolutionListViewProps {
   onPageChange: (page: number, pageSize: number) => void;
   onEdit: (item: PreparedSolutionBatchDto) => void;
   onProcess: (item: PreparedSolutionBatchDto) => void;
+  onRowDoubleClick: (item: PreparedSolutionBatchDto) => void;
   createModalOpen: boolean;
   editingItem?: PreparedSolutionBatchDto;
   onCreateModalClose: () => void;
@@ -53,6 +54,7 @@ const PreparedSolutionListView: React.FC<PreparedSolutionListViewProps> = ({
   onPageChange,
   onEdit,
   onProcess,
+  onRowDoubleClick,
   createModalOpen,
   editingItem,
   onCreateModalClose,
@@ -122,6 +124,7 @@ const PreparedSolutionListView: React.FC<PreparedSolutionListViewProps> = ({
         onPageChange={onPageChange}
         onEdit={onEdit}
         onProcess={onProcess}
+        onRowDoubleClick={onRowDoubleClick}
       />
     </Card>
 

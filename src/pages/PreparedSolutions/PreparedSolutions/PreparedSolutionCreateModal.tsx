@@ -541,24 +541,25 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
           </Col>
         </Row>
 
-        {/* Row C: Ngày pha | Ngày hết hạn */}
+        {/* Row C: Ngày giờ pha | Ngày hết hạn */}
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item
-              label="Ngày pha"
+              label="Ngày giờ pha"
               required
               validateStatus={errors.preparationDate ? "error" : ""}
             >
               <Controller
                 name="preparationDate"
                 control={control}
-                rules={{ required: "Vui lòng chọn ngày pha" }}
+                rules={{ required: "Vui lòng chọn ngày giờ pha" }}
                 render={({ field }) => (
                   <DatePicker
                     {...field}
                     style={{ width: "100%" }}
-                    format="DD/MM/YYYY"
-                    placeholder="Chọn ngày pha"
+                    showTime={{ format: "HH:mm" }}
+                    format="DD/MM/YYYY HH:mm"
+                    placeholder="Chọn ngày giờ pha"
                   />
                 )}
               />
@@ -590,7 +591,7 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
                     return (
                       value.isAfter(prepDate) ||
                       value.isSame(prepDate, "day") ||
-                      "Hạn sử dụng phải sau hoặc bằng ngày pha"
+                      "Hạn sử dụng phải sau hoặc bằng ngày giờ pha"
                     );
                   },
                 }}

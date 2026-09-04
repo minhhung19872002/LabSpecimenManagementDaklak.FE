@@ -207,6 +207,9 @@ const MaterialReceiptDetail = Loadable(
 const PreparedSolutionList = Loadable(
   lazy(() => import("./pages/PreparedSolutions/PreparedSolutionListPage")),
 );
+const PreparedSolutionDetail = Loadable(
+  lazy(() => import("./pages/PreparedSolutions/PreparedSolutionDetailPage")),
+);
 
 // Supplementary Tasks
 const SupplementaryTaskPage = Loadable(
@@ -443,6 +446,7 @@ function App() {
 
           {/* Prepared Solutions - Pha dung dịch */}
           <Route path="prepared-solutions" element={<PreparedSolutionList />} />
+          <Route path="prepared-solutions/:id" element={<PreparedSolutionDetail />} />
 
           {/* Supplementary Tasks - Công việc bổ sung */}
           <Route

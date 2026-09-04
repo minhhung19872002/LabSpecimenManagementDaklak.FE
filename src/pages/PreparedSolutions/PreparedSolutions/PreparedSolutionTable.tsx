@@ -5,10 +5,11 @@ import { EditOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   PreparedSolutionBatchDto,
-  PreparedSolutionIngredientDto,
   PreparedSolutionStatus,
 } from "../../../services/preparedSolutionService";
 import { STATUS_COLOR, STATUS_LABEL, formatDate, formatVolume } from "./utils";
+import DaysRemainingText from "./DaysRemainingText";
+import PreparedSolutionIngredientList from "./PreparedSolutionIngredientList";
 
 export interface PreparedSolutionTableProps {
   items: PreparedSolutionBatchDto[];
@@ -19,6 +20,7 @@ export interface PreparedSolutionTableProps {
   onPageChange: (page: number, pageSize: number) => void;
   onEdit: (item: PreparedSolutionBatchDto) => void;
   onProcess: (item: PreparedSolutionBatchDto) => void;
+  onRowDoubleClick: (item: PreparedSolutionBatchDto) => void;
 }
 
 // Row background: đỏ nhạt cho Sắp hết hạn + Hết hạn, xanh nhạt cho Hết
@@ -36,83 +38,6 @@ const canEdit = (row: PreparedSolutionBatchDto): boolean => {
   return true;
 };
 
-const DaysRemainingText: React.FC<{ row: PreparedSolutionBatchDto }> = ({ row }) => {
-  if (!row.expiryDate) return null;
-  const { daysRemaining } = row;
-  if (daysRemaining < 0) {
-    return (
-      <Typography.Text type="danger" style={{ fontSize: 11 }}>
-        quá {Math.abs(daysRemaining)} ngày
-      </Typography.Text>
-    );
-  }
-  if (daysRemaining === 0) {
-    return (
-      <Typography.Text type="warning" style={{ fontSize: 11 }}>
-        hôm nay
-      </Typography.Text>
-    );
-  }
-  const textType = daysRemaining < 30 ? "warning" : "secondary";
-  return (
-    <Typography.Text type={textType} style={{ fontSize: 11 }}>
-      còn {daysRemaining} ngày
-    </Typography.Text>
-  );
-};
-
-const IngredientExpandRow: React.FC<{ ingredients: PreparedSolutionIngredientDto[] }> = ({
-  ingredients,
-}) => {
-  if (ingredients.length === 0) return null;
-
-  return (
-    <div style={{ padding: "8px 16px 12px", background: "#fafafa" }}>
-      <Typography.Text
-        type="secondary"
-        style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 8 }}
-      >
-        Nguyên liệu gốc đã trừ tiêu hao kho:
-      </Typography.Text>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: 8,
-        }}
-      >
-        {ingredients.map((i) => (
-          <div
-            key={i.id}
-            style={{
-              background: "#fff",
-              border: "1px solid #f0f0f0",
-              borderRadius: 6,
-              padding: "8px 12px",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-              <Typography.Text strong style={{ fontSize: 13, flex: 1, minWidth: 0 }} ellipsis>
-                {i.productName}
-              </Typography.Text>
-              <Typography.Text type="danger" strong style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                − {formatVolume(i.quantityUsed, i.unitName ?? undefined)}
-              </Typography.Text>
-            </div>
-            {!i.isEquipment && (
-              <div style={{ textAlign: "right", marginTop: 2 }}>
-                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                  Hệ thống đã tự trừ
-                </Typography.Text>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 const PreparedSolutionTable: React.FC<PreparedSolutionTableProps> = ({
   items,
   totalCount,
@@ -122,6 +47,7 @@ const PreparedSolutionTable: React.FC<PreparedSolutionTableProps> = ({
   onPageChange,
   onEdit,
   onProcess,
+  onRowDoubleClick,
 }) => {
   const columns: ColumnsType<PreparedSolutionBatchDto> = [
     {
@@ -172,7 +98,7 @@ const PreparedSolutionTable: React.FC<PreparedSolutionTableProps> = ({
       render: (_: unknown, row: PreparedSolutionBatchDto) => (
         <Space direction="vertical" size={2}>
           <Typography.Text>{formatDate(row.expiryDate)}</Typography.Text>
-          <DaysRemainingText row={row} />
+          <DaysRemainingText expiryDate={row.expiryDate} daysRemaining={row.daysRemaining} />
         </Space>
       ),
     },
@@ -252,11 +178,14 @@ const PreparedSolutionTable: React.FC<PreparedSolutionTableProps> = ({
         ) {
           bg = "#fff1f0";
         }
-        return { style: { backgroundColor: bg } };
+        return {
+          style: { backgroundColor: bg, cursor: "pointer" },
+          onDoubleClick: () => onRowDoubleClick(row),
+        };
       }}
       expandable={{
         expandedRowRender: (row: PreparedSolutionBatchDto) => (
-          <IngredientExpandRow ingredients={row.ingredients} />
+          <PreparedSolutionIngredientList ingredients={row.ingredients} />
         ),
         rowExpandable: (row: PreparedSolutionBatchDto) => row.ingredients.length > 0,
       }}

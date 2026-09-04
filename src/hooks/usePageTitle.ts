@@ -84,6 +84,7 @@ const ROUTE_TITLES: PageTitleRoute[] = [
   { path: "/products/:id/sources", title: "Nguồn cung vật tư" },
   { path: "/products/:id", title: "Chi tiết vật tư" },
   { path: "/products", title: "Quản lý vật tư", end: false },
+  { path: "/prepared-solutions/:id", title: "Chi tiết phiếu pha dung dịch" },
   { path: "/prepared-solutions", title: "Pha dung dịch", end: false },
   { path: "/supplementary-tasks", title: "Công việc bổ sung", end: false },
   { path: "/master-data", title: "Ngân hàng dữ liệu", end: false },

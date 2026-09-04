@@ -18,6 +18,7 @@ import {
 import { goodsReceiptService, GoodsReceiptDto } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { PATH_ROUTES } from "../../constants/routes";
 import { WarehouseImportModal } from "../GoodsReceipts/components";
 import { truncateMiddle } from "../../utils/fileUtils";
 import "../../styles/ListCard.css";
@@ -46,6 +47,14 @@ const WarehouseImportDetail: React.FC = () => {
     try {
       setLoading(true);
       const data = await warehouseImportReceiptService.get(id);
+      if (data.preparedSolutionBatchId) {
+        // Phiếu nhập kho ảo sinh từ pha dung dịch → hiển thị bằng trang chi tiết phiếu pha
+        navigate(PATH_ROUTES.preparedSolutions.detail(data.preparedSolutionBatchId), {
+          replace: true,
+          state: stateData,
+        });
+        return;
+      }
       setReceipt(data);
       if (data.goodsReceiptId) {
         goodsReceiptService.get(data.goodsReceiptId)
@@ -57,7 +66,7 @@ const WarehouseImportDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, navigate, stateData]);
 
   useEffect(() => {
     loadData();

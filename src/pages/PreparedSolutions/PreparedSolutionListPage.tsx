@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { message } from "antd";
 import {
   PreparedSolutionBatchDto,
@@ -6,12 +7,14 @@ import {
 } from "../../services/preparedSolutionService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { PATH_ROUTES } from "../../constants/routes";
 import { TAB_STATUSES } from "./PreparedSolutions/utils";
 import PreparedSolutionListView from "./PreparedSolutions/PreparedSolutionListView";
 
 const PAGE_SIZE = 20;
 
 const PreparedSolutionListPage: React.FC = () => {
+  const navigate = useNavigate();
   const canCreate = authService.hasPermission(PERMISSIONS.PreparedSolutions.Create);
 
   const [items, setItems] = useState<PreparedSolutionBatchDto[]>([]);
@@ -92,6 +95,13 @@ const PreparedSolutionListPage: React.FC = () => {
     setProcessModalOpen(true);
   }, []);
 
+  const handleRowDoubleClick = useCallback(
+    (item: PreparedSolutionBatchDto) => {
+      navigate(PATH_ROUTES.preparedSolutions.detail(item.id));
+    },
+    [navigate]
+  );
+
   const handleCreateModalClose = useCallback(() => {
     setCreateModalOpen(false);
     setEditingItem(undefined);
@@ -131,6 +141,7 @@ const PreparedSolutionListPage: React.FC = () => {
       onPageChange={handlePageChange}
       onEdit={handleEdit}
       onProcess={handleProcess}
+      onRowDoubleClick={handleRowDoubleClick}
       createModalOpen={createModalOpen}
       editingItem={editingItem}
       onCreateModalClose={handleCreateModalClose}
