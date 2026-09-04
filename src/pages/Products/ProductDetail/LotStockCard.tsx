@@ -136,9 +136,14 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   const theoreticalVol = lot.volumePerUnit && lot.volumePerUnit > 0
     ? lot.theoreticalConsumption * lot.volumePerUnit
     : lot.theoreticalConsumption;
+  // Tồn đầu kỳ = tổng số đã nhập (hệ thống không trừ thật nên dùng receivedBaseQuantity)
+  const openingBaseQty = lot.receivedBaseQuantity;
   const openingVolume = lot.volumePerUnit && lot.volumePerUnit > 0
-    ? lot.openingBaseQuantity * lot.volumePerUnit
-    : lot.openingBaseQuantity;
+    ? openingBaseQty * lot.volumePerUnit
+    : openingBaseQty;
+  // Tồn cuối kỳ dự kiến = đầu kỳ - tiêu hao (có thể âm nếu tiêu hao vượt quá tồn)
+  const closingBaseQty = openingBaseQty - lot.theoreticalConsumption;
+  const closingVolume = openingVolume - theoreticalVol;
   const usedPct = openingVolume > 0
     ? Math.min(100, Math.round((theoreticalVol / openingVolume) * 100))
     : 0;
@@ -207,7 +212,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
             <span className="lot-card__stock-unit">{volumeUnit}</span>
           </div>
           <div className="lot-card__stock-sub">
-            {formatLotBaseQty(lot.openingBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+            {formatLotBaseQty(openingBaseQty, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
           </div>
         </div>
         <div className="lot-card__stock-operator">&minus;</div>
@@ -225,12 +230,12 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
           <div className="lot-card__stock-label" style={{ color: "#096DD9" }}>Tồn cuối kỳ</div>
           <div className="lot-card__stock-value">
             <span className="lot-card__stock-number" style={{ color: "#096DD9" }}>
-              {remainingVolume.toLocaleString("vi-VN")}
+              {closingVolume.toLocaleString("vi-VN")}
             </span>
             <span className="lot-card__stock-unit" style={{ color: "#40a9ff" }}>{volumeUnit}</span>
           </div>
           <div className="lot-card__stock-sub" style={{ color: "#40a9ff" }}>
-            {formatLotBaseQty(lot.remainingBaseQuantity, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+            {formatLotBaseQty(closingBaseQty, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
           </div>
         </div>
       </div>
