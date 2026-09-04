@@ -81,3 +81,47 @@ export const LOT_BAR_COLORS: Record<LotStatus, string> = {
   expired: "#ff4d4f",
   empty: "#d9d9d9",
 };
+
+const toTime = (iso?: string): number =>
+  iso ? new Date(iso).getTime() : Number.MAX_SAFE_INTEGER;
+
+/**
+ * FEFO comparator: lô có HSD sớm nhất trước (không có HSD xếp cuối);
+ * trùng HSD thì lô nhập kho trước xếp trước (theo yêu cầu BA).
+ */
+export const compareLotsFefo = (a: ProductLotStockDto, b: ProductLotStockDto): number => {
+  const expiryDiff = toTime(a.lotExpiryDate) - toTime(b.lotExpiryDate);
+  if (expiryDiff !== 0) return expiryDiff;
+  return toTime(a.firstImportDate) - toTime(b.firstImportDate);
+};
+
+/** Danh sách lô còn dùng được (còn hạn / sắp hết hạn), sắp theo FEFO */
+export const getUsableLotsFefo = (lots: ProductLotStockDto[]): ProductLotStockDto[] =>
+  lots
+    .filter((l) => {
+      const st = getLotStatus(l);
+      return st === "ok" || st === "near";
+    })
+    .sort(compareLotsFefo);
+
+/** Lô đã bắt đầu được sử dụng (có tiêu hao) */
+export const isLotInUse = (lot: ProductLotStockDto): boolean =>
+  (lot.consumedBaseQuantity ?? 0) > 0 || (lot.theoreticalConsumption ?? 0) > 0;
+
+/**
+ * "Lô tiếp theo" theo FEFO (quy tắc BA):
+ * - Chưa dùng lô nào  -> lô có HSD gần nhất.
+ * - Đang dùng lô X     -> lô đứng ngay sau X theo FEFO.
+ * - Đang dùng lô cuối  -> không có (null).
+ * - Chỉ có 1 lô còn tồn -> không có (null).
+ */
+export const getNextFefoLot = (lots: ProductLotStockDto[]): ProductLotStockDto | null => {
+  const fefo = getUsableLotsFefo(lots);
+  if (fefo.length < 2) return null;
+  let lastInUseIdx = -1;
+  fefo.forEach((l, i) => {
+    if (isLotInUse(l)) lastInUseIdx = i;
+  });
+  if (lastInUseIdx === -1) return fefo[0];
+  return fefo[lastInUseIdx + 1] ?? null;
+};

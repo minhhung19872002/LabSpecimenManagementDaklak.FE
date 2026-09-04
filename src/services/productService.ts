@@ -381,6 +381,8 @@ export interface ProductLotStockDto {
   lotNumber?: string;
   manufacturerName?: string;
   lotExpiryDate?: string;
+  /** Ngày nhập kho sớm nhất của lô (tie-break FEFO khi trùng HSD) */
+  firstImportDate?: string;
   receivedBaseQuantity: number;
   consumedBaseQuantity: number;
   remainingBaseQuantity: number;

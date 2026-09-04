@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Alert, Empty, Spin } from "antd";
 import { ProductLotStockDto } from "../../../services/productService";
-import { getLotStatus, getLotVolumeQty } from "./utils";
+import { getLotStatus, getLotVolumeQty, getNextFefoLot } from "./utils";
 import LotStockFilterBar, {
   StatusFilter,
   SortOrder,
@@ -38,12 +38,8 @@ const LotStockTab: React.FC<LotStockTabProps> = ({
     return result;
   }, [lots, statusFilter, sortOrder]);
 
-  const firstUsableLotNumber = useMemo(() => {
-    const usable = lots.find(
-      (l) => getLotStatus(l) === "ok" || getLotStatus(l) === "near"
-    );
-    return usable?.lotNumber;
-  }, [lots]);
+  // "Lô tiếp theo" theo quy tắc BA (cùng logic với StockSummaryPanel, xem getNextFefoLot)
+  const firstUsableLotNumber = useMemo(() => getNextFefoLot(lots)?.lotNumber, [lots]);
 
   if (!warehouseId) {
     return (

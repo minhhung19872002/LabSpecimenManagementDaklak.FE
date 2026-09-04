@@ -160,8 +160,8 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
               >
                 {statusCfg.label}
               </span>
-              {isNextFEFO && status === "ok" && (
-                <span className="lot-card__fefo-badge">Dùng tiếp theo</span>
+              {isNextFEFO && (status === "ok" || status === "near") && (
+                <span className="lot-card__fefo-badge">Lô tiếp theo &middot; FEFO</span>
               )}
             </div>
             {lot.manufacturerName && (

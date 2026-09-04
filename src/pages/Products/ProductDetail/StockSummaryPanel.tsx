@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Spin } from "antd";
 import { ProductLotStockDto } from "../../../services/productService";
-import { getLotStatus, getLotVolumeQty, getLotVolumeUnit } from "./utils";
+import { getLotStatus, getLotVolumeQty, getLotVolumeUnit, getNextFefoLot } from "./utils";
 
 const LOT_PALETTE = [
   "#1a5fd0", "#2f9e6b", "#e8a83a", "#7c6bd6", "#4aa3c7",
@@ -28,7 +28,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
     let expiredCount = 0;
     let expiredVolume = 0;
     let unit = "";
-    let nextLot = null as ProductLotStockDto | null;
+    const usableLots: ProductLotStockDto[] = [];
 
     const segments: { lotNo: string; volume: number; color: string }[] = [];
 
@@ -41,7 +41,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
       if (status === "ok" || status === "near") {
         totalAvailable += vol;
         usableCount++;
-        if (!nextLot) nextLot = l;
+        usableLots.push(l);
       }
       if (status === "near") nearCount++;
       if (status === "expired") {
@@ -58,6 +58,9 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
         segIdx++;
       }
     });
+
+    // "Lô tiếp theo" theo quy tắc BA (xem getNextFefoLot trong utils)
+    const nextLot = getNextFefoLot(usableLots);
 
     const totalVolume = segments.reduce((s, seg) => s + seg.volume, 0);
     const segmentsWithPct = segments.map((seg) => ({
@@ -150,7 +153,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
 
         {stats.nextLot && (
           <div className="stock-summary__fefo-row">
-            <span>Dùng tiếp theo &middot; FEFO</span>
+            <span>Lô tiếp theo &middot; FEFO</span>
             <span>{stats.nextLot.lotNumber || "Không có số lô"}</span>
           </div>
         )}
