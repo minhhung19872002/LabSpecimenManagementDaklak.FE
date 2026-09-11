@@ -59,10 +59,13 @@ export const useIndicatorsData = () => {
   }, [groups]);
 
   const laboratoryOptions = useMemo(() => {
-    return (laboratories || []).map((lab) => ({
-      value: lab.id,
-      label: lab.name + (!lab.isActive ? " (Ngừng)" : ""),
-    }));
+    const VISIBLE_LABS = ["lab vi sinh", "lab hóa"];
+    return (laboratories || [])
+      .filter((lab) => lab.isActive && VISIBLE_LABS.includes(lab.name.toLowerCase()))
+      .map((lab) => ({
+        value: lab.id,
+        label: lab.name,
+      }));
   }, [laboratories]);
 
   // Filter options: only show specimenTypes/testMethods linked to indicators

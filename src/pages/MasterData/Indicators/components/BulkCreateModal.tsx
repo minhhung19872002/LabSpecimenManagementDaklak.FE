@@ -5,7 +5,7 @@ import { RichTextEditor } from "../../../../components/common";
 import type { FormInstance } from "antd";
 import "./BulkCreateModal.css";
 
-interface GroupOption {
+interface SelectOption {
   value: string;
   label: string;
 }
@@ -14,7 +14,8 @@ interface BulkCreateModalProps {
   open: boolean;
   loading: boolean;
   form: FormInstance;
-  groupOptions: GroupOption[];
+  groupOptions: SelectOption[];
+  laboratoryOptions: SelectOption[];
   onOk: () => void;
   onCancel: () => void;
 }
@@ -27,6 +28,7 @@ interface SubIndicator {
 interface IndicatorItem {
   name: string;
   formattedName: string;
+  laboratoryId?: string;
   subIndicators: SubIndicator[];
 }
 
@@ -35,6 +37,7 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
   loading,
   form,
   groupOptions,
+  laboratoryOptions,
   onOk,
   onCancel,
 }) => {
@@ -104,11 +107,23 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
     form.setFieldsValue({ indicators: updatedIndicators });
   }, [form]);
 
+  // Update parent indicator laboratory
+  const handleUpdateParentLab = useCallback((parentIndex: number, labId: string) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    const updatedIndicators = currentIndicators.map((ind: IndicatorItem, idx: number) => {
+      if (idx === parentIndex) {
+        return { ...ind, laboratoryId: labId };
+      }
+      return ind;
+    });
+    form.setFieldsValue({ indicators: updatedIndicators });
+  }, [form]);
+
   // Add new parent indicator
   const handleAddParent = useCallback(() => {
     const currentIndicators = form.getFieldValue('indicators') || [];
     form.setFieldsValue({
-      indicators: [...currentIndicators, { name: "", formattedName: "", subIndicators: [] }]
+      indicators: [...currentIndicators, { name: "", formattedName: "", laboratoryId: undefined, subIndicators: [] }]
     });
   }, [form]);
 
@@ -170,7 +185,6 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
             options={groupOptions}
           />
         </Form.Item>
-
         {/* Hidden field to store indicators data */}
         <Form.Item name="indicators" hidden>
           <input type="hidden" />
@@ -205,6 +219,18 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
                       }}
                     />
                   </Tooltip>
+                </Col>
+                <Col flex="200px">
+                  <Select
+                    value={indicator.laboratoryId}
+                    onChange={(val) => handleUpdateParentLab(parentIndex, val)}
+                    placeholder="Khoa phòng"
+                    showSearch
+                    optionFilterProp="label"
+                    options={laboratoryOptions}
+                    className="bulk-row-select"
+                    style={{ width: "100%" }}
+                  />
                 </Col>
                 <Col flex="auto">
                   <div

@@ -28,6 +28,13 @@ export const getIndicatorColumns = (
     ),
   },
   {
+    title: "Khoa phòng",
+    dataIndex: "laboratoryName",
+    key: "laboratoryName",
+    width: 150,
+    render: (laboratoryName: string | undefined) => laboratoryName || "-",
+  },
+  {
     title: "Chỉ tiêu phụ",
     key: "subIndicatorCount",
     width: 120,
@@ -125,13 +132,6 @@ export const getGroupColumns = (
     dataIndex: "name",
     key: "name",
     width: 250,
-  },
-  {
-    title: "Khoa phòng thực hiện",
-    dataIndex: "laboratoryName",
-    key: "laboratoryName",
-    width: 180,
-    render: (laboratoryName: string | undefined) => laboratoryName || "-",
   },
   {
     title: "Số chỉ tiêu",

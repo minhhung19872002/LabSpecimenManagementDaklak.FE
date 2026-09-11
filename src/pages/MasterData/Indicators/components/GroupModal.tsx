@@ -2,19 +2,12 @@ import { Modal, Form, Input, Select } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { IndicatorGroupDto } from "../types";
 import { IndicatorGroupFormData } from "../schemas/indicatorSchema";
-import { clearableSelectProps } from "../../../../utils/formHelpers";
-
-interface LaboratoryOption {
-  value: string;
-  label: string;
-}
 
 interface GroupModalProps {
   open: boolean;
   loading: boolean;
   editingGroup: IndicatorGroupDto | null;
   form: UseFormReturn<IndicatorGroupFormData>;
-  laboratoryOptions: LaboratoryOption[];
   onOk: (data: IndicatorGroupFormData) => void;
   onCancel: () => void;
 }
@@ -24,7 +17,6 @@ const GroupModal: React.FC<GroupModalProps> = ({
   loading,
   editingGroup,
   form,
-  laboratoryOptions,
   onOk,
   onCancel,
 }) => {
@@ -59,22 +51,6 @@ const GroupModal: React.FC<GroupModalProps> = ({
             control={control}
             render={({ field }) => (
               <Input {...field} placeholder="Nhập tên nhóm" />
-            )}
-          />
-        </Form.Item>
-        <Form.Item label="Khoa phòng thực hiện">
-          <Controller
-            name="laboratoryId"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...clearableSelectProps(field)}
-                allowClear
-                showSearch
-                placeholder="Chọn khoa phòng (không bắt buộc)"
-                optionFilterProp="label"
-                options={laboratoryOptions}
-              />
             )}
           />
         </Form.Item>

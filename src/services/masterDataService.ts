@@ -379,12 +379,12 @@ export interface BulkSubIndicatorItemDto {
 export interface BulkIndicatorItemDto {
   name: string;
   formattedName?: string;
+  laboratoryId: string;
   subIndicators: BulkSubIndicatorItemDto[];
 }
 
 export interface CreateBulkIndicatorsDto {
   indicatorGroupId: string;
-  laboratoryId: string;
   indicators: BulkIndicatorItemDto[];
 }
 

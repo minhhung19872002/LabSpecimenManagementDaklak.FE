@@ -265,8 +265,8 @@ export interface TestRequestSampleIndicatorDto {
   indicatorName?: string;
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   indicatorGroupName?: string;
-  /** Khoa phòng mặc định của nhóm chỉ tiêu (để auto-fill khi gửi QLKT) */
-  indicatorGroupLaboratoryId?: string;
+  /** Khoa phòng mặc định của chỉ tiêu (để auto-fill khi gửi QLKT) */
+  indicatorDefaultLaboratoryId?: string;
   unitPrice: number;
   /** Giá gốc trước khi áp dụng combo giảm giá (chỉ có khi được miễn phí do combo kim loại nặng) */
   originalUnitPrice?: number;

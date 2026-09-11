@@ -17,6 +17,7 @@ import IndicatorName from "../../../../components/common/IndicatorName";
 import {
   IndicatorDto,
   IndicatorGroupDto,
+  LaboratoryDto,
   SpecimenTypeDto,
 } from "../../../../services/masterDataService";
 import {
@@ -42,6 +43,7 @@ interface QuickCreateIndicatorModalProps {
   open: boolean;
   onCancel: () => void;
   indicatorGroups: IndicatorGroupDto[];
+  laboratories: LaboratoryDto[];
   specimenTypes: SpecimenTypeDto[];
   indicators: IndicatorDto[];
   indicatorToSpecimenTypesMap: Record<string, { id: string; name: string }[]>;
@@ -59,6 +61,7 @@ const QuickCreateIndicatorModal: React.FC<QuickCreateIndicatorModalProps> = ({
   open,
   onCancel,
   indicatorGroups,
+  laboratories,
   specimenTypes,
   indicators,
   indicatorToSpecimenTypesMap,
@@ -106,6 +109,16 @@ const QuickCreateIndicatorModal: React.FC<QuickCreateIndicatorModalProps> = ({
         .map((g) => ({ value: g.id, label: g.name })),
     [indicatorGroups]
   );
+
+  const laboratoryOptions = useMemo(() => {
+    const VISIBLE_LABS = ["lab vi sinh", "lab hóa"];
+    return (laboratories || [])
+      .filter((lab) => lab.isActive && VISIBLE_LABS.includes(lab.name.toLowerCase()))
+      .map((lab) => ({
+        value: lab.id,
+        label: lab.name,
+      }));
+  }, [laboratories]);
 
   const getExistingNamesForSpecimenType = useCallback(
     (specimenTypeId?: string): Set<string> => {
@@ -313,6 +326,7 @@ const QuickCreateIndicatorModal: React.FC<QuickCreateIndicatorModalProps> = ({
 
       const result = await testRequestService.quickCreateIndicators({
         indicatorGroupId: values.indicatorGroupId,
+        laboratoryId: values.laboratoryId,
         testRequestId,
         contractNumber,
         indicators: validItems.map((item) => ({
@@ -407,6 +421,19 @@ const QuickCreateIndicatorModal: React.FC<QuickCreateIndicatorModalProps> = ({
             showSearch
             optionFilterProp="label"
             options={groupOptions}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="laboratoryId"
+          label="Khoa phòng thực hiện"
+          rules={[{ required: true, message: "Vui lòng chọn khoa phòng" }]}
+        >
+          <Select
+            placeholder="Chọn khoa phòng thực hiện"
+            showSearch
+            optionFilterProp="label"
+            options={laboratoryOptions}
           />
         </Form.Item>
 

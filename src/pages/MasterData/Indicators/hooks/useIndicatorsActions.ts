@@ -77,7 +77,7 @@ export const useIndicatorsActions = ({
   // Handle Group CRUD
   const handleCreateGroup = (groupForm: UseFormReturn<IndicatorGroupFormData>) => {
     setEditingGroup(null);
-    groupForm.reset({ name: "", isActive: true, laboratoryId: undefined });
+    groupForm.reset({ name: "", isActive: true });
     setGroupModalOpen(true);
   };
 
@@ -89,7 +89,6 @@ export const useIndicatorsActions = ({
     groupForm.reset({
       name: group.name,
       isActive: group.isActive,
-      laboratoryId: group.laboratoryId || undefined,
     });
     setGroupModalOpen(true);
   };
@@ -155,6 +154,7 @@ export const useIndicatorsActions = ({
     }));
     indicatorForm.reset({
       indicatorGroupId: indicator.indicatorGroupId,
+      laboratoryId: indicator.laboratoryId,
       name: indicator.name,
       formattedName: indicator.formattedName || indicator.name,
       isActive: indicator.isActive,
@@ -307,6 +307,7 @@ export const useIndicatorsActions = ({
           formattedName: data.formattedName,
           isActive: data.isActive,
           indicatorGroupId: data.indicatorGroupId,
+          laboratoryId: data.laboratoryId,
           subIndicators: (data.subIndicators || []).map((sub) => ({
             id: sub.id || undefined,
             name: sub.name,
@@ -335,7 +336,7 @@ export const useIndicatorsActions = ({
   const handleBulkCreate = (bulkForm: FormInstance) => {
     console.log("handleBulkCreate");
     bulkForm.resetFields();
-    bulkForm.setFieldsValue({ indicators: [{ name: "", formattedName: "", subIndicators: [] }] });
+    bulkForm.setFieldsValue({ indicators: [{ name: "", formattedName: "", laboratoryId: undefined, subIndicators: [] }] });
     setBulkModalOpen(true);
   };
 
@@ -359,6 +360,7 @@ export const useIndicatorsActions = ({
           return {
             name: item.name.trim(),
             formattedName: item.formattedName || item.name.trim(),
+            laboratoryId: item.laboratoryId,
             subIndicators,
           };
         });
@@ -370,6 +372,12 @@ export const useIndicatorsActions = ({
 
       if (data.indicators.length === 0) {
         message.error("Vui lòng nhập ít nhất 1 chỉ tiêu");
+        return;
+      }
+
+      const missingLab = data.indicators.some((ind) => !ind.laboratoryId);
+      if (missingLab) {
+        message.error("Vui lòng chọn khoa phòng cho tất cả chỉ tiêu");
         return;
       }
 

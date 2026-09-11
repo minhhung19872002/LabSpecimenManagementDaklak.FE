@@ -590,6 +590,7 @@ const TestRequestForm: React.FC = () => {
             isRequestCompleted={currentStatus === TestRequestStatus.Completed}
             testRequestId={id}
             contractNumber={form.getFieldValue("contractNumber")}
+            laboratories={laboratories}
             onQuickIndicatorCreated={registerQuickCreatedIndicator}
             onPriceChange={(key, price) =>
               setCustomPrices((prev) => ({ ...prev, [key]: price }))

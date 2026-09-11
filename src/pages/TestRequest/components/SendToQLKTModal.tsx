@@ -198,19 +198,19 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         panelKeys.push(sample.id);
 
         unsent.forEach((indicator) => {
-          // Auto-fill laboratoryId: ưu tiên laboratoryId đã có, fallback sang indicatorGroupLaboratoryId
+          // Auto-fill laboratoryId: ưu tiên laboratoryId đã có, fallback sang indicatorDefaultLaboratoryId
           let autoFilledLabId: string | undefined = undefined;
 
           // 1. Ưu tiên laboratoryId đã được gán cho indicator
           if (indicator.laboratoryId && labIds.has(indicator.laboratoryId)) {
             autoFilledLabId = indicator.laboratoryId;
           }
-          // 2. Fallback: lấy từ nhóm chỉ tiêu (indicatorGroupLaboratoryId)
+          // 2. Fallback: lấy từ khoa phòng mặc định của chỉ tiêu
           else if (
-            indicator.indicatorGroupLaboratoryId &&
-            labIds.has(indicator.indicatorGroupLaboratoryId)
+            indicator.indicatorDefaultLaboratoryId &&
+            labIds.has(indicator.indicatorDefaultLaboratoryId)
           ) {
-            autoFilledLabId = indicator.indicatorGroupLaboratoryId;
+            autoFilledLabId = indicator.indicatorDefaultLaboratoryId;
           }
 
           states[indicator.id] = {

@@ -163,11 +163,11 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
 
   const groupForm = useForm<IndicatorGroupFormData>({
     resolver: yupResolver(indicatorGroupSchema) as any,
-    defaultValues: { name: "", isActive: true, laboratoryId: undefined },
+    defaultValues: { name: "", isActive: true },
   });
   const indicatorForm = useForm<IndicatorFormData>({
     resolver: yupResolver(indicatorSchema) as any,
-    defaultValues: { indicatorGroupId: "", name: "", isActive: true },
+    defaultValues: { indicatorGroupId: "", laboratoryId: "", name: "", isActive: true },
   });
   const [bulkForm] = Form.useForm();
 
@@ -249,7 +249,6 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         loading={modalLoading}
         editingGroup={editingGroup}
         form={groupForm}
-        laboratoryOptions={laboratoryOptions}
         onOk={(data) => handleGroupModalOk(data, groupForm)}
         onCancel={() => {
           setGroupModalOpen(false);
@@ -264,6 +263,7 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         editingIndicator={editingIndicator}
         form={indicatorForm}
         groupOptions={groupOptions}
+        laboratoryOptions={laboratoryOptions}
         onOk={(data) => handleIndicatorModalOk(data, indicatorForm)}
         onCancel={() => {
           setIndicatorModalOpen(false);
@@ -277,6 +277,7 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         loading={modalLoading}
         form={bulkForm}
         groupOptions={groupOptions}
+        laboratoryOptions={laboratoryOptions}
         onOk={() => handleBulkModalOk(bulkForm)}
         onCancel={() => {
           setBulkModalOpen(false);

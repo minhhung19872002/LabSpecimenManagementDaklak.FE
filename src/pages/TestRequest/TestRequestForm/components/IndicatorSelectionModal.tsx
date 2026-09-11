@@ -29,6 +29,7 @@ import dayjs from "dayjs";
 import {
   IndicatorGroupDto,
   IndicatorDto,
+  LaboratoryDto,
   SpecimenTypeWithIndicatorsDto,
   SpecimenTypeDto,
   SampleTypeCategoryDto,
@@ -200,6 +201,7 @@ interface IndicatorSelectionModalProps {
   isRequestCompleted?: boolean;
   testRequestId?: string;
   contractNumber?: string;
+  laboratories: LaboratoryDto[];
   onQuickIndicatorCreated: (result: QuickCreateIndicatorResultItem) => void;
 }
 
@@ -250,6 +252,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   isRequestCompleted = false,
   testRequestId,
   contractNumber,
+  laboratories,
   onQuickIndicatorCreated,
 }) => {
   const [quickCreateVisible, setQuickCreateVisible] = useState(false);
@@ -2279,6 +2282,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         open={quickCreateVisible}
         onCancel={() => setQuickCreateVisible(false)}
         indicatorGroups={indicatorGroups}
+        laboratories={laboratories}
         specimenTypes={specimenTypes}
         indicators={indicators}
         indicatorToSpecimenTypesMap={indicatorToSpecimenTypesMap}

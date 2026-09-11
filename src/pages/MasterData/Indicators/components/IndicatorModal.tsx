@@ -5,7 +5,7 @@ import { IndicatorDto } from "../types";
 import { IndicatorFormData } from "../schemas/indicatorSchema";
 import { RichTextEditor } from "../../../../components/common";
 
-interface GroupOption {
+interface SelectOption {
   value: string;
   label: string;
 }
@@ -15,7 +15,8 @@ interface IndicatorModalProps {
   loading: boolean;
   editingIndicator: IndicatorDto | null;
   form: UseFormReturn<IndicatorFormData>;
-  groupOptions: GroupOption[];
+  groupOptions: SelectOption[];
+  laboratoryOptions: SelectOption[];
   onOk: (data: IndicatorFormData) => void;
   onCancel: () => void;
 }
@@ -26,6 +27,7 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
   editingIndicator,
   form,
   groupOptions,
+  laboratoryOptions,
   onOk,
   onCancel,
 }) => {
@@ -71,6 +73,26 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
                 showSearch
                 optionFilterProp="label"
                 options={groupOptions}
+              />
+            )}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Khoa phòng thực hiện"
+          required
+          validateStatus={errors.laboratoryId ? "error" : ""}
+          help={errors.laboratoryId?.message}
+        >
+          <Controller
+            name="laboratoryId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Chọn khoa phòng"
+                showSearch
+                optionFilterProp="label"
+                options={laboratoryOptions}
               />
             )}
           />
