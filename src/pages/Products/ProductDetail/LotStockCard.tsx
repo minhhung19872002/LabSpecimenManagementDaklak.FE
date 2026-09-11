@@ -109,6 +109,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
       render: (v) => (v ? dayjs(v).format("DD/MM/YY HH:mm") : "—"),
     },
     { title: "Mã mẫu", dataIndex: "sampleCode", width: 110, render: (v) => v || "—" },
+    { title: "Barcode", dataIndex: "barcodeCode", width: 220, ellipsis: true, render: (v) => v || "—" },
     { title: "Chỉ tiêu", dataIndex: "indicatorName", ellipsis: true, render: (v) => v || "—" },
     { title: "Người TH", dataIndex: "technicianName", width: 130, render: (v) => v || "—" },
     {
@@ -277,7 +278,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
           ) : (
             <Table
               size="small"
-              rowKey={(r, i) => `${r.sampleCode}-${r.indicatorName}-${i}`}
+              rowKey={(r, i) => `${r.sampleCode}-${r.indicatorName}-${r.barcodeCode || ''}-${i}`}
               dataSource={items}
               columns={columns}
               loading={loading}
@@ -294,7 +295,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
                     }
                   : false
               }
-              scroll={{ x: 620 }}
+              scroll={{ x: 840 }}
             />
           )}
         </div>

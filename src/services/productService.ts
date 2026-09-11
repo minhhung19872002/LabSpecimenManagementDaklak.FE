@@ -374,6 +374,7 @@ export interface ProductUsageLogItemDto {
   consumableStockUnitName?: string;
   consumptionAmount?: number;
   consumptionUnitName?: string;
+  barcodeCode?: string;
 }
 
 export interface GetProductUsageLogParams {
