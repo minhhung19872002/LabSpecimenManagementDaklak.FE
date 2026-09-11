@@ -1170,6 +1170,8 @@ export interface WarehouseDto {
   parentWarehouseId?: string | null;
   parentWarehouseName?: string;
   level: number;
+  laboratoryId?: string | null;
+  laboratoryName?: string;
 }
 
 export interface CreateUpdateWarehouseDto {
@@ -1178,6 +1180,7 @@ export interface CreateUpdateWarehouseDto {
   physicalLocation?: string;
   isActive: boolean;
   parentWarehouseId?: string | null;
+  laboratoryId: string;
 }
 
 export const warehouseService = {

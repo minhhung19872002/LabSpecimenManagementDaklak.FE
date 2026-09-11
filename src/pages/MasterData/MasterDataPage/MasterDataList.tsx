@@ -942,6 +942,7 @@ const MasterDataList: React.FC = () => {
           users={users}
           departments={data.departments || []}
           warehouses={data.warehouses || []}
+          laboratories={data.laboratories || []}
           onOk={() => handleModalOk(form)}
           onCancel={() => {
             setIsModalOpen(false);

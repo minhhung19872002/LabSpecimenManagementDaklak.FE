@@ -4,6 +4,8 @@ import type { FormInstance } from "antd";
 import { MasterDataItem, UserLookupDto } from "../types";
 import { categoryLabels } from "../constants";
 
+const VISIBLE_LABS = ["lab vi sinh", "lab hóa"];
+
 interface MasterDataModalProps {
   open: boolean;
   loading: boolean;
@@ -13,6 +15,7 @@ interface MasterDataModalProps {
   users: UserLookupDto[];
   departments: MasterDataItem[];
   warehouses: MasterDataItem[];
+  laboratories: MasterDataItem[];
   onOk: () => void;
   onCancel: () => void;
 }
@@ -26,6 +29,7 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
   users,
   departments,
   warehouses,
+  laboratories,
   onOk,
   onCancel,
 }) => {
@@ -79,6 +83,41 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
               </Form.Item>
             </Col>
           </Row>
+        )}
+        {activeCategory === "warehouses" && (
+          <Form.Item
+            name="laboratoryId"
+            label="Khoa phòng quản lý"
+            rules={[
+              {
+                required: true,
+                message: "Vui lòng chọn khoa phòng quản lý",
+              },
+            ]}
+          >
+            <Select
+              placeholder="Chọn khoa phòng"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children as unknown as string)
+                  ?.toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+            >
+              {laboratories
+                .filter(
+                  (l) =>
+                    l.isActive &&
+                    VISIBLE_LABS.includes(l.name.toLowerCase())
+                )
+                .map((lab) => (
+                  <Select.Option key={lab.id} value={lab.id}>
+                    {lab.name}
+                  </Select.Option>
+                ))}
+            </Select>
+          </Form.Item>
         )}
         {activeCategory === "warehouses" && (
           <Form.Item name="parentWarehouseId" label="Chọn kho cha" initialValue={null}>
