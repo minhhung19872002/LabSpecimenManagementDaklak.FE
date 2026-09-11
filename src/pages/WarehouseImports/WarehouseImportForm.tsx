@@ -4,6 +4,7 @@ import {
   Table, message, Spin, Tag, Modal, Badge, Popover, AutoComplete, Collapse,
 } from "antd";
 import { BranchesOutlined, WarningOutlined, EditOutlined, FileTextOutlined, DeleteOutlined } from "@ant-design/icons";
+import TruncatedHtmlCell from "../../components/common/TruncatedHtmlCell";
 import { NumericFormat } from "react-number-format";
 import {
   DeliveryDocumentFileDto,
@@ -1119,7 +1120,7 @@ const WarehouseImportForm: React.FC = () => {
       width: 150,
       render: (_: any, record: LineItem) =>
         record.packagingSpec
-          ? <div style={{ fontSize: 12, color: "#595959" }} dangerouslySetInnerHTML={{ __html: record.packagingSpec }} />
+          ? <TruncatedHtmlCell html={record.packagingSpec} maxChars={50} style={{ color: "#595959", fontSize: 12 }} />
           : <span style={{ fontSize: 12, color: "#595959" }}>-</span>,
     },
     {
