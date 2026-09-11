@@ -35,6 +35,16 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
 }) => {
   const isDefaultWarehouse = activeCategory === "warehouses" && editingItem && (editingItem as any).isDefault;
 
+  const parentWarehouseId = Form.useWatch("parentWarehouseId", form);
+
+  const shouldShowLabDropdown = React.useMemo(() => {
+    if (activeCategory !== "warehouses") return false;
+    if (isDefaultWarehouse) return false;
+    if (!parentWarehouseId) return true;
+    const parent = warehouses.find((w) => w.id === parentWarehouseId) as any;
+    return parent?.isDefault === true;
+  }, [activeCategory, isDefaultWarehouse, parentWarehouseId, warehouses]);
+
   return (
     <Modal
       title={
@@ -85,6 +95,23 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
           </Row>
         )}
         {activeCategory === "warehouses" && (
+          <Form.Item name="parentWarehouseId" label="Chọn kho cha" initialValue={null}>
+            <Select disabled={!!isDefaultWarehouse}>
+              <Select.Option value={null}>Không có kho cha (Level 0)</Select.Option>
+              {warehouses
+                .filter((w) => !editingItem || w.id !== editingItem.id)
+                .slice()
+                .sort((a: any, b: any) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name))
+                .map((w: any) => (
+                  <Select.Option key={w.id} value={w.id}>
+                    {"— ".repeat(w.level ?? 0)}
+                    {w.name} (Level {w.level ?? 0})
+                  </Select.Option>
+                ))}
+            </Select>
+          </Form.Item>
+        )}
+        {shouldShowLabDropdown && (
           <Form.Item
             name="laboratoryId"
             label="Khoa phòng quản lý"
@@ -114,23 +141,6 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
                 .map((lab) => (
                   <Select.Option key={lab.id} value={lab.id}>
                     {lab.name}
-                  </Select.Option>
-                ))}
-            </Select>
-          </Form.Item>
-        )}
-        {activeCategory === "warehouses" && (
-          <Form.Item name="parentWarehouseId" label="Chọn kho cha" initialValue={null}>
-            <Select disabled={!!isDefaultWarehouse}>
-              <Select.Option value={null}>Không có kho cha (Level 0)</Select.Option>
-              {warehouses
-                .filter((w) => !editingItem || w.id !== editingItem.id)
-                .slice()
-                .sort((a: any, b: any) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name))
-                .map((w: any) => (
-                  <Select.Option key={w.id} value={w.id}>
-                    {"— ".repeat(w.level ?? 0)}
-                    {w.name} (Level {w.level ?? 0})
                   </Select.Option>
                 ))}
             </Select>

@@ -1180,7 +1180,7 @@ export interface CreateUpdateWarehouseDto {
   physicalLocation?: string;
   isActive: boolean;
   parentWarehouseId?: string | null;
-  laboratoryId: string;
+  laboratoryId?: string | null;
 }
 
 export const warehouseService = {
