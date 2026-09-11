@@ -39,6 +39,7 @@ export interface WarehouseImportPreviewItem {
   name: string;
   parentWarehouseCode?: string;
   physicalLocation?: string;
+  laboratoryName?: string;
   isNew: boolean;
   existingId?: string;
   isValid: boolean;
@@ -165,6 +166,12 @@ const ImportWarehouseModal: React.FC<ImportWarehouseModalProps> = ({
       title: "Vị trí vật lý",
       dataIndex: "physicalLocation",
       key: "physicalLocation",
+    },
+    {
+      title: "Khoa phòng QL",
+      dataIndex: "laboratoryName",
+      key: "laboratoryName",
+      width: 130,
     },
     {
       title: "Trạng thái",
