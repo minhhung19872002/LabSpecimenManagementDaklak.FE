@@ -41,7 +41,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   timeRange,
   isNextFEFO,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [items, setItems] = useState<ProductUsageLogItemDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -81,19 +81,19 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
 
   const prevTimeRange = useRef(timeRange);
   useEffect(() => {
-    if (open && prevTimeRange.current !== timeRange) {
+    if (detailOpen && prevTimeRange.current !== timeRange) {
       setPage(1);
       loadUsage(1);
     }
     prevTimeRange.current = timeRange;
-  }, [timeRange, open, loadUsage]);
+  }, [timeRange, detailOpen, loadUsage]);
 
-  const handleToggle = () => {
-    if (!open) {
+  const handleDetailToggle = () => {
+    if (!detailOpen) {
       setPage(1);
       loadUsage(1);
     }
-    setOpen(!open);
+    setDetailOpen((v) => !v);
   };
 
   const handlePageChange = (p: number) => {
@@ -155,7 +155,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
       className={`lot-card lot-card--${status}`}
       style={{ borderColor: statusCfg.border }}
     >
-      <div className="lot-card__header" onClick={handleToggle} style={{ cursor: "pointer" }}>
+      <div className="lot-card__header" onClick={handleDetailToggle} style={{ cursor: "pointer" }}>
         <div className="lot-card__title-row">
           <div className="lot-card__title-left">
             <div className="lot-card__badges">
@@ -203,44 +203,6 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
         </div>
       </div>
 
-      <div className="lot-card__stock-breakdown">
-        <div className="lot-card__stock-item">
-          <div className="lot-card__stock-label">Tồn kho đầu kỳ</div>
-          <div className="lot-card__stock-value">
-            <span className="lot-card__stock-number">
-              {openingVolume.toLocaleString("vi-VN")}
-            </span>
-            <span className="lot-card__stock-unit">{volumeUnit}</span>
-          </div>
-          <div className="lot-card__stock-sub">
-            {formatLotBaseQty(openingBaseQty, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
-          </div>
-        </div>
-        <div className="lot-card__stock-operator">&minus;</div>
-        <div className="lot-card__stock-item">
-          <div className="lot-card__stock-label">Tiêu hao trong kỳ</div>
-          <div className="lot-card__stock-value">
-            <span className="lot-card__stock-number" style={{ color: "#CF1322" }}>
-              {theoreticalVol.toLocaleString("vi-VN")}
-            </span>
-            <span className="lot-card__stock-unit">{volumeUnit}</span>
-          </div>
-        </div>
-        <div className="lot-card__stock-operator">=</div>
-        <div className="lot-card__stock-item lot-card__stock-item--result">
-          <div className="lot-card__stock-label" style={{ color: "#096DD9" }}>Tồn cuối kỳ</div>
-          <div className="lot-card__stock-value">
-            <span className="lot-card__stock-number" style={{ color: "#096DD9" }}>
-              {closingVolume.toLocaleString("vi-VN")}
-            </span>
-            <span className="lot-card__stock-unit" style={{ color: "#40a9ff" }}>{volumeUnit}</span>
-          </div>
-          <div className="lot-card__stock-sub" style={{ color: "#40a9ff" }}>
-            {formatLotBaseQty(closingBaseQty, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
-          </div>
-        </div>
-      </div>
-
       <div className="lot-card__progress">
         <div className="lot-card__progress-bar">
           <div
@@ -266,39 +228,79 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
         </span>
       </div>
 
-      {open && (
-        <div className="lot-card__usage">
-          <div className="lot-card__usage-header">
-            <Text strong style={{ fontSize: 13 }}>Lịch sử sử dụng của riêng lô này</Text>
-          </div>
-          {!lot.lotNumber ? (
-            <div style={{ padding: "16px 0", textAlign: "center", fontSize: 12, color: "rgba(0,0,0,0.45)" }}>
-              Lô không có số lô — không thể truy vết lịch sử sử dụng
+      {detailOpen && (
+        <>
+          <div className="lot-card__stock-breakdown">
+            <div className="lot-card__stock-item">
+              <div className="lot-card__stock-label">Tồn kho đầu kỳ</div>
+              <div className="lot-card__stock-value">
+                <span className="lot-card__stock-number">
+                  {openingVolume.toLocaleString("vi-VN")}
+                </span>
+                <span className="lot-card__stock-unit">{volumeUnit}</span>
+              </div>
+              <div className="lot-card__stock-sub">
+                {formatLotBaseQty(openingBaseQty, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+              </div>
             </div>
-          ) : (
-            <Table
-              size="small"
-              rowKey={(r, i) => `${r.sampleCode}-${r.indicatorName}-${r.barcodeCode || ''}-${i}`}
-              dataSource={items}
-              columns={columns}
-              loading={loading}
-              locale={{ emptyText: "Không có dữ liệu" }}
-              pagination={
-                totalCount > pageSize
-                  ? {
-                      current: page,
-                      pageSize,
-                      total: totalCount,
-                      showSizeChanger: false,
-                      size: "small",
-                      onChange: handlePageChange,
-                    }
-                  : false
-              }
-              scroll={{ x: 840 }}
-            />
-          )}
-        </div>
+            <div className="lot-card__stock-operator">&minus;</div>
+            <div className="lot-card__stock-item">
+              <div className="lot-card__stock-label">Tiêu hao trong kỳ</div>
+              <div className="lot-card__stock-value">
+                <span className="lot-card__stock-number" style={{ color: "#CF1322" }}>
+                  {theoreticalVol.toLocaleString("vi-VN")}
+                </span>
+                <span className="lot-card__stock-unit">{volumeUnit}</span>
+              </div>
+            </div>
+            <div className="lot-card__stock-operator">=</div>
+            <div className="lot-card__stock-item lot-card__stock-item--result">
+              <div className="lot-card__stock-label" style={{ color: "#096DD9" }}>Tồn cuối kỳ</div>
+              <div className="lot-card__stock-value">
+                <span className="lot-card__stock-number" style={{ color: "#096DD9" }}>
+                  {closingVolume.toLocaleString("vi-VN")}
+                </span>
+                <span className="lot-card__stock-unit" style={{ color: "#40a9ff" }}>{volumeUnit}</span>
+              </div>
+              <div className="lot-card__stock-sub" style={{ color: "#40a9ff" }}>
+                {formatLotBaseQty(closingBaseQty, lot.packagingUnitName, lot.volumePerUnit, lot.volumeUnitName)}
+              </div>
+            </div>
+          </div>
+
+          <div className="lot-card__usage">
+            <div className="lot-card__usage-header">
+              <Text strong style={{ fontSize: 13 }}>Lịch sử sử dụng của riêng lô này</Text>
+            </div>
+            {!lot.lotNumber ? (
+              <div style={{ padding: "16px 0", textAlign: "center", fontSize: 12, color: "rgba(0,0,0,0.45)" }}>
+                Lô không có số lô — không thể truy vết lịch sử sử dụng
+              </div>
+            ) : (
+              <Table
+                size="small"
+                rowKey={(r, i) => `${r.sampleCode}-${r.indicatorName}-${r.barcodeCode || ''}-${i}`}
+                dataSource={items}
+                columns={columns}
+                loading={loading}
+                locale={{ emptyText: "Không có dữ liệu" }}
+                pagination={
+                  totalCount > pageSize
+                    ? {
+                        current: page,
+                        pageSize,
+                        total: totalCount,
+                        showSizeChanger: false,
+                        size: "small",
+                        onChange: handlePageChange,
+                      }
+                    : false
+                }
+                scroll={{ x: 840 }}
+              />
+            )}
+          </div>
+        </>
       )}
     </div>
   );
