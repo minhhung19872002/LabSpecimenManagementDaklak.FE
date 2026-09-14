@@ -4,8 +4,6 @@ import React, {
   useCallback,
   useMemo,
   useRef,
-  lazy,
-  Suspense,
 } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { message, Modal } from "antd";
@@ -17,7 +15,6 @@ import {
   type CreateUpdateMaterialReceiptDto,
   type ReceivingWarehouseStockDto,
 } from "../../services/materialReceiptService";
-import { productService, type CreateUpdateProductDto } from "../../services/productService";
 import {
   warehouseService,
   type WarehouseDto,
@@ -30,10 +27,6 @@ import {
   type MaterialReceiptLineItem,
   buildLineItemFromProduct,
 } from "./MaterialReceipt/utils";
-
-const ProductModal = lazy(
-  () => import("../Products/components/ProductModal"),
-);
 
 const MaterialReceiptForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,8 +54,6 @@ const MaterialReceiptForm: React.FC = () => {
   const [productTypeFilter, setProductTypeFilter] = useState("all");
 
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
-  const [productModalOpen, setProductModalOpen] = useState(false);
-  const [productModalLoading, setProductModalLoading] = useState(false);
 
   const filteredProductOptions = useMemo(() => {
     const addedKeys = new Set(
@@ -322,21 +313,6 @@ const MaterialReceiptForm: React.FC = () => {
     });
   }, []);
 
-  const handleCreateProduct = useCallback(async (data: CreateUpdateProductDto) => {
-    setProductModalLoading(true);
-    try {
-      await productService.create(data);
-      message.success("Đã tạo vật tư mới");
-      setProductModalOpen(false);
-      const products = await materialReceiptService.getCentralWarehouseProducts();
-      setCentralProducts(products);
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể tạo vật tư."));
-    } finally {
-      setProductModalLoading(false);
-    }
-  }, []);
-
   const validateForm = useCallback((): boolean => {
     let valid = true;
     if (!code.trim()) {
@@ -502,21 +478,10 @@ const MaterialReceiptForm: React.FC = () => {
       itemCount={items.length}
       onProductTypeChange={setProductTypeFilter}
       onAddProduct={handleAddProduct}
-      onOpenProductModal={() => setProductModalOpen(true)}
       onSaveDraft={handleSaveDraft}
       onConfirm={handleConfirm}
       onCancel={handleCancel}
-    >
-      <Suspense fallback={null}>
-        <ProductModal
-          open={productModalOpen}
-          loading={productModalLoading}
-          editingProduct={null}
-          onOk={handleCreateProduct}
-          onCancel={() => setProductModalOpen(false)}
-        />
-      </Suspense>
-    </MaterialReceiptFormView>
+    />
   );
 };
 

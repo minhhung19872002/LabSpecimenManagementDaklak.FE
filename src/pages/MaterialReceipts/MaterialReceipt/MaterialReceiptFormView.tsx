@@ -1,6 +1,5 @@
 import React from "react";
 import { Card, Button, Space, Divider, Form, Select } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
 import type { WarehouseDto } from "../../../services/masterDataService";
 import MaterialReceiptHeader, {
   type MaterialReceiptHeaderProps,
@@ -30,10 +29,8 @@ export interface MaterialReceiptFormViewProps
   productTypeFilter: string;
   productOptions: { value: string; label: string; lotNumber?: string }[];
   itemCount: number;
-  children?: React.ReactNode;
   onProductTypeChange: (value: string) => void;
   onAddProduct: (productId: string) => void;
-  onOpenProductModal: () => void;
   onSaveDraft: () => void;
   onConfirm: () => void;
   onCancel: () => void;
@@ -44,7 +41,6 @@ const MaterialReceiptFormView: React.FC<MaterialReceiptFormViewProps> = ({
   saving,
   confirming,
   isReadonly,
-  children,
   // Header props
   code,
   receiverName,
@@ -65,7 +61,6 @@ const MaterialReceiptFormView: React.FC<MaterialReceiptFormViewProps> = ({
   itemCount,
   onProductTypeChange,
   onAddProduct,
-  onOpenProductModal,
   // Actions
   onSaveDraft,
   onConfirm,
@@ -107,38 +102,30 @@ const MaterialReceiptFormView: React.FC<MaterialReceiptFormViewProps> = ({
                   style={{ width: 200 }}
                   placeholder="Tất cả"
                 />
-                <Space.Compact style={{ flex: 1, maxWidth: 420 }}>
-                  <Select
-                    key={`product-select-${itemCount}`}
-                    placeholder="Tìm hàng hóa theo mã hoặc theo tên"
-                    options={productOptions}
-                    onSelect={onAddProduct}
-                    style={{ width: "100%" }}
-                    showSearch
-                    filterOption={(input, option) => {
-                      const searchText = input.toLowerCase();
-                      const label = (option?.label as string)?.toLowerCase() ?? "";
-                      const lot = (option as any)?.lotNumber?.toLowerCase() ?? "";
-                      return label.includes(searchText) || lot.includes(searchText);
-                    }}
-                    optionRender={(option) => (
-                      <div>
-                        <div>{option.label}</div>
-                        {(option.data as any)?.lotNumber && (
-                          <div style={{ fontSize: 12, color: "#888" }}>
-                            Số lô: {(option.data as any).lotNumber}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  />
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={onOpenProductModal}
-                    title="Tạo hàng hóa mới"
-                  />
-                </Space.Compact>
+                <Select
+                  key={`product-select-${itemCount}`}
+                  placeholder="Tìm hàng hóa theo mã hoặc theo tên"
+                  options={productOptions}
+                  onSelect={onAddProduct}
+                  style={{ flex: 1, maxWidth: 420 }}
+                  showSearch
+                  filterOption={(input, option) => {
+                    const searchText = input.toLowerCase();
+                    const label = (option?.label as string)?.toLowerCase() ?? "";
+                    const lot = (option as any)?.lotNumber?.toLowerCase() ?? "";
+                    return label.includes(searchText) || lot.includes(searchText);
+                  }}
+                  optionRender={(option) => (
+                    <div>
+                      <div>{option.label}</div>
+                      {(option.data as any)?.lotNumber && (
+                        <div style={{ fontSize: 12, color: "#888" }}>
+                          Số lô: {(option.data as any).lotNumber}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                />
               </div>
             )}
           </div>
@@ -175,7 +162,6 @@ const MaterialReceiptFormView: React.FC<MaterialReceiptFormViewProps> = ({
         </Card>
       )}
 
-      {children}
     </div>
   );
 };
