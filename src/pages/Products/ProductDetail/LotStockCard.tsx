@@ -137,8 +137,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   const theoreticalVol = lot.volumePerUnit && lot.volumePerUnit > 0
     ? lot.theoreticalConsumption * lot.volumePerUnit
     : lot.theoreticalConsumption;
-  // Tồn đầu kỳ = tổng số đã nhập (hệ thống không trừ thật nên dùng receivedBaseQuantity)
-  const openingBaseQty = lot.receivedBaseQuantity;
+  const openingBaseQty = lot.openingBaseQuantity;
   const openingVolume = lot.volumePerUnit && lot.volumePerUnit > 0
     ? openingBaseQty * lot.volumePerUnit
     : openingBaseQty;
