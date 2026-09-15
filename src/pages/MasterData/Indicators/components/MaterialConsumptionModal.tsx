@@ -618,10 +618,10 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
           <Col xs={24} sm={12}>
             <Typography.Text type="secondary">Đơn vị</Typography.Text>
             <div style={{ fontWeight: 500 }}>
-              {formattedUnit ? (
-                <span dangerouslySetInnerHTML={{ __html: formattedUnit }} />
+              {formattedUnit || unit ? (
+                <span dangerouslySetInnerHTML={{ __html: formattedUnit || unit || "" }} />
               ) : (
-                unit || "-"
+                "-"
               )}
             </div>
           </Col>
