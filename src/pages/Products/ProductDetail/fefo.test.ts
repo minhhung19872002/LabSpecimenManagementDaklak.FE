@@ -89,9 +89,9 @@ describe("getNextFefoLot (quy tắc BA)", () => {
     expect(getNextFefoLot(lots)).toBeNull();
   });
 
-  it("đang dùng lô B (lô cuối), lô A vẫn còn tồn -> không hiển thị", () => {
+  it("đang dùng lô B (HSD xa), lô A (HSD gần) chưa dùng -> lô tiếp theo là B", () => {
     const lots = [lotA(), lotB({ consumedBaseQuantity: 2, remainingBaseQuantity: 8 })];
-    expect(getNextFefoLot(lots)).toBeNull();
+    expect(getNextFefoLot(lots)?.lotNumber).toBe("B");
   });
 
   it("chỉ có 1 lô còn tồn -> không hiển thị", () => {
@@ -104,9 +104,15 @@ describe("getNextFefoLot (quy tắc BA)", () => {
     expect(getNextFefoLot(lots)?.lotNumber).toBe("B");
   });
 
-  it("3 lô, đang dùng B -> lô tiếp theo là C", () => {
+  it("3 lô, đang dùng B -> lô tiếp theo vẫn là B (FEFO thứ 2)", () => {
     const lots = [lotC(), lotA(), lotB({ theoreticalConsumption: 1 })];
-    expect(getNextFefoLot(lots)?.lotNumber).toBe("C");
+    expect(getNextFefoLot(lots)?.lotNumber).toBe("B");
+  });
+
+  it("đang dùng lô HSD xa, nhập lô HSD gần hơn -> lô tiếp theo là lô HSD xa (case BA)", () => {
+    const lotOld = makeLot({ lotNumber: "OLD", lotExpiryDate: daysFromNow(200), consumedBaseQuantity: 3, remainingBaseQuantity: 7 });
+    const lotNew = makeLot({ lotNumber: "NEW", lotExpiryDate: daysFromNow(100) });
+    expect(getNextFefoLot([lotOld, lotNew])?.lotNumber).toBe("OLD");
   });
 
   it("không có lô nào còn tồn -> null", () => {

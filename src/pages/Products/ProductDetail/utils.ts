@@ -110,18 +110,14 @@ export const isLotInUse = (lot: ProductLotStockDto): boolean =>
 
 /**
  * "Lô tiếp theo" theo FEFO (quy tắc BA):
- * - Chưa dùng lô nào  -> lô có HSD gần nhất.
- * - Đang dùng lô X     -> lô đứng ngay sau X theo FEFO.
- * - Đang dùng lô cuối  -> không có (null).
+ * - Chưa dùng lô nào  -> lô có HSD gần nhất (lô sẽ dùng đầu tiên).
+ * - Có lô đang dùng   -> lô thứ 2 trong FEFO order (lô dùng sau khi lô đầu hết).
  * - Chỉ có 1 lô còn tồn -> không có (null).
  */
 export const getNextFefoLot = (lots: ProductLotStockDto[]): ProductLotStockDto | null => {
   const fefo = getUsableLotsFefo(lots);
   if (fefo.length < 2) return null;
-  let lastInUseIdx = -1;
-  fefo.forEach((l, i) => {
-    if (isLotInUse(l)) lastInUseIdx = i;
-  });
-  if (lastInUseIdx === -1) return fefo[0];
-  return fefo[lastInUseIdx + 1] ?? null;
+  const anyInUse = fefo.some(isLotInUse);
+  if (!anyInUse) return fefo[0];
+  return fefo[1];
 };
