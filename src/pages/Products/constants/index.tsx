@@ -122,23 +122,6 @@ export const getProductColumns = (
       align: "right" as const,
       sorter: true,
       render: (qty: number, record: ProductDto) => {
-        if (record.stockByUnits && record.stockByUnits.length >= 2) {
-          return (
-            <div>
-              {record.stockByUnits.map((entry, i) => {
-                const unit = entry.packagingUnitName || "";
-                const intPart = Math.floor(entry.quantity);
-                const decPart = entry.quantity - intPart;
-                if (decPart === 0 || !entry.volumePerUnit || !entry.volumeUnitName) {
-                  return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
-                }
-                const vol = Math.round(decPart * entry.volumePerUnit);
-                return <div key={i}>{`${intPart} ${unit} - ${vol} ${entry.volumeUnitName}`}</div>;
-              })}
-            </div>
-          );
-        }
-
         const storageUnit = record.packagingUnitName || "";
         const intPart = Math.floor(qty);
         const decPart = qty - intPart;
@@ -194,23 +177,6 @@ export const getProductColumns = (
       align: "right" as const,
       render: (qty: number, record: ProductDto) => {
         if (!qty) return "-";
-        if (record.stockByUnits && record.stockByUnits.length >= 2) {
-          const totalVolume = record.stockByUnits.reduce(
-            (s, e) => s + e.quantity * (e.volumePerUnit || 0), 0,
-          );
-          if (totalVolume > 0) {
-            return (
-              <div>
-                {record.stockByUnits.map((entry, i) => {
-                  const entryVol = entry.quantity * (entry.volumePerUnit || 0);
-                  if (entryVol <= 0 || !entry.volumePerUnit || !entry.volumeUnitName) return null;
-                  const entryConsumption = qty * (entryVol / totalVolume);
-                  return <div key={i}>{`${entryConsumption.toLocaleString("vi-VN")} ${entry.volumeUnitName}`}</div>;
-                })}
-              </div>
-            );
-          }
-        }
         const unitName = record.volumeUnitName || record.baseUnitName || "";
         return `${qty.toLocaleString("vi-VN")} ${unitName}`.trim();
       },
