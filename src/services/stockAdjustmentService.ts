@@ -123,6 +123,7 @@ export interface GetStockAdjustmentListInput {
   status?: StockAdjustmentStatus;
   fromDate?: string;
   toDate?: string;
+  warehouseId?: string;
 }
 
 interface PagedResult<T> {
@@ -141,6 +142,7 @@ export const stockAdjustmentService = {
     if (params.status !== undefined) apiParams.Status = params.status;
     if (params.fromDate) apiParams.FromDate = params.fromDate;
     if (params.toDate) apiParams.ToDate = params.toDate;
+    if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
     const response = await api.get<PagedResult<StockAdjustmentListDto>>(BASE_URL, { params: apiParams });
     return response.data;
   },

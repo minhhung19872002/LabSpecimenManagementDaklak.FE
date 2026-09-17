@@ -17,6 +17,7 @@ import MaterialReceiptHistoryToolbar from "./MaterialReceiptHistoryToolbar";
 import MaterialReceiptHistoryTable from "./MaterialReceiptHistoryTable";
 import BarcodeListModal from "./BarcodeListModal";
 import BarcodeLotHistoryModal from "./BarcodeLotHistoryModal";
+import InventoryHistoryTab from "./InventoryHistoryTab";
 
 type DateRange = [dayjs.Dayjs | null, dayjs.Dayjs | null] | null;
 
@@ -152,6 +153,11 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           />
         </div>
       ),
+    },
+    {
+      key: "inventory-history",
+      label: "Lịch sử kiểm kê kho",
+      children: <InventoryHistoryTab warehouseId={warehouseId} />,
     },
   ];
 
