@@ -110,6 +110,12 @@ export interface WarehouseProductLotDto {
   theoreticalConsumption: number;
 }
 
+export interface WarehouseWithLotsDto {
+  warehouseId: string;
+  warehouseName: string;
+  lots: WarehouseProductLotDto[];
+}
+
 export interface GetStockAdjustmentListInput {
   page?: number;
   limit?: number;
@@ -170,6 +176,11 @@ export const stockAdjustmentService = {
 
   getWarehouseProductLots: async (warehouseId: string): Promise<WarehouseProductLotDto[]> => {
     const response = await api.get<WarehouseProductLotDto[]>(`${BASE_URL}/warehouse-product-lots/${warehouseId}`);
+    return response.data;
+  },
+
+  getWarehouseWithChildrenLots: async (warehouseId: string): Promise<WarehouseWithLotsDto[]> => {
+    const response = await api.get<WarehouseWithLotsDto[]>(`${BASE_URL}/warehouse-with-children-lots/${warehouseId}`);
     return response.data;
   },
 };

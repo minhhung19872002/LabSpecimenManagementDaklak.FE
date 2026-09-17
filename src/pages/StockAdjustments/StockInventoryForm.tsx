@@ -16,6 +16,7 @@ import {
   StockAdjustmentStatus,
   CreateUpdateStockAdjustmentDto,
   WarehouseProductLotDto,
+  WarehouseWithLotsDto,
 } from "../../services/stockAdjustmentService";
 import { ProductTypeLabels } from "../../services/productService";
 import { warehouseService, WarehouseDto } from "../../services/masterDataService";
@@ -97,10 +98,7 @@ const StockInventoryForm: React.FC = () => {
     if (!id && warehouses.length > 0) {
       const stateWarehouseId = (location.state?.warehouseId || searchParams.get("warehouseId")) as string | undefined;
       if (stateWarehouseId) {
-        const wh = warehouses.find(w => w.id === stateWarehouseId);
-        if (wh) {
-          addWarehouseSection(wh);
-        }
+        addWarehouseSectionsWithChildren(stateWarehouseId);
       }
     }
   }, [warehouses, id]);
@@ -178,6 +176,30 @@ const StockInventoryForm: React.FC = () => {
       message.error("Không thể tải phiếu kiểm kê");
     } finally {
       setPageLoading(false);
+    }
+  };
+
+  const addWarehouseSectionsWithChildren = async (warehouseId: string) => {
+    try {
+      const warehouseGroups = await stockAdjustmentService.getWarehouseWithChildrenLots(warehouseId);
+      const newSections: WarehouseSection[] = warehouseGroups.map((wg: WarehouseWithLotsDto) => ({
+        warehouseId: wg.warehouseId,
+        warehouseName: wg.warehouseName,
+        lots: wg.lots,
+        loading: false,
+        items: wg.lots.map(lot => ({
+          productId: lot.productId,
+          lotNumber: lot.lotNumber,
+          manufacturerName: lot.manufacturerName,
+          actualQuantityStorage: null,
+          actualQuantityConsumable: null,
+          reason: "",
+        })),
+      }));
+      setSections(newSections);
+      setActiveKeys(newSections.map(s => s.warehouseId));
+    } catch {
+      message.error("Không thể tải dữ liệu kiểm kê kho");
     }
   };
 
