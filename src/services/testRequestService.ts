@@ -48,6 +48,7 @@ export interface TemplateDto {
   name: string;
   displayName: string;
   fileName: string;
+  hasLogo: boolean;
 }
 
 // Print result item for batch print

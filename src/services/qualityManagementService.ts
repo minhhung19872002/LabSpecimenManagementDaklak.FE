@@ -308,6 +308,7 @@ export interface TemplateDto {
   name: string;
   displayName: string;
   fileName: string;
+  hasLogo: boolean;
 }
 
 export default qualityManagementService;
