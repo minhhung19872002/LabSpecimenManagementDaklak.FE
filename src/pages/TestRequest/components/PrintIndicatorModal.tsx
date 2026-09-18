@@ -847,14 +847,64 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                 onChange={(values) =>
                   setSelectedTemplates(values as string[])
                 }
+                style={{ width: "100%" }}
               >
-                <Space direction="vertical">
-                  {templates.map((template) => (
-                    <Checkbox key={template.name} value={template.name}>
-                      {template.displayName}
-                    </Checkbox>
-                  ))}
-                </Space>
+                <Collapse
+                  accordion
+                  defaultActiveKey={["with-logo"]}
+                  size="small"
+                  style={{
+                    width: "100%",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 6,
+                  }}
+                  items={[
+                    {
+                      key: "with-logo",
+                      label: <Text strong>Template có Logo</Text>,
+                      style: { padding: 0 },
+                      children: (
+                        <Space
+                          direction="vertical"
+                          style={{ paddingLeft: 8 }}
+                        >
+                          {templates
+                            .filter((t) => t.hasLogo)
+                            .map((template) => (
+                              <Checkbox
+                                key={template.name}
+                                value={template.name}
+                              >
+                                {template.displayName}
+                              </Checkbox>
+                            ))}
+                        </Space>
+                      ),
+                    },
+                    {
+                      key: "without-logo",
+                      label: <Text strong>Template không có Logo</Text>,
+                      style: { padding: 0 },
+                      children: (
+                        <Space
+                          direction="vertical"
+                          style={{ paddingLeft: 8 }}
+                        >
+                          {templates
+                            .filter((t) => !t.hasLogo)
+                            .map((template) => (
+                              <Checkbox
+                                key={template.name}
+                                value={template.name}
+                              >
+                                {template.displayName}
+                              </Checkbox>
+                            ))}
+                        </Space>
+                      ),
+                    },
+                  ]}
+                />
               </Checkbox.Group>
             </div>
 
