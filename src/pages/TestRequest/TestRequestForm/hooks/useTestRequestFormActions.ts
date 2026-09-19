@@ -538,6 +538,19 @@ export const useTestRequestFormActions = ({
     });
     setIndicatorLaboratoryMap(newLabMap);
 
+    // Copy custom prices from source sample to duplicated sample
+    const newPrices: Record<string, number> = {};
+    const sourcePrefix = `${key}_`;
+    for (const [priceKey, priceValue] of Object.entries(customPrices)) {
+      if (priceKey.startsWith(sourcePrefix)) {
+        const suffix = priceKey.slice(sourcePrefix.length);
+        newPrices[`${newSample.key}_${suffix}`] = priceValue;
+      }
+    }
+    if (Object.keys(newPrices).length > 0) {
+      setCustomPrices((prev) => ({ ...prev, ...newPrices }));
+    }
+
     setSamples([...samples, newSample]);
   };
 
