@@ -44,50 +44,47 @@ const formatNumber = (value?: number | null) =>
 
 const columns: ColumnsType<AdminConsumptionPreviewItem & { key: number }> = [
   { title: "Dòng", dataIndex: "rowNumber", key: "rowNumber", width: 60 },
-  { title: "Nhóm chỉ tiêu", dataIndex: "groupName", key: "groupName", width: 150 },
+  { title: "Nền mẫu", dataIndex: "specimenTypeName", key: "specimenTypeName", width: 160 },
   {
     title: "Chỉ tiêu",
-    dataIndex: "indicatorFormattedName",
-    key: "indicatorFormattedName",
-    width: 200,
+    dataIndex: "indicatorName",
+    key: "indicatorName",
+    width: 180,
     render: (text: string) => renderHtmlOrText(text),
   },
   {
     title: "Phương pháp",
     dataIndex: "testMethodName",
     key: "testMethodName",
-    width: 160,
+    width: 150,
     render: (text: string) => renderHtmlOrText(text),
   },
   {
-    title: "Loại",
-    dataIndex: "isEquipment",
-    key: "isEquipment",
-    width: 90,
-    render: (isEquipment: boolean) =>
-      isEquipment ? <Tag color="purple">Thiết bị</Tag> : <Tag color="cyan">Vật tư</Tag>,
+    title: "Loại vật tư",
+    dataIndex: "productTypeLabel",
+    key: "productTypeLabel",
+    width: 120,
+    render: (text: string) => (text ? <Tag color="cyan">{text}</Tag> : "-"),
   },
-  { title: "Mã", dataIndex: "itemCode", key: "itemCode", width: 120 },
-  { title: "Tên vật tư / thiết bị", dataIndex: "itemName", key: "itemName", width: 200 },
-  { title: "Đơn vị", dataIndex: "unitName", key: "unitName", width: 90 },
+  { title: "Tên vật tư", dataIndex: "productName", key: "productName", width: 200 },
   {
-    title: "Số lượng",
+    title: "Tiêu hao / mẫu",
     dataIndex: "quantity",
     key: "quantity",
-    width: 100,
+    width: 150,
     align: "right",
     render: (v: number) => formatNumber(v),
   },
   {
-    title: "Mẫu/năm",
+    title: "Số mẫu dự tính",
     dataIndex: "estimatedSamplesPerYear",
     key: "estimatedSamplesPerYear",
-    width: 100,
+    width: 150,
     align: "right",
-    render: (v?: number | null) => formatNumber(v),
+    render: (v: number) => formatNumber(v),
   },
   {
-    title: "TB/mẫu",
+    title: "TB / mẫu",
     dataIndex: "avgConsumptionPerSample",
     key: "avgConsumptionPerSample",
     width: 100,
@@ -156,17 +153,22 @@ const AdminImportConsumptionModal: React.FC<AdminImportConsumptionModalProps> = 
             description={
               <div>
                 <div>
-                  Tải "Template tiêu hao", điền các cột <b>Mã vật tư / Serial thiết bị</b>,{" "}
-                  <b>Đơn vị</b>, <b>Số lượng</b> (tuỳ chọn: Số mẫu dự kiến/năm, Tiêu hao TB/mẫu)
-                  cho từng dòng chỉ tiêu + phương pháp, rồi upload lại.
+                  Tải "Template tiêu hao": file đã có sẵn toàn bộ combination <b>Nền mẫu</b> +{" "}
+                  <b>Chỉ tiêu</b> + <b>Tên phương pháp</b> cùng tiêu hao vật tư hiện có. Điền / sửa
+                  các cột <b>Loại vật tư</b>, <b>Tên vật tư</b>, <b>Tiêu hao / mẫu</b>,{" "}
+                  <b>Số mẫu dự tính</b> rồi upload lại. Dòng nào 4 cột này để trống sẽ được bỏ qua,
+                  đã điền thì bắt buộc đủ (cột "Khoa phòng thực hiện" hiện chưa xử lý).
                 </div>
                 <div>
-                  Một chỉ tiêu + phương pháp cần nhiều vật tư thì copy thành nhiều dòng, giữ nguyên
-                  cột ID màu xám.
+                  Các dòng có cùng Nền mẫu + Chỉ tiêu + Phương pháp được gom thành danh sách vật tư
+                  tiêu hao của chỉ tiêu đó. Tên vật tư phải khớp chính xác (phân biệt hoa/thường) và
+                  đúng loại vật tư đã khai báo. Tiêu hao / mẫu nhận số thập phân, Số mẫu dự tính phải
+                  là số nguyên. Hệ thống tự tính "Tiêu hao trung bình / mẫu".
                 </div>
                 <div style={{ color: "#fa8c16" }}>
-                  Lưu ý: tiêu hao hiện có của các cặp chỉ tiêu + phương pháp xuất hiện trong file sẽ
-                  bị <b>ghi đè toàn bộ</b>. Các cặp không có trong file giữ nguyên.
+                  Lưu ý: tiêu hao vật tư hiện có của các combination xuất hiện trong file sẽ bị{" "}
+                  <b>ghi đè</b> (dòng thiết bị giữ nguyên). Các combination không có trong file giữ
+                  nguyên.
                 </div>
               </div>
             }
@@ -193,26 +195,33 @@ const AdminImportConsumptionModal: React.FC<AdminImportConsumptionModalProps> = 
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
           <Card size="small">
             <Row gutter={[16, 8]}>
-              <Col span={6}>
+              <Col span={5}>
                 <Statistic title="Tổng dòng" value={previewData.totalRows} />
               </Col>
-              <Col span={6}>
+              <Col span={5}>
                 <Statistic
                   title="Hợp lệ"
                   value={previewData.validRows}
                   valueStyle={{ color: previewData.validRows > 0 ? "#1677ff" : undefined }}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={4}>
                 <Statistic
                   title="Lỗi"
                   value={previewData.errorRows}
                   valueStyle={{ color: previewData.errorRows > 0 ? "#ff4d4f" : undefined }}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={5}>
                 <Statistic
-                  title="Chỉ tiêu + PP bị ghi đè"
+                  title="Bỏ qua (chưa điền)"
+                  value={previewData.skippedRows ?? 0}
+                  valueStyle={{ color: "#8c8c8c" }}
+                />
+              </Col>
+              <Col span={5}>
+                <Statistic
+                  title="Combination bị ghi đè"
                   value={previewData.affectedIndicators}
                   valueStyle={{
                     color: previewData.affectedIndicators > 0 ? "#fa8c16" : undefined,
@@ -243,7 +252,11 @@ const AdminImportConsumptionModal: React.FC<AdminImportConsumptionModalProps> = 
           )}
 
           {!hasErrors && previewData.validRows === 0 && (
-            <Alert type="info" message="File không có dòng tiêu hao nào để nhập" showIcon />
+            <Alert
+              type="info"
+              message="File không có dòng tiêu hao nào để nhập (các dòng chưa điền vật tư đều bị bỏ qua)"
+              showIcon
+            />
           )}
 
           <div style={{ maxHeight: 400, overflow: "auto" }}>
@@ -252,7 +265,7 @@ const AdminImportConsumptionModal: React.FC<AdminImportConsumptionModalProps> = 
               dataSource={previewData.items.map((item, i) => ({ ...item, key: i }))}
               columns={columns}
               pagination={false}
-              scroll={{ x: 1400 }}
+              scroll={{ x: 1370 }}
               rowClassName={(record) => (record.isValid ? "" : "ant-table-row-error")}
             />
           </div>

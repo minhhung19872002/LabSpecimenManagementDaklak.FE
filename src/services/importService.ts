@@ -215,26 +215,27 @@ export interface AdminIndicatorNamePreviewDto {
   errorFileName?: string;
 }
 
-// ==================== Admin Consumption Import (tiêu hao theo chỉ tiêu + phương pháp) ====================
+// ==================== Admin Consumption Import (tiêu hao theo Nền mẫu + Chỉ tiêu + Phương pháp) ====================
 
 /**
- * 1 dòng trong file template tiêu hao = 1 vật tư/thiết bị tiêu hao cho 1 cặp (chỉ tiêu + phương pháp).
- * Định danh cặp bằng testMethodIndicatorId (cột ẩn màu xám do BE xuất sẵn).
- * Vật tư nhận diện bằng mã sản phẩm, thiết bị nhận diện bằng số serial.
+ * 1 dòng trong template "Tiêu hao.xlsx" = 1 vật tư tiêu hao cho 1 combination
+ * (Nền mẫu + Chỉ tiêu + Phương pháp). Cột "Khoa phòng thực hiện" hiện tại BE bỏ qua.
  */
 export interface AdminConsumptionPreviewItem {
   rowNumber: number;
-  testMethodIndicatorId: string;
-  groupName: string;
-  indicatorFormattedName: string;
+  specimenTypeName: string;
+  indicatorName: string;
   testMethodName: string;
-  isEquipment: boolean;
-  itemCode: string;
-  itemName: string;
-  unitName?: string;
+  productTypeLabel: string;
+  productName: string;
   quantity: number;
-  estimatedSamplesPerYear?: number | null;
+  estimatedSamplesPerYear: number;
+  /** BE tự tính = quantity / estimatedSamplesPerYear */
   avgConsumptionPerSample?: number | null;
+  testMethodIndicatorId?: string | null;
+  productId?: string | null;
+  /** BE tự gán từ vật tư, không có trong template */
+  unitId?: string | null;
   isValid: boolean;
   errors: string[];
 }
@@ -243,7 +244,9 @@ export interface AdminConsumptionPreviewDto {
   totalRows: number;
   validRows: number;
   errorRows: number;
-  /** Số cặp (chỉ tiêu + phương pháp) sẽ bị ghi đè toàn bộ tiêu hao khi import */
+  /** Số dòng combination có cột E–H trống (chưa điền vật tư) → bỏ qua, không ghi đè */
+  skippedRows: number;
+  /** Số combination (Nền mẫu + Chỉ tiêu + Phương pháp) sẽ bị ghi đè tiêu hao vật tư khi import */
   affectedIndicators: number;
   items: AdminConsumptionPreviewItem[];
   errorFileBase64?: string;
