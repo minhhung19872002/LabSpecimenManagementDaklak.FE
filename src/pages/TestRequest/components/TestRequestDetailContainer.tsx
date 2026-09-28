@@ -196,14 +196,18 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Gửi QLKT - khi status cho phép gửi lần đầu, hoặc khi có chỉ tiêu chưa gửi khoa phòng
-    const hasUnsentIndicators = data.samples?.some((sample) =>
-      sample.indicators?.some(
-        (ind) =>
-          (ind.approvalStatus === undefined || ind.approvalStatus === null) &&
-          !ind.isSentToQLKT &&
-          !ind.sentToDepartment,
-      ),
+    // Gửi QLKT - khi status cho phép gửi lần đầu, hoặc khi có chỉ tiêu chưa gửi khoa phòng.
+    // "Đã gửi" = tồn tại LaboratoryTaskIndicator (isSentToQLKT), không dựa vào cờ sentToDepartment.
+    // Bỏ qua mẫu đã huỷ (giống BE SendToQLKTAsync chỉ lấy mẫu !IsCancelled && !IsCustomerCancelled).
+    const hasUnsentIndicators = data.samples?.some(
+      (sample) =>
+        !sample.isCancelled &&
+        !sample.isCustomerCancelled &&
+        sample.indicators?.some(
+          (ind) =>
+            (ind.approvalStatus === undefined || ind.approvalStatus === null) &&
+            !ind.isSentToQLKT,
+        ),
     );
     const showSendToQLKT =
       !!hasUnsentIndicators &&

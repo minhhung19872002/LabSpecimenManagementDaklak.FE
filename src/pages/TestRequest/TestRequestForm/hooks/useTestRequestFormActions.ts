@@ -1062,7 +1062,6 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: !!labAssignment?.laboratoryId && labAssignment.sentToDepartment === true,
                 isSubcontract: method?.isSubcontract || false,
               };
             })
@@ -1090,7 +1089,6 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: !!labAssignment?.laboratoryId && labAssignment.sentToDepartment === true,
               };
             });
 
