@@ -43,6 +43,7 @@ import {
   MasterDataTable,
   MasterDataModal,
   StatisticsCards,
+  AsyncDropdownButton,
 } from "./components";
 import {
   categoryLabels,
@@ -590,24 +591,47 @@ const MasterDataList: React.FC = () => {
                   </Button>
                   {authService.isAdmin() && (
                     <>
-                      <Button
+                      <AsyncDropdownButton
+                        label="Tải template (Admin)"
                         icon={<DownloadOutlined />}
-                        onClick={() =>
-                          indicatorsRef.current?.handleDownloadAdminTemplate()
-                        }
                         style={{ borderColor: "#faad14", color: "#faad14" }}
-                      >
-                        Tải template (Admin)
-                      </Button>
-                      <Button
+                        items={[
+                          {
+                            key: "indicator",
+                            label: "Tải template chỉ tiêu",
+                            icon: <DownloadOutlined />,
+                            onClick: () =>
+                              indicatorsRef.current?.handleDownloadAdminTemplate(),
+                          },
+                          {
+                            key: "consumption",
+                            label: "Tải template tiêu hao",
+                            icon: <DownloadOutlined />,
+                            onClick: () =>
+                              indicatorsRef.current?.handleDownloadAdminConsumptionTemplate(),
+                          },
+                        ]}
+                      />
+                      <AsyncDropdownButton
+                        label="Nhập danh sách (Admin)"
                         icon={<UploadOutlined />}
-                        onClick={() =>
-                          indicatorsRef.current?.handleAdminImport()
-                        }
                         style={{ borderColor: "#faad14", color: "#faad14" }}
-                      >
-                        Nhập danh sách (Admin)
-                      </Button>
+                        items={[
+                          {
+                            key: "indicator",
+                            label: "Nhập template chỉ tiêu",
+                            icon: <UploadOutlined />,
+                            onClick: () => indicatorsRef.current?.handleAdminImport(),
+                          },
+                          {
+                            key: "consumption",
+                            label: "Nhập template tiêu hao",
+                            icon: <UploadOutlined />,
+                            onClick: () =>
+                              indicatorsRef.current?.handleAdminConsumptionImport(),
+                          },
+                        ]}
+                      />
                     </>
                   )}
                 </>

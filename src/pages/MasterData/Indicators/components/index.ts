@@ -5,6 +5,7 @@ export { default as BulkCreateModal } from "./BulkCreateModal";
 export { ImportIndicatorModal, ImportGroupModal } from "./ImportModals";
 export { default as ImportIndicatorGroupModal } from "./ImportIndicatorGroupModal";
 export { default as AdminImportNameModal } from "./AdminImportNameModal";
+export { default as AdminImportConsumptionModal } from "./AdminImportConsumptionModal";
 export { default as AddMethodToIndicatorModal } from "./AddMethodToIndicatorModal";
 export { default as EditMethodModal } from "./EditMethodModal";
 export { default as MaterialConsumptionModal } from "./MaterialConsumptionModal";

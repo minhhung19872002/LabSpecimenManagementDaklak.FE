@@ -215,6 +215,41 @@ export interface AdminIndicatorNamePreviewDto {
   errorFileName?: string;
 }
 
+// ==================== Admin Consumption Import (tiêu hao theo chỉ tiêu + phương pháp) ====================
+
+/**
+ * 1 dòng trong file template tiêu hao = 1 vật tư/thiết bị tiêu hao cho 1 cặp (chỉ tiêu + phương pháp).
+ * Định danh cặp bằng testMethodIndicatorId (cột ẩn màu xám do BE xuất sẵn).
+ * Vật tư nhận diện bằng mã sản phẩm, thiết bị nhận diện bằng số serial.
+ */
+export interface AdminConsumptionPreviewItem {
+  rowNumber: number;
+  testMethodIndicatorId: string;
+  groupName: string;
+  indicatorFormattedName: string;
+  testMethodName: string;
+  isEquipment: boolean;
+  itemCode: string;
+  itemName: string;
+  unitName?: string;
+  quantity: number;
+  estimatedSamplesPerYear?: number | null;
+  avgConsumptionPerSample?: number | null;
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface AdminConsumptionPreviewDto {
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  /** Số cặp (chỉ tiêu + phương pháp) sẽ bị ghi đè toàn bộ tiêu hao khi import */
+  affectedIndicators: number;
+  items: AdminConsumptionPreviewItem[];
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
+
 // ==================== Test Requests ====================
 
 export const importService = {
@@ -479,6 +514,27 @@ export const importService = {
     const formData = new FormData();
     formData.append('file', file);
     const response = await api.upload<ImportResultDto>(`${BASE_URL}/indicator-groups/admin`, formData);
+    return response.data;
+  },
+
+  // ==================== Admin Consumption Import (tiêu hao theo chỉ tiêu) ====================
+
+  downloadAdminConsumptionTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/indicator-groups/admin-consumption-template`);
+    return response.data;
+  },
+
+  previewAdminConsumption: async (file: File): Promise<AdminConsumptionPreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<AdminConsumptionPreviewDto>(`${BASE_URL}/indicator-groups/admin-consumption-preview`, formData);
+    return response.data;
+  },
+
+  importAdminConsumption: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/indicator-groups/admin-consumption`, formData);
     return response.data;
   },
 

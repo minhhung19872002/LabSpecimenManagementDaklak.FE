@@ -13,6 +13,7 @@ import {
   ImportGroupModal,
   ImportIndicatorGroupModal,
   AdminImportNameModal,
+  AdminImportConsumptionModal,
   AddMethodToIndicatorModal,
   EditMethodModal,
   MaterialConsumptionModal,
@@ -120,6 +121,16 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handlePreviewAdminImport,
     handleConfirmAdminImport,
     handleResetAdminImport,
+    // Admin consumption import
+    adminConsumptionModalOpen,
+    setAdminConsumptionModalOpen,
+    adminConsumptionFileList,
+    setAdminConsumptionFileList,
+    adminConsumptionPreview,
+    handleDownloadAdminConsumptionTemplate,
+    handlePreviewAdminConsumption,
+    handleConfirmAdminConsumption,
+    handleResetAdminConsumption,
   } = useIndicatorsActions({
     indicators,
     selectedRowKeys,
@@ -204,6 +215,8 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handleImport: () => setImportIndicatorGroupModalOpen(true),
     handleDownloadAdminTemplate,
     handleAdminImport: () => setAdminImportModalOpen(true),
+    handleDownloadAdminConsumptionTemplate,
+    handleAdminConsumptionImport: () => setAdminConsumptionModalOpen(true),
   }));
 
   return (
@@ -346,6 +359,22 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
           handleResetAdminImport();
         }}
         onReset={handleResetAdminImport}
+      />
+
+      {/* Admin Import tiêu hao theo chỉ tiêu + phương pháp */}
+      <AdminImportConsumptionModal
+        open={adminConsumptionModalOpen}
+        loading={modalLoading}
+        fileList={adminConsumptionFileList}
+        previewData={adminConsumptionPreview}
+        onFileListChange={setAdminConsumptionFileList}
+        onPreview={handlePreviewAdminConsumption}
+        onConfirm={handleConfirmAdminConsumption}
+        onCancel={() => {
+          setAdminConsumptionModalOpen(false);
+          handleResetAdminConsumption();
+        }}
+        onReset={handleResetAdminConsumption}
       />
 
       {/* Add Method to Indicator Modal */}

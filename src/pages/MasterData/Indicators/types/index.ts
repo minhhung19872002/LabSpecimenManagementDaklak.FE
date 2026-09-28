@@ -15,8 +15,10 @@ export interface IndicatorsActions {
   handleCreateGroup: () => void;
   handleDownloadTemplate: () => void;
   handleImport: () => void;
-  handleDownloadAdminTemplate: () => void;
+  handleDownloadAdminTemplate: () => Promise<void>;
   handleAdminImport: () => void;
+  handleDownloadAdminConsumptionTemplate: () => Promise<void>;
+  handleAdminConsumptionImport: () => void;
 }
 
 export interface GroupedIndicatorData extends IndicatorGroupDto {
