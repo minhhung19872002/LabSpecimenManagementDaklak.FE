@@ -632,6 +632,7 @@ export const useTestRequestFormActions = ({
     }
     setIndicatorModalVisible(false);
     setCurrentSampleKey(null);
+    setCheckedIndicators([]); // Reset checked để không bị dính khi lưu form
   };
 
   const handleIndicatorModalCancel = () => {
@@ -639,6 +640,7 @@ export const useTestRequestFormActions = ({
     setCurrentSampleKey(null);
     setTempSelectedIndicators([]);
     setTempSelectedIndicatorMethods([]);
+    setCheckedIndicators([]); // Reset checked để không bị dính khi lưu form
   };
 
   // OLD: Toggle indicator (deprecated, kept for backward compat)
@@ -1060,7 +1062,7 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(methodKey),
+                sentToDepartment: !!labAssignment?.laboratoryId && labAssignment.sentToDepartment === true,
                 isSubcontract: method?.isSubcontract || false,
               };
             })
@@ -1088,7 +1090,7 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(indId),
+                sentToDepartment: !!labAssignment?.laboratoryId && labAssignment.sentToDepartment === true,
               };
             });
 
