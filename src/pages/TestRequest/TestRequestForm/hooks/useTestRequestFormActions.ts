@@ -161,7 +161,7 @@ export const useTestRequestFormActions = ({
 
     // Fields to compare (simple fields)
     const fieldsToCompare = [
-      'contractNumber', 'customerName', 'address', 'taxCode', 'contactPerson', 'phone',
+      'contractNumber', 'customerName', 'address', 'taxCode', 'contactPerson', 'phone', 'email',
       'province', 'ward', 'methodWestHighlandInstitute', 'methodCustomer', 'methodCustomerDetail',
       'resultLanguage', 'resultCopyCount', 'separatePassedResults', 'conformityDeclaration',
       'otherRequirements', 'subContract', 'samplingRequirement', 'deliveryDirectPickup',
@@ -1139,6 +1139,7 @@ export const useTestRequestFormActions = ({
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
         phone: values.phone || undefined,
+        email: values.email?.trim() || undefined,
         totalSampleCount: samples.length,
         methodWestHighlandInstitute: values.methodRequirement === "westHighlandInstitute",
         methodCustomer: values.methodRequirement === "customerRequest",
@@ -1307,6 +1308,7 @@ export const useTestRequestFormActions = ({
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
         phone: values.phone || undefined,
+        email: values.email?.trim() || undefined,
         totalSampleCount: samples.length,
         methodWestHighlandInstitute: values.methodWestHighlandInstitute || false,
         methodCustomer: values.methodCustomer || false,

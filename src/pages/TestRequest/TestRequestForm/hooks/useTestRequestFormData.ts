@@ -950,6 +950,7 @@ export const useTestRequestFormData = () => {
         taxCode: data.taxCode || "",
         contactPerson: data.contactPerson || "",
         phone: data.phone || "",
+        email: data.email || "",
       });
 
       // Generate samples from test request samples

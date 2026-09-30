@@ -107,6 +107,7 @@ export interface PreviewTestRequestFormInput {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
   totalSampleCount: number;
   methodWestHighlandInstitute: boolean;
   methodCustomer: boolean;
@@ -745,6 +746,7 @@ export const offlineTestRequestService = {
       taxCode: data.taxCode,
       contactPerson: data.contactPerson,
       phone: data.phone,
+      email: data.email,
       notes: data.notes,
       expectedCompletionDate: data.expectedCompletionDate,
       resultLanguage: data.resultLanguage,

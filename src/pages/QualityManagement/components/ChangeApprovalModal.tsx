@@ -122,6 +122,7 @@ const FIELD_LABELS: Record<string, string> = {
   taxCode: 'Mã số thuế',
   contactPerson: 'Người liên hệ',
   phone: 'Số điện thoại',
+  email: 'Email',
   provinceCode: 'Tỉnh/Thành phố',
   province: 'Tỉnh/Thành phố',
   districtCode: 'Quận/Huyện',

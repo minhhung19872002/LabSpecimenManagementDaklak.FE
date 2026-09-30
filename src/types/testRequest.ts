@@ -454,6 +454,7 @@ export interface TestRequestDto {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
 
   // Sample count
   totalSampleCount: number;
@@ -536,6 +537,7 @@ export interface CreateTestRequestDto {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
 
   // Sample count
   totalSampleCount?: number;
@@ -602,6 +604,7 @@ export interface UpdateTestRequestDto {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
 
   // Sample count
   totalSampleCount?: number;
