@@ -113,6 +113,9 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
             <Col xs={24} sm={12}>
               <Checkbox value="subContract">Hợp đồng phụ</Checkbox>
             </Col>
+            <Col xs={24} sm={12}>
+              <Checkbox value="surveillance">Mẫu giám sát/ nghiên cứu</Checkbox>
+            </Col>
           </Row>
         </Checkbox.Group>
       </Form.Item>

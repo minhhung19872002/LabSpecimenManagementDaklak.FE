@@ -41,6 +41,7 @@ const SampleTypeSection: React.FC<SampleTypeSectionProps> = ({ data }) => {
           <SampleTypeTag value={data.sampleTypeContract} label="Hợp đồng" />
           <SampleTypeTag value={data.sampleTypeTask} label="Nhiệm vụ" />
           <SampleTypeTag value={data.sampleTypeSubContract} label="Thầu phụ" />
+          <SampleTypeTag value={data.sampleTypeSurveillance} label="Giám sát/ nghiên cứu" />
         </div>
         {data.subContract && (
           <div className="detail-item-col">

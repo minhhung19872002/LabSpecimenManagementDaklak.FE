@@ -629,6 +629,10 @@ const ReceiptDetail: React.FC = () => {
                       value={testRequest.sampleTypeSubContract}
                       label="Thầu phụ"
                     />
+                    <BoolTag
+                      value={testRequest.sampleTypeSurveillance}
+                      label="Giám sát/ nghiên cứu"
+                    />
                   </div>
                   {testRequest.subContract && (
                     <div className="detail-item">

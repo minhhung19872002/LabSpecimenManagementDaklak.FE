@@ -650,6 +650,7 @@ export const useTestRequestFormData = () => {
       if (data.sampleTypeContract) selectedSampleTypes.push("contract");
       if (data.sampleTypeTask) selectedSampleTypes.push("task");
       if (data.sampleTypeSubContract) selectedSampleTypes.push("subContract");
+      if (data.sampleTypeSurveillance) selectedSampleTypes.push("surveillance");
       form.setFieldsValue({ sampleType: selectedSampleTypes });
 
       if (data.methodCustomer) {

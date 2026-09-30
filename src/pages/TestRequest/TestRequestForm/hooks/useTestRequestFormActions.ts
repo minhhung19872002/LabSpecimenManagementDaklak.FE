@@ -165,7 +165,7 @@ export const useTestRequestFormActions = ({
       'province', 'ward', 'methodWestHighlandInstitute', 'methodCustomer', 'methodCustomerDetail',
       'resultLanguage', 'resultCopyCount', 'separatePassedResults', 'conformityDeclaration',
       'otherRequirements', 'subContract', 'samplingRequirement', 'deliveryDirectPickup',
-      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract', 'sampleTypeTask', 'sampleTypeSubContract',
+      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract', 'sampleTypeTask', 'sampleTypeSubContract', 'sampleTypeSurveillance',
       'sampleStorage', 'totalCost', 'totalCostInWords',
       'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
       'paymentReceived', 'sentToDepartment', 'resultReturned', 'subcontractor'
@@ -940,6 +940,7 @@ export const useTestRequestFormActions = ({
     const sampleTypeContract = selectedSampleTypes.includes("contract");
     const sampleTypeTask = selectedSampleTypes.includes("task");
     const sampleTypeSubContract = selectedSampleTypes.includes("subContract");
+    const sampleTypeSurveillance = selectedSampleTypes.includes("surveillance");
     const normalizedSubContract = sampleTypeSubContract
       ? values.subContract?.trim()
       : undefined;
@@ -1159,6 +1160,7 @@ export const useTestRequestFormActions = ({
         sampleTypeContract,
         sampleTypeTask,
         sampleTypeSubContract,
+        sampleTypeSurveillance,
         resultDeliveryDate: values.expectedCompletionDate
           ? values.expectedCompletionDate.format('YYYY-MM-DD')
           : undefined,
@@ -1282,6 +1284,7 @@ export const useTestRequestFormActions = ({
       const sampleTypeContract = selectedSampleTypes.includes("contract");
       const sampleTypeTask = selectedSampleTypes.includes("task");
       const sampleTypeSubContract = selectedSampleTypes.includes("subContract");
+      const sampleTypeSurveillance = selectedSampleTypes.includes("surveillance");
       const normalizedSubContract = sampleTypeSubContract
         ? values.subContract?.trim()
         : undefined;
@@ -1327,6 +1330,7 @@ export const useTestRequestFormActions = ({
         sampleTypeContract,
         sampleTypeTask,
         sampleTypeSubContract,
+        sampleTypeSurveillance,
         resultDeliveryDate: values.resultDeliveryDate
           ? values.resultDeliveryDate.toISOString()
           : undefined,

@@ -477,6 +477,7 @@ export interface TestRequestDto {
   sampleTypeContract: boolean;
   sampleTypeTask: boolean;
   sampleTypeSubContract: boolean;
+  sampleTypeSurveillance: boolean;
   resultDeliveryDate?: string;
   sampleStorage: SampleStorageOption;
   totalCost: number;
@@ -560,6 +561,7 @@ export interface CreateTestRequestDto {
   sampleTypeContract?: boolean;
   sampleTypeTask?: boolean;
   sampleTypeSubContract?: boolean;
+  sampleTypeSurveillance?: boolean;
   resultDeliveryDate?: string;
   sampleStorage?: SampleStorageOption;
   totalCost?: number;
@@ -627,6 +629,7 @@ export interface UpdateTestRequestDto {
   sampleTypeContract?: boolean;
   sampleTypeTask?: boolean;
   sampleTypeSubContract?: boolean;
+  sampleTypeSurveillance?: boolean;
   resultDeliveryDate?: string;
   sampleStorage?: SampleStorageOption;
   totalCost?: number;

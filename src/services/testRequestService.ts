@@ -126,6 +126,7 @@ export interface PreviewTestRequestFormInput {
   sampleTypeContract: boolean;
   sampleTypeTask: boolean;
   sampleTypeSubContract: boolean;
+  sampleTypeSurveillance: boolean;
   resultDeliveryDate?: string;
   sampleStorage: number; // 0=No, 1=Yes
   totalCost: number;
@@ -772,6 +773,7 @@ export const offlineTestRequestService = {
       sampleTypeContract: data.sampleTypeContract || false,
       sampleTypeTask: data.sampleTypeTask || false,
       sampleTypeSubContract: data.sampleTypeSubContract || false,
+      sampleTypeSurveillance: data.sampleTypeSurveillance || false,
       agreeTerms: data.agreeTerms || false,
     } as unknown as TestRequestDto;
 
