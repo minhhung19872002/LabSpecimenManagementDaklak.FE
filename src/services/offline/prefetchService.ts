@@ -18,7 +18,7 @@ import {
 } from '../masterDataService';
 import { userService } from '../userService';
 import { organizationService } from '../organizationService';
-import { cacheEntity, cacheDocumentTemplate, hasDocumentTemplate, getDB } from './db';
+import { cacheEntity, cacheDocumentTemplate, getCachedDocumentTemplate, getDB } from './db';
 import { TEMPLATE_NAMES, TEMPLATE_FILE_NAMES } from './offlinePrintService';
 
 // Track prefetch status
@@ -250,15 +250,17 @@ async function prefetchOrganizations(): Promise<void> {
  */
 async function prefetchDocumentTemplates(): Promise<void> {
   try {
-    // Check if already cached (to avoid re-downloading large files)
-    const alreadyCached = await hasDocumentTemplate(TEMPLATE_NAMES.TEST_REQUEST_FORM);
-    if (alreadyCached) {
+    const templateFileName = TEMPLATE_FILE_NAMES[TEMPLATE_NAMES.TEST_REQUEST_FORM];
+
+    // Check if already cached (to avoid re-downloading large files).
+    // Re-download when template file changed (e.g. version upgrade 3.2 -> 4.0)
+    const cached = await getCachedDocumentTemplate(TEMPLATE_NAMES.TEST_REQUEST_FORM);
+    if (cached && cached.fileName === templateFileName) {
       console.log('Document templates already cached, skipping');
       return;
     }
 
     // Download the test request form template (BM05)
-    const templateFileName = TEMPLATE_FILE_NAMES[TEMPLATE_NAMES.TEST_REQUEST_FORM];
     const templateBlob = await formTemplateService.download(templateFileName);
 
     // Cache the template
