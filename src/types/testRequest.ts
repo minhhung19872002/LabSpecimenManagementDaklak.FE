@@ -750,6 +750,21 @@ export interface ConfirmDeliveryInput {
   note?: string;
 }
 
+// Kết quả "In phiếu bàn giao" (BM03 - Sổ quản lý mẫu)
+export interface PrintHandoverOutput {
+  fileName: string;                     // File .docx trong wwwroot/temp, mở bằng Document Editor
+  status: TestRequestStatus;            // Trạng thái sau khi in
+}
+
+// Lịch sử in phiếu bàn giao
+export interface TestRequestDeliveryHistoryDto {
+  id: string;
+  testRequestId: string;
+  printedDate: string;
+  printedByUserName?: string;
+  statusAfter: TestRequestStatus;
+}
+
 // DTO for published report (log history)
 export interface PublishedReportDto {
   id: string;

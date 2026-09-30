@@ -14,6 +14,8 @@ import {
   ConfirmIndicatorInput,
   BulkConfirmIndicatorsInput,
   ConfirmDeliveryInput,
+  PrintHandoverOutput,
+  TestRequestDeliveryHistoryDto,
   PublishedReportDto,
   CostChangeHistoryDto,
   UpdateIndicatorLaboratoryInput
@@ -573,6 +575,29 @@ export const testRequestService = {
     input?: ConfirmDeliveryInput
   ): Promise<void> => {
     await api.post(`${BASE_URL}/${testRequestId}/confirm-delivery`, input || {});
+  },
+
+  /**
+   * In phiếu bàn giao (BM03 - Sổ quản lý mẫu).
+   * Chỉ in, không đổi trạng thái. Mỗi lần in đều ghi lịch sử.
+   */
+  printHandover: async (testRequestId: string): Promise<PrintHandoverOutput> => {
+    const response = await api.post<PrintHandoverOutput>(
+      `${BASE_URL}/${testRequestId}/print-handover`
+    );
+    return response.data;
+  },
+
+  /**
+   * Lịch sử in phiếu bàn giao (mới nhất trước)
+   */
+  getDeliveryHistories: async (
+    testRequestId: string
+  ): Promise<TestRequestDeliveryHistoryDto[]> => {
+    const response = await api.get<TestRequestDeliveryHistoryDto[]>(
+      `${BASE_URL}/${testRequestId}/delivery-histories`
+    );
+    return response.data;
   },
 
   /**

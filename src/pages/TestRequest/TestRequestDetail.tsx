@@ -34,6 +34,7 @@ import PrintMixedIndicatorModal from "./components/PrintMixedIndicatorModal";
 import RejectResultModal from "./components/RejectResultModal";
 import CustomerConfirmationModal from "./components/CustomerConfirmationModal";
 import CostChangeHistoryModal from "./components/CostChangeHistoryModal";
+import DeliveryHistoryModal from "./components/DeliveryHistoryModal";
 import SendToQLKTModal from "./components/SendToQLKTModal";
 import PaymentConfirmationModal from "./components/PaymentConfirmationModal";
 import { getApiErrorMessage } from "../../utils/errorHandler";
@@ -68,6 +69,8 @@ const TestRequestDetail: React.FC = () => {
     setCustomerConfirmationModalVisible,
   ] = useState(false);
   const [costHistoryModalVisible, setCostHistoryModalVisible] = useState(false);
+  const [deliveryHistoryModalVisible, setDeliveryHistoryModalVisible] =
+    useState(false);
   const [sendToQLKTModalVisible, setSendToQLKTModalVisible] = useState(false);
   const [paymentConfirmationModalVisible, setPaymentConfirmationModalVisible] =
     useState(false);
@@ -78,7 +81,6 @@ const TestRequestDetail: React.FC = () => {
   const [sendingToAccounting, setSendingToAccounting] = useState(false);
   const [sendingToQLKT, setSendingToQLKT] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
-  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   // Form for cancel reason
   const [cancelForm] = Form.useForm();
@@ -397,38 +399,53 @@ const TestRequestDetail: React.FC = () => {
     setSampleImagesModalVisible(true);
   };
 
-  // Handle confirm delivery to customer (BPGN)
-  const handleConfirmDelivery = async () => {
+  // In phiếu bàn giao (BM03 - Sổ quản lý mẫu) - in luôn, không confirm, không đổi trạng thái.
+  // BE ghi lịch sử in. Không throw để button luôn tắt loading.
+  const handlePrintHandover = async (): Promise<void> => {
     if (!id) return;
     if (!isOnline) {
-      message.warning("Không thể xác nhận bàn giao khi đang offline");
+      message.warning("Không thể in phiếu bàn giao khi đang offline");
       return;
     }
 
-    Modal.confirm({
-      title: "Xác nhận bàn giao kết quả",
-      content:
-        "Bạn có chắc chắn muốn xác nhận đã bàn giao kết quả cho khách hàng?",
-      okText: "Xác nhận",
-      cancelText: "Hủy",
-      centered: true,
-      onOk: async () => {
-        setConfirmingDelivery(true);
-        try {
-          await testRequestService.confirmDeliveryToCustomer(id);
-          message.success("Đã xác nhận bàn giao kết quả cho khách hàng");
-          loadData(id);
-        } catch (error: any) {
-          console.error("Error confirming delivery:", error);
-          message.error(
-            error?.response?.data?.error?.message ||
-              "Không thể xác nhận bàn giao. Vui lòng thử lại.",
-          );
-        } finally {
-          setConfirmingDelivery(false);
-        }
-      },
-    });
+    // Mở tab ngay trong user gesture để không bị chặn popup
+    const newTab = window.open("about:blank", "_blank");
+    if (newTab) {
+      newTab.document.write(`
+        <html>
+          <head>
+            <title>Đang tạo phiếu...</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .loader { text-align: center; }
+              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu bàn giao...</p></div></body>
+        </html>
+      `);
+    }
+
+    try {
+      const result = await testRequestService.printHandover(id);
+
+      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
+      if (newTab) {
+        newTab.location.href = editorUrl;
+      } else {
+        window.open(editorUrl, "_blank");
+      }
+
+      message.success("Đã tạo phiếu bàn giao");
+    } catch (error: any) {
+      console.error("Error printing handover:", error);
+      newTab?.close();
+      message.error(
+        getApiErrorMessage(error, "Không thể in phiếu bàn giao. Vui lòng thử lại."),
+      );
+    }
   };
 
   // Handle print single result (In KQ)
@@ -514,7 +531,6 @@ const TestRequestDetail: React.FC = () => {
         sendingToAccounting={sendingToAccounting}
         sendingToQLKT={sendingToQLKT}
         cancellingRequest={cancellingRequest}
-        confirmingDelivery={confirmingDelivery}
         onPrintTestRequest={handlePrintTestRequest}
         onSendSample={handleSendSample}
         onSendResult={handleSendResult}
@@ -527,7 +543,8 @@ const TestRequestDetail: React.FC = () => {
         onSendToQLKT={handleSendToQLKT}
         onCancelRequest={handleCancelRequest}
         onOpenCustomerConfirmation={handleOpenCustomerConfirmation}
-        onConfirmDelivery={handleConfirmDelivery}
+        onPrintHandover={handlePrintHandover}
+        onViewDeliveryHistory={() => setDeliveryHistoryModalVisible(true)}
         onViewCostHistory={() => setCostHistoryModalVisible(true)}
         onOpenPaymentConfirmation={handleOpenPaymentConfirmation}
         canPrint={canPrint}
@@ -648,6 +665,13 @@ const TestRequestDetail: React.FC = () => {
       <CostChangeHistoryModal
         open={costHistoryModalVisible}
         onClose={() => setCostHistoryModalVisible(false)}
+        testRequestId={id!}
+      />
+
+      {/* Lịch sử in phiếu bàn giao */}
+      <DeliveryHistoryModal
+        open={deliveryHistoryModalVisible}
+        onClose={() => setDeliveryHistoryModalVisible(false)}
         testRequestId={id!}
       />
 

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   Descriptions,
@@ -57,7 +57,6 @@ interface TestRequestDetailContainerProps {
   sendingToAccounting: boolean;
   sendingToQLKT: boolean;
   cancellingRequest: boolean;
-  confirmingDelivery?: boolean;
   onPrintTestRequest: () => void;
   onSendSample: () => void;
   onSendResult: () => void;
@@ -70,7 +69,8 @@ interface TestRequestDetailContainerProps {
   onSendToQLKT: () => void;
   onCancelRequest: () => void;
   onOpenCustomerConfirmation: () => void;
-  onConfirmDelivery?: () => void;
+  onPrintHandover?: () => Promise<void>;
+  onViewDeliveryHistory?: () => void;
   onViewCostHistory?: () => void;
   onOpenPaymentConfirmation?: () => void;
   canPrint: boolean;
@@ -85,6 +85,32 @@ interface TestRequestDetailContainerProps {
   isOfflineData?: boolean;
 }
 
+// In phiếu bàn giao - tự quản loading, không drill state từ parent
+const PrintHandoverButton = React.memo<{
+  onSubmit: () => Promise<void>;
+  disabled?: boolean;
+}>(function PrintHandoverButton({ onSubmit, disabled }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <Button
+      type="primary"
+      icon={<PrinterOutlined />}
+      loading={loading}
+      disabled={disabled || loading}
+      onClick={async () => {
+        setLoading(true);
+        try {
+          await onSubmit();
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      In phiếu bàn giao
+    </Button>
+  );
+});
+
 const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   data,
   id,
@@ -93,7 +119,6 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   sendingToAccounting,
   sendingToQLKT,
   cancellingRequest,
-  confirmingDelivery,
   onPrintTestRequest,
   onSendSample,
   onSendResult,
@@ -106,7 +131,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onSendToQLKT,
   onCancelRequest,
   onOpenCustomerConfirmation,
-  onConfirmDelivery,
+  onPrintHandover,
+  onViewDeliveryHistory,
   onViewCostHistory,
   onOpenPaymentConfirmation,
   canPrint,
@@ -354,33 +380,24 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Xác nhận bàn giao KH - BPGN xác nhận khi status = ReportPublished hoặc PartialResultSent
+    // In phiếu bàn giao (BM03 - Sổ quản lý mẫu) - BPGN
+    // Chỉ in + ghi lịch sử, không đổi trạng thái
     if (
       (data.status === TestRequestStatus.ReportPublished ||
-        data.status === TestRequestStatus.PartialResultSent) &&
-      onConfirmDelivery
+        data.status === TestRequestStatus.PartialResultSent ||
+        data.status === TestRequestStatus.Completed) &&
+      onPrintHandover
     ) {
-      const confirmDeliveryButton = (
-        <Button
-          key="confirm-delivery"
-          type="primary"
-          onClick={onConfirmDelivery}
-          loading={confirmingDelivery}
-          disabled={!isOnline}
-        >
-          Xác nhận bàn giao KH
-        </Button>
-      );
       buttons.push(
         !isOnline ? (
           <Tooltip
-            key="confirm-delivery-tooltip"
+            key="print-handover-tooltip"
             title="Không khả dụng khi offline"
           >
-            {confirmDeliveryButton}
+            <PrintHandoverButton onSubmit={onPrintHandover} disabled />
           </Tooltip>
         ) : (
-          confirmDeliveryButton
+          <PrintHandoverButton key="print-handover" onSubmit={onPrintHandover} />
         ),
       );
     }
@@ -678,6 +695,19 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
                 ? dayjs(data.lastModificationTime).format("DD/MM/YYYY HH:mm:ss")
                 : "-"}
             </Descriptions.Item>
+            {onViewDeliveryHistory && (
+              <Descriptions.Item label="Phiếu bàn giao">
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<HistoryOutlined />}
+                  onClick={onViewDeliveryHistory}
+                  style={{ padding: 0, height: "auto" }}
+                >
+                  Lịch sử in
+                </Button>
+              </Descriptions.Item>
+            )}
           </Descriptions>
         </div>
       </Card>
