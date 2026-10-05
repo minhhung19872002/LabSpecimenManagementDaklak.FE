@@ -136,6 +136,7 @@ const offlineEnabledService = createOfflineService<EmployeeDto, CreateEmployeeDt
 
 export const employeeService = {
   getList: offlineEnabledService.getList,
+  getListWithPending: offlineEnabledService.getListWithPending,
   get: offlineEnabledService.get,
   create: offlineEnabledService.create,
   update: offlineEnabledService.update,

@@ -264,15 +264,20 @@ export async function addToSyncQueue(
   return clientId;
 }
 
+// Index by-status trả theo khóa chính (clientId = UUID ngẫu nhiên) → phải sắp lại theo thời điểm tạo,
+// để BE xử lý đúng thứ tự người dùng thao tác (vd: số HĐ cấp khi đồng bộ tăng theo thứ tự tạo phiếu)
+const byCreatedAt = (a: SyncQueueItem, b: SyncQueueItem) =>
+  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+
 export async function getPendingSyncItems(): Promise<SyncQueueItem[]> {
   const db = await getDB();
-  return db.getAllFromIndex('syncQueue', 'by-status', 'pending');
+  const pending = await db.getAllFromIndex('syncQueue', 'by-status', 'pending');
+  return pending.sort(byCreatedAt);
 }
 
 export async function getPendingSyncItemsByType(entityType: SyncEntityType): Promise<SyncQueueItem[]> {
-  const db = await getDB();
-  const allPending = await db.getAllFromIndex('syncQueue', 'by-status', 'pending');
-  return allPending.filter(item => item.entityType === entityType);
+  const pending = await getPendingSyncItems();
+  return pending.filter(item => item.entityType === entityType);
 }
 
 export async function getAllSyncItems(): Promise<SyncQueueItem[]> {

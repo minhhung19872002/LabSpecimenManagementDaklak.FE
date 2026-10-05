@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import { NCRStatus } from "../../../services/ncrService";
 import { NCRDisplay, NCR_TYPES, SEVERITY_CONFIG, STATUS_CONFIG } from "../hooks";
 import StatusTag from "../../../components/common/StatusTag";
+import SyncStatusTag from "../../../components/common/SyncStatusTag";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 
@@ -43,14 +44,24 @@ export const getNCRColumns = ({ onView, onEdit, onDelete }: ColumnActions) => [
     key: "ncrNumber",
     width: 180,
     fixed: "left" as const,
-    render: (text: string, record: NCRDisplay) => (
-      <a onClick={() => onView(record)}>
-        <Space>
-          <WarningOutlined style={{ color: "#faad14" }} />
-          {text}
+    render: (text: string, record: NCRDisplay) => {
+      const link = (
+        <a onClick={() => onView(record)}>
+          <Space>
+            <WarningOutlined style={{ color: "#faad14" }} />
+            {text || "-"}
+          </Space>
+        </a>
+      );
+      return record.syncStatus ? (
+        <Space direction="vertical" size={2}>
+          {link}
+          <SyncStatusTag record={record} />
         </Space>
-      </a>
-    ),
+      ) : (
+        link
+      );
+    },
   },
   {
     title: "Tiêu đề",

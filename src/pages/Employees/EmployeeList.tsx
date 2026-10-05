@@ -290,8 +290,10 @@ const EmployeeList: React.FC = () => {
               }}
               scroll={{ x: 1400 }}
               onRow={(record) => ({
-                onDoubleClick: () => navigate(PATH_ROUTES.employees.detail(record.id)),
-                style: { cursor: "pointer" },
+                onDoubleClick: () => {
+                  if (!record._isUnsyncedCreate) navigate(PATH_ROUTES.employees.detail(record.id));
+                },
+                style: { cursor: record._isUnsyncedCreate ? "default" : "pointer" },
               })}
             />
           </div>

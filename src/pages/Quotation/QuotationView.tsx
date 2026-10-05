@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Button,
@@ -12,6 +12,7 @@ import {
   Col,
   Statistic,
   Tooltip,
+  Alert,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -25,6 +26,10 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
 import type { QuotationPdfSampleDto } from "../../services/quotationService";
+import type { OfflineSyncInfo } from "../../services/offline/createOfflineService";
+import { syncManager } from "../../services/offline/syncManager";
+import type { SyncedItemEvent } from "../../services/offline/syncManager";
+import { useReloadOnSync } from "../../hooks/useReloadOnSync";
 import {
   QuotationDto,
   QuotationSampleIndicatorDto,
@@ -54,17 +59,11 @@ const QuotationView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
   const [loading, setLoading] = useState(false);
-  const [quotation, setQuotation] = useState<QuotationDto | null>(null);
+  const [quotation, setQuotation] = useState<(QuotationDto & OfflineSyncInfo) | null>(null);
   const [emailModalVisible, setEmailModalVisible] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      loadQuotation(id);
-    }
-  }, [id]);
-
-  const loadQuotation = async (quotationId: string) => {
+  const loadQuotation = useCallback(async (quotationId: string) => {
     setLoading(true);
     try {
       const data = await quotationService.get(quotationId);
@@ -75,7 +74,32 @@ const QuotationView: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (id) {
+      loadQuotation(id);
+    }
+  }, [id, loadQuotation]);
+
+  // Báo giá tạo offline (id tạm) → sync xong thì chuyển sang id thật; còn lại tải lại để cập nhật trạng thái đồng bộ
+  useEffect(() => {
+    if (!id) return;
+    const handleItemSynced = (payload: unknown) => {
+      const event = payload as SyncedItemEvent;
+      if (event.clientId !== id || event.operationType !== "create" || !event.serverId || event.serverId === id) return;
+      navigate(PATH_ROUTES.quotations.view(event.serverId), { replace: true });
+    };
+    syncManager.on("itemSynced", handleItemSynced);
+    return () => syncManager.off("itemSynced", handleItemSynced);
+  }, [id, navigate]);
+
+  const reloadAfterSync = useCallback(() => {
+    if (id) loadQuotation(id);
+  }, [id, loadQuotation]);
+  useReloadOnSync(reloadAfterSync);
+
+  const isUnsyncedCreate = Boolean(quotation?._isUnsyncedCreate);
 
   const handleCreateTestRequest = () => {
     if (id) {
@@ -435,18 +459,34 @@ const QuotationView: React.FC = () => {
                 Tải báo giá
               </Button>
               {authService.hasPermission(PERMISSIONS.TestRequests.Create) && (
-                <Button
-                  type="primary"
-                  icon={<FileAddOutlined />}
-                  onClick={handleCreateTestRequest}
-                  style={{ background: 'linear-gradient(to right, #1E63F8, #009AE3)', border: 'none' }}
-                >
-                  Tạo phiếu thử nghiệm
-                </Button>
+                <Tooltip title={isUnsyncedCreate ? "Báo giá chưa đồng bộ lên máy chủ, chưa thể tạo phiếu thử nghiệm" : undefined}>
+                  <Button
+                    type="primary"
+                    icon={<FileAddOutlined />}
+                    onClick={handleCreateTestRequest}
+                    disabled={isUnsyncedCreate}
+                    style={isUnsyncedCreate ? undefined : { background: 'linear-gradient(to right, #1E63F8, #009AE3)', border: 'none' }}
+                  >
+                    Tạo phiếu thử nghiệm
+                  </Button>
+                </Tooltip>
               )}
             </Space>
           </Col>
         </Row>
+        {quotation?.syncStatus && (
+          <Alert
+            data-testid="quotation-sync-alert"
+            type={quotation.syncStatus === "failed" ? "error" : "warning"}
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={
+              quotation.syncStatus === "failed"
+                ? `Báo giá đồng bộ lỗi: ${quotation.syncError || "không rõ nguyên nhân"}`
+                : "Báo giá đang lưu trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+            }
+          />
+        )}
         <Card
           className="list-card"
           title="Chi tiết báo giá"
@@ -470,7 +510,7 @@ const QuotationView: React.FC = () => {
               >
                 <Descriptions.Item label="Số báo giá">
                   <Text strong style={{ color: "#1890ff" }}>
-                    {quotation.quotationNumber}
+                    {quotation.quotationNumber || "-"}
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày tạo">

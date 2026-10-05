@@ -32,6 +32,7 @@ import {
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
+import { isQueuedOffline } from "../../services/offline/createOfflineService";
 import { organizationService } from "../../services/organizationService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
@@ -541,13 +542,19 @@ const QuotationForm: React.FC = () => {
       };
 
       if (isEdit && id) {
-        await quotationService.update(id, data);
-        message.success("Cập nhật báo giá thành công");
+        const updated = await quotationService.update(id, data);
+        message.success(
+          isQueuedOffline(updated)
+            ? "Đã lưu thay đổi báo giá trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+            : "Cập nhật báo giá thành công"
+        );
         navigate(PATH_ROUTES.quotations.view(id));
       } else {
         const created = await quotationService.create(data);
         message.success(
-          isDuplicateMode
+          isQueuedOffline(created)
+            ? "Đã lưu báo giá trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+            : isDuplicateMode
             ? "Nhân bản báo giá thành công"
             : "Tạo báo giá thành công"
         );

@@ -103,7 +103,7 @@ const quotationBaseService: BaseCrudService<QuotationListDto, CreateUpdateQuotat
   get: async (id) => quotationService.get(id) as unknown as QuotationListDto,
   create: async (data) => quotationService.create(data) as unknown as QuotationListDto,
   update: async (id, data) => quotationService.update(id, data) as unknown as QuotationListDto,
-  delete: async (id) => quotationService.delete(id),
+  delete: async (id) => { await quotationService.delete(id); },
 };
 
 export const offlineQuotationService = createOfflineService<
@@ -119,7 +119,7 @@ const ncrBaseService: BaseCrudService<NCRDto, CreateNCRDto, UpdateNCRDto, NCRLis
   get: async (id) => ncrService.get(id),
   create: async (data) => ncrService.create(data),
   update: async (id, data) => ncrService.update(id, data),
-  delete: async (id) => ncrService.delete(id),
+  delete: async (id) => { await ncrService.delete(id); },
 };
 
 export const offlineNCRService = createOfflineService<
@@ -135,7 +135,7 @@ const specimenBaseService: BaseCrudService<SpecimenDto, CreateSpecimenDto, Updat
   get: async (id) => specimenService.get(id),
   create: async (data) => specimenService.create(data),
   update: async (id, data) => specimenService.update(id, data),
-  delete: async (id) => specimenService.delete(id),
+  delete: async (id) => { await specimenService.delete(id); },
 };
 
 export const offlineSpecimenService = createOfflineService<
@@ -151,7 +151,7 @@ const subcontractorBaseService: BaseCrudService<SubcontractorDto, CreateUpdateSu
   get: async (id) => subcontractorService.get(id),
   create: async (data) => subcontractorService.create(data),
   update: async (id, data) => subcontractorService.update(id, data),
-  delete: async (id) => subcontractorService.delete(id),
+  delete: async (id) => { await subcontractorService.delete(id); },
 };
 
 export const offlineSubcontractorService = createOfflineService<
@@ -177,7 +177,7 @@ const employeeBaseService: BaseCrudService<EmployeeDto, CreateEmployeeDto, Updat
   get: async (id) => employeeService.get(id),
   create: async (data) => employeeService.create(data),
   update: async (id, data) => employeeService.update(id, data),
-  delete: async (id) => employeeService.delete(id),
+  delete: async (id) => { await employeeService.delete(id); },
 };
 
 export const offlineEmployeeService = createOfflineService<
@@ -195,7 +195,7 @@ const laboratoryTaskBaseService: BaseCrudService<LaboratoryTaskDto, UpdateLabora
   get: async (id) => laboratoryTaskService.get(id),
   create: async (_data) => { throw new Error('LaboratoryTask cannot be created directly'); },
   update: async (id, data) => laboratoryTaskService.update(id, data),
-  delete: async (id) => laboratoryTaskService.delete(id),
+  delete: async (id) => { await laboratoryTaskService.delete(id); },
 };
 
 export const offlineLaboratoryTaskService = createOfflineService<
@@ -213,7 +213,7 @@ const specimenTypeBaseService: BaseCrudService<SpecimenTypeDto, CreateUpdateSpec
   get: async (id) => specimenTypeService.get(id),
   create: async (data) => specimenTypeService.create(data),
   update: async (id, data) => specimenTypeService.update(id, data),
-  delete: async (id) => specimenTypeService.delete(id),
+  delete: async (id) => { await specimenTypeService.delete(id); },
 };
 
 export const offlineSpecimenTypeService = createOfflineService<
@@ -229,7 +229,7 @@ const testMethodBaseService: BaseCrudService<TestMethodDto, CreateTestMethodDto,
   get: async (id) => testMethodService.get(id),
   create: async (data) => testMethodService.create(data),
   update: async (id, data) => testMethodService.update(id, data),
-  delete: async (id) => testMethodService.delete(id),
+  delete: async (id) => { await testMethodService.delete(id); },
 };
 
 export const offlineTestMethodService = createOfflineService<
@@ -248,7 +248,7 @@ const laboratoryBaseService: BaseCrudService<LaboratoryDto, CreateUpdateLaborato
   get: async (id) => laboratoryService.get(id),
   create: async (data) => laboratoryService.create(data),
   update: async (id, data) => laboratoryService.update(id, data),
-  delete: async (id) => laboratoryService.delete(id),
+  delete: async (id) => { await laboratoryService.delete(id); },
 };
 
 export const offlineLaboratoryService = createOfflineService<
@@ -264,7 +264,7 @@ const standardBaseService: BaseCrudService<StandardDto, CreateStandardDto, Updat
   get: async (id) => standardService.get(id),
   create: async (data) => standardService.create(data),
   update: async (id, data) => standardService.update(id, data),
-  delete: async (id) => standardService.delete(id),
+  delete: async (id) => { await standardService.delete(id); },
 };
 
 export const offlineStandardService = createOfflineService<
@@ -280,7 +280,7 @@ const departmentBaseService: BaseCrudService<DepartmentDto, CreateUpdateDepartme
   get: async (id) => departmentService.get(id),
   create: async (data) => departmentService.create(data),
   update: async (id, data) => departmentService.update(id, data),
-  delete: async (id) => departmentService.delete(id),
+  delete: async (id) => { await departmentService.delete(id); },
 };
 
 export const offlineDepartmentService = createOfflineService<
@@ -296,7 +296,7 @@ const customerBaseService: BaseCrudService<CustomerDto, CreateUpdateCustomerDto,
   get: async (id) => customerService.get(id),
   create: async (data) => customerService.create(data),
   update: async (id, data) => customerService.update(id, data),
-  delete: async (id) => customerService.delete(id),
+  delete: async (id) => { await customerService.delete(id); },
 };
 
 export const offlineCustomerService = createOfflineService<
@@ -312,7 +312,7 @@ const storageLocationBaseService: BaseCrudService<StorageLocationDto, CreateUpda
   get: async (id) => storageLocationService.get(id),
   create: async (data) => storageLocationService.create(data),
   update: async (id, data) => storageLocationService.update(id, data),
-  delete: async (id) => storageLocationService.delete(id),
+  delete: async (id) => { await storageLocationService.delete(id); },
 };
 
 export const offlineStorageLocationService = createOfflineService<
@@ -328,7 +328,7 @@ const indicatorGroupBaseService: BaseCrudService<IndicatorGroupDto, CreateUpdate
   get: async (id) => indicatorGroupService.get(id),
   create: async (data) => indicatorGroupService.create(data),
   update: async (id, data) => indicatorGroupService.update(id, data),
-  delete: async (id) => indicatorGroupService.delete(id),
+  delete: async (id) => { await indicatorGroupService.delete(id); },
 };
 
 export const offlineIndicatorGroupService = createOfflineService<
@@ -344,7 +344,7 @@ const indicatorBaseService: BaseCrudService<IndicatorDto, CreateIndicatorDto, Up
   get: async (id) => indicatorService.get(id),
   create: async (data) => indicatorService.create(data),
   update: async (id, data) => indicatorService.update(id, data),
-  delete: async (id) => indicatorService.delete(id),
+  delete: async (id) => { await indicatorService.delete(id); },
 };
 
 export const offlineIndicatorService = createOfflineService<
