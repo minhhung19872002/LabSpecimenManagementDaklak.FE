@@ -16,6 +16,11 @@ import {
   getPendingFileUploads,
   updatePendingFileUploadStatus,
   clearUploadedFiles,
+  cacheEntity,
+  removeCachedEntity,
+  cacheTestRequest,
+  removeCachedTestRequest,
+  setSyncedIdMapping,
 } from './db';
 
 export interface GenericSyncItemDto {
@@ -40,8 +45,28 @@ export interface GenericSyncResultDto {
   entityType: SyncEntityType;
   error?: string;
   validationErrors?: string[];
-  conflictResolution?: 'ClientWins' | 'ServerWins' | 'Merged';
+  // BE serialize enum dạng số: 0 = ClientWins, 1 = ServerWins, 2 = Merged
+  conflictResolution?: 'ClientWins' | 'ServerWins' | 'Merged' | 0 | 1 | 2;
   serverData?: unknown;
+}
+
+/** Payload của event 'itemSynced' */
+export interface SyncedItemEvent {
+  clientId: string;
+  serverId?: string;
+  entityType: SyncEntityType;
+  operationType: SyncOperationType;
+  /** true khi server có bản mới hơn → thay đổi offline bị bỏ qua */
+  serverWins: boolean;
+  serverData?: unknown;
+}
+
+/** Payload của event 'itemFailed' */
+export interface FailedItemEvent {
+  clientId: string;
+  entityType: SyncEntityType;
+  operationType: SyncOperationType;
+  error: string;
 }
 
 export interface GenericSyncBatchResponseDto {
@@ -87,8 +112,20 @@ export interface SyncBatchResponseDto {
   serverChanges?: unknown[];
 }
 
-type SyncEventType = 'syncStart' | 'syncComplete' | 'syncError' | 'statusChange' | 'pendingCountChange';
+type SyncEventType =
+  | 'syncStart'
+  | 'syncComplete'
+  | 'syncError'
+  | 'statusChange'
+  | 'pendingCountChange'
+  | 'itemSynced'
+  | 'itemFailed'
+  | 'itemsDiscarded';
 type SyncEventCallback = (data?: unknown) => void;
+
+const SYNC_LOCK_NAME = 'lab-specimen-offline-sync';
+// Không có Web Locks: item 'syncing' quá thời gian này mới coi là kẹt (tab khác có thể đang sync)
+const STUCK_SYNCING_TIMEOUT_MS = 5 * 60 * 1000;
 
 
 class SyncManager {
@@ -213,6 +250,43 @@ class SyncManager {
     return this.queueEntity('TestRequest', data, operationType, serverId);
   }
 
+  /**
+   * Sửa 1 bản ghi tạo offline (chưa lên server): gộp data mới vào item 'create' trong queue
+   * thay vì queue thêm 'update' với id tạm (BE sẽ báo not found).
+   * Trả về false nếu không có item create phù hợp (hoặc đang sync dở).
+   */
+  async mergeIntoPendingCreate(clientId: string, data: unknown): Promise<boolean> {
+    const db = await getDB();
+    const item = await db.get('syncQueue', clientId);
+    if (!item || item.operationType !== 'create' || item.status === 'synced' || item.status === 'syncing') {
+      return false;
+    }
+
+    // Giữ các trường chỉ có ở bản tạo (vd: quotationId) - dữ liệu sửa là UpdateTestRequestDto
+    item.data = { ...(item.data as object), ...(data as object) };
+    item.status = 'pending';
+    item.lastError = undefined;
+    item.clientLastModified = new Date();
+    item.updatedAt = new Date();
+    await db.put('syncQueue', item);
+
+    await this.notifyPendingCountChange();
+    if (this.isOnline) {
+      this.sync();
+    }
+    return true;
+  }
+
+  async getQueueItem(clientId: string): Promise<SyncQueueItem | undefined> {
+    const db = await getDB();
+    return db.get('syncQueue', clientId);
+  }
+
+  async getFailedItems(): Promise<SyncQueueItem[]> {
+    const db = await getDB();
+    return db.getAllFromIndex('syncQueue', 'by-status', 'failed');
+  }
+
 
   async sync(): Promise<GenericSyncBatchResponseDto | null> {
     console.log('[SyncManager] sync() called, isOnline:', this.isOnline, 'isSyncing:', this.isSyncing);
@@ -221,9 +295,38 @@ class SyncManager {
     }
 
     this.isSyncing = true;
+    try {
+      // Nhiều tab (hoặc nhiều instance sau HMR) dùng chung IndexedDB → chỉ cho 1 lượt sync chạy tại 1 thời điểm,
+      // nếu không cùng 1 item bị gửi lên server nhiều lần cùng lúc (đã gặp: 1 phiếu offline tạo ra 2 phiếu trùng)
+      if (navigator.locks) {
+        return await navigator.locks.request(SYNC_LOCK_NAME, () => this.runSync(true));
+      }
+      return await this.runSync(false);
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
+  /** Chờ lượt sync đang chạy (ở bất kỳ tab nào) xong - dùng trước khi reload trang để không cắt ngang request sync */
+  async waitForIdle(): Promise<void> {
+    if (navigator.locks) {
+      await navigator.locks.request(SYNC_LOCK_NAME, () => undefined);
+      return;
+    }
+    while (this.isSyncing) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+
+  private async runSync(holdsLock: boolean): Promise<GenericSyncBatchResponseDto | null> {
     let pendingItems: SyncQueueItem[] = [];
 
     try {
+      // Đang giữ khóa sync → item 'syncing' còn sót là của lượt sync bị ngắt (đóng tab giữa chừng) → trả lại pending.
+      // Không có Web Locks (http, trình duyệt cũ) thì tab khác có thể đang sync → chỉ trả lại item kẹt quá lâu.
+      // Nếu server đã tạo rồi thì BE nhận ra ClientId cũ và trả lại bản ghi đó, không tạo trùng.
+      await this.requeueStuckSyncingItems(holdsLock ? 0 : STUCK_SYNCING_TIMEOUT_MS);
+
       // Step 1: Sync pending file uploads first
       const fileIdMappings = await this.syncPendingFileUploads();
       console.log('[SyncManager] File sync complete, mappings:', fileIdMappings);
@@ -233,7 +336,6 @@ class SyncManager {
       console.log('[SyncManager] Pending items count:', pendingItems.length);
 
       if (pendingItems.length === 0) {
-        this.isSyncing = false;
         return null;
       }
 
@@ -293,8 +395,17 @@ class SyncManager {
 
       this.emit('syncError', error);
       return null;
-    } finally {
-      this.isSyncing = false;
+    }
+  }
+
+  private async requeueStuckSyncingItems(minAgeMs: number): Promise<void> {
+    const db = await getDB();
+    const stuck = await db.getAllFromIndex('syncQueue', 'by-status', 'syncing');
+    const now = Date.now();
+    for (const item of stuck) {
+      if (now - new Date(item.updatedAt).getTime() >= minAgeMs) {
+        await updateSyncItemStatus(item.clientId, 'pending');
+      }
     }
   }
 
@@ -329,14 +440,74 @@ class SyncManager {
           'synced',
           result.serverId ?? undefined
         );
+
+        const serverId = result.serverId ?? item.serverId;
+        await this.replaceOfflineCache(item, serverId, result.serverData);
+
+        this.emit('itemSynced', {
+          clientId: item.clientId,
+          serverId,
+          entityType: item.entityType,
+          operationType: item.operationType,
+          serverWins: result.conflictResolution === 'ServerWins' || result.conflictResolution === 1,
+          serverData: result.serverData,
+        } satisfies SyncedItemEvent);
       } else {
-        await updateSyncItemStatus(
-          result.clientId,
-          'failed',
-          undefined,
-          result.error || result.validationErrors?.join(', ')
-        );
+        const error = [result.error, ...(result.validationErrors ?? [])]
+          .filter(Boolean)
+          .join('; ') || 'Lỗi không xác định';
+
+        await updateSyncItemStatus(result.clientId, 'failed', undefined, error);
+
+        this.emit('itemFailed', {
+          clientId: item.clientId,
+          entityType: item.entityType,
+          operationType: item.operationType,
+          error,
+        } satisfies FailedItemEvent);
       }
+    }
+
+    // Item không có kết quả trả về → trả lại pending, tránh kẹt ở trạng thái 'syncing'
+    const answered = new Set(results.map(r => r.clientId));
+    for (const item of pendingItems) {
+      if (!answered.has(item.clientId)) {
+        await updateSyncItemStatus(item.clientId, 'pending');
+      }
+    }
+  }
+
+  /**
+   * Sau khi sync thành công: bỏ bản cache tạm (id = clientId, isOffline) và cache bản từ server,
+   * để danh sách/chi tiết offline không bị trùng hoặc giữ mãi bản tạm.
+   */
+  private async replaceOfflineCache(
+    item: SyncQueueItem,
+    serverId: string | undefined,
+    serverData: unknown
+  ): Promise<void> {
+    try {
+      if (item.operationType === 'create') {
+        if (item.entityType === 'TestRequest') {
+          await removeCachedTestRequest(item.clientId);
+        } else {
+          await removeCachedEntity(item.entityType, item.clientId);
+        }
+        // BE dùng ClientId làm Id (TestRequest) → không cần map
+        if (serverId && serverId !== item.clientId) {
+          await setSyncedIdMapping(item.clientId, serverId);
+        }
+      }
+
+      if (item.operationType === 'delete' || !serverId || !serverData) return;
+
+      if (item.entityType === 'TestRequest') {
+        await cacheTestRequest(serverId, serverData, false);
+      } else {
+        await cacheEntity(item.entityType, serverId, serverData, false);
+      }
+    } catch (error) {
+      console.error('[SyncManager] Failed to update cache after sync:', error);
     }
   }
 
@@ -462,14 +633,39 @@ class SyncManager {
    * Clear all permanently failed items (retryCount >= 3)
    */
   async clearFailedItems(): Promise<void> {
-    const db = await getDB();
-    const failedItems = await db.getAllFromIndex('syncQueue', 'by-status', 'failed');
+    const failedItems = await this.getFailedItems();
+    await this.discardItems(failedItems);
+  }
 
-    for (const item of failedItems) {
+  /**
+   * Bỏ 1 mục đồng bộ lỗi (vd: 1 phiếu tạo offline không muốn giữ nữa)
+   */
+  async discardFailedItem(clientId: string): Promise<void> {
+    const item = await this.getQueueItem(clientId);
+    if (!item || item.status !== 'failed') return;
+    await this.discardItems([item]);
+  }
+
+  /**
+   * Xóa khỏi hàng đợi + xóa bản cache tạm của dữ liệu tạo offline (id = clientId),
+   * nếu không danh sách offline vẫn hiện bản tạm dù mục đồng bộ đã bị xóa
+   */
+  private async discardItems(items: SyncQueueItem[]): Promise<void> {
+    for (const item of items) {
       await removeSyncItem(item.clientId);
+      if (item.operationType === 'create') {
+        if (item.entityType === 'TestRequest') {
+          await removeCachedTestRequest(item.clientId);
+        } else {
+          await removeCachedEntity(item.entityType, item.clientId);
+        }
+      }
     }
 
     await this.notifyPendingCountChange();
+    if (items.length > 0) {
+      this.emit('itemsDiscarded', items.map(item => item.clientId));
+    }
   }
 
   /**

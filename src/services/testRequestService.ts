@@ -21,7 +21,16 @@ import {
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 import { syncManager } from './offline/syncManager';
 import { isNetworkError } from './offline/createOfflineService';
-import { cacheTestRequest, getCachedTestRequest, getOfflineTestRequests, getCachedEntitiesByType, getCachedEntity } from './offline/db';
+import {
+  cacheTestRequest,
+  getCachedTestRequest,
+  getOfflineTestRequests,
+  getCachedEntitiesByType,
+  getCachedEntity,
+  getUnsyncedItemsByType,
+  getSyncedServerId,
+  SyncQueueItem,
+} from './offline/db';
 import { IndicatorDto } from './masterDataService';
 
 const BASE_URL = '/api/v1/test-requests';
@@ -649,6 +658,51 @@ export interface SampleForSelectionDto {
   requestedCompletionDate?: string;
 }
 
+const withSyncInfo = (dto: TestRequestDto, item: SyncQueueItem): TestRequestDto => ({
+  ...dto,
+  isOffline: true,
+  syncStatus: item.status === 'synced' ? undefined : item.status,
+  syncError: item.lastError,
+});
+
+const matchesSearch = (item: TestRequestDto, search?: string): boolean => {
+  if (!search) return true;
+  const searchLower = search.toLowerCase();
+  return Boolean(
+    item.customerName?.toLowerCase().includes(searchLower) ||
+    item.contractNumber?.toLowerCase().includes(searchLower) ||
+    item.requestNumber?.toLowerCase().includes(searchLower) ||
+    item.contactPerson?.toLowerCase().includes(searchLower) ||
+    item.phone?.toLowerCase().includes(searchLower)
+  );
+};
+
+/**
+ * Phiếu tạo offline chưa lên server (id = clientId của item 'create' trong syncQueue)
+ */
+const getUnsyncedOfflineTestRequest = async (id: string): Promise<TestRequestDto | null> => {
+  const queueItem = await syncManager.getQueueItem(id);
+  if (!queueItem || queueItem.operationType !== 'create' || queueItem.status === 'synced') {
+    return null;
+  }
+  const cached = await getCachedTestRequest(id);
+  if (!cached) return null;
+  return withSyncInfo(cached.data as TestRequestDto, queueItem);
+};
+
+const getUnsyncedOfflineTestRequests = async (): Promise<TestRequestDto[]> => {
+  const queueItems = await getUnsyncedItemsByType('TestRequest');
+  const result: TestRequestDto[] = [];
+  for (const item of queueItems) {
+    if (item.operationType !== 'create') continue;
+    const cached = await getCachedTestRequest(item.clientId);
+    if (cached) {
+      result.push(withSyncInfo(cached.data as TestRequestDto, item));
+    }
+  }
+  return result.sort((a, b) => (b.requestDate || '').localeCompare(a.requestDate || ''));
+};
+
 /**
  * Offline-aware test request service
  * Automatically queues operations when offline and syncs when back online
@@ -707,6 +761,7 @@ export const offlineTestRequestService = {
       id: clientId,
       requestNumber: `OFFLINE-${clientId.substring(0, 8)}`,
       requestDate: data.requestDate || new Date().toISOString(),
+      creationTime: new Date().toISOString(),
       status: TestRequestStatus.New,
       customerName: data.customerName,
       contractNumber: data.contractNumber,
@@ -760,6 +815,28 @@ export const offlineTestRequestService = {
    * If offline, queues the operation
    */
   update: async (id: string, data: UpdateTestRequestDto): Promise<OfflineAwareResponse<TestRequestDto>> => {
+    // Phiếu tạo offline đang được gửi lên server → chờ lượt sync xong rồi mới sửa (tránh gọi API với id chưa tồn tại)
+    const queueItem = await syncManager.getQueueItem(id);
+    if (queueItem?.operationType === 'create' && queueItem.status === 'syncing') {
+      await syncManager.waitForIdle();
+    }
+
+    // Phiếu tạo offline chưa lên server → gộp thay đổi vào item 'create' (id tạm không tồn tại trên server)
+    if (await syncManager.mergeIntoPendingCreate(id, data)) {
+      const cached = await getCachedTestRequest(id);
+      const mergedDto = {
+        ...(cached?.data as TestRequestDto || {}),
+        ...data,
+        id,
+        isOffline: true,
+      } as unknown as TestRequestDto;
+      await cacheTestRequest(id, mergedDto, true);
+      return { data: mergedDto, isOffline: true, clientId: id };
+    }
+
+    // Đang mở bằng id tạm nhưng phiếu đã sync xong → dùng id thật
+    id = (await getSyncedServerId(id)) ?? id;
+
     if (navigator.onLine) {
       try {
         const result = await testRequestService.update(id, data);
@@ -796,6 +873,10 @@ export const offlineTestRequestService = {
    */
   get: async (id: string): Promise<TestRequestDto | null> => {
     if (navigator.onLine) {
+      const unsynced = await getUnsyncedOfflineTestRequest(id);
+      if (unsynced) return unsynced;
+      id = (await getSyncedServerId(id)) ?? id;
+
       try {
         const result = await testRequestService.get(id);
         // Update cache
@@ -851,6 +932,24 @@ export const offlineTestRequestService = {
         for (const item of result.items || []) {
           await cacheTestRequest(item.id, item, false);
         }
+
+        // Phiếu tạo offline chưa lên server không có trong API → hiển thị ở đầu trang 1
+        if (!params.skipCount) {
+          const unsynced = (await getUnsyncedOfflineTestRequests()).filter(item =>
+            matchesSearch(item, params.search) &&
+            (params.status === undefined || item.status === params.status)
+          );
+          if (unsynced.length > 0) {
+            return {
+              data: {
+                items: [...unsynced, ...(result.items || [])],
+                totalCount: (result.totalCount || 0) + unsynced.length,
+              },
+              isOfflineData: false,
+            };
+          }
+        }
+
         return { data: result, isOfflineData: false };
       } catch (error) {
         if (!isNetworkError(error)) throw error;
@@ -860,19 +959,15 @@ export const offlineTestRequestService = {
 
     // Offline: Return cached items with client-side filtering/pagination
     const cachedEntities = await getCachedEntitiesByType('TestRequest');
-    let items = cachedEntities.map(entity => entity.data as TestRequestDto);
+    const unsyncedById = new Map(
+      (await getUnsyncedOfflineTestRequests()).map(item => [item.id, item])
+    );
+    let items = cachedEntities.map(entity =>
+      unsyncedById.get(entity.id.replace(/^TestRequest:/, '')) ?? (entity.data as TestRequestDto)
+    );
 
     // Apply search filter (customerName, contractNumber, requestNumber)
-    if (params.search) {
-      const searchLower = params.search.toLowerCase();
-      items = items.filter(item =>
-        (item.customerName?.toLowerCase().includes(searchLower)) ||
-        (item.contractNumber?.toLowerCase().includes(searchLower)) ||
-        (item.requestNumber?.toLowerCase().includes(searchLower)) ||
-        (item.contactPerson?.toLowerCase().includes(searchLower)) ||
-        (item.phone?.toLowerCase().includes(searchLower))
-      );
-    }
+    items = items.filter(item => matchesSearch(item, params.search));
 
     // Apply status filter
     if (params.status !== undefined) {
@@ -893,8 +988,9 @@ export const offlineTestRequestService = {
       );
     }
 
-    // Sort by creationTime desc (default)
+    // Phiếu chưa đồng bộ luôn ở đầu (giống khi online), còn lại sort by creationTime desc (default)
     items.sort((a, b) => {
+      if (Boolean(a.syncStatus) !== Boolean(b.syncStatus)) return a.syncStatus ? -1 : 1;
       const dateA = a.creationTime ? new Date(a.creationTime).getTime() : 0;
       const dateB = b.creationTime ? new Date(b.creationTime).getTime() : 0;
       return dateB - dateA;
@@ -916,17 +1012,28 @@ export const offlineTestRequestService = {
   /**
    * Get a test request with offline fallback - returns response with offline status
    */
-  getWithStatus: async (id: string): Promise<{ data: TestRequestDto | null; isOfflineData: boolean }> => {
+  getWithStatus: async (
+    id: string
+  ): Promise<{ data: TestRequestDto | null; isOfflineData: boolean; resolvedId?: string }> => {
     // Always check cache first to handle offline-created items
     const cached = await getCachedTestRequest(id);
 
     // If we're online, try to get fresh data from API
     if (navigator.onLine) {
+      // Phiếu tạo offline chưa lên server → gọi API bằng id tạm sẽ 404, trả bản cache kèm trạng thái sync
+      const unsynced = await getUnsyncedOfflineTestRequest(id);
+      if (unsynced) {
+        return { data: unsynced, isOfflineData: true };
+      }
+
+      // Phiếu tạo offline đã sync → lấy theo id thật
+      const serverId = await getSyncedServerId(id);
+
       try {
-        const result = await testRequestService.get(id);
+        const result = await testRequestService.get(serverId ?? id);
         // Update cache with fresh data
         await cacheTestRequest(result.id, result, false);
-        return { data: result, isOfflineData: false };
+        return { data: result, isOfflineData: false, resolvedId: serverId ?? undefined };
       } catch (error: any) {
         if (!isNetworkError(error)) throw error;
         // Network error - fall through to return cached data if available
@@ -936,7 +1043,8 @@ export const offlineTestRequestService = {
 
     // Return cached data if available (for both offline mode and API failure cases)
     if (cached) {
-      return { data: cached.data as TestRequestDto, isOfflineData: true };
+      const unsynced = await getUnsyncedOfflineTestRequest(id);
+      return { data: unsynced ?? (cached.data as TestRequestDto), isOfflineData: true };
     }
 
     // Also try entityCache as fallback (data is written to both stores)

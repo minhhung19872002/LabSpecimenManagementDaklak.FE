@@ -1,4 +1,4 @@
-import { Button, Space } from "antd";
+import { Button, Space, Tag, Tooltip } from "antd";
 import { EditOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -34,7 +34,21 @@ export const getTestRequestColumns = (
     key: "contractNumber",
     width: 140,
     fixed: "left",
-    render: (value: string) => value || "-",
+    render: (value: string, record: TestRequestDto) =>
+      record.syncStatus ? (
+        <Space direction="vertical" size={2}>
+          <span>{value || "-"}</span>
+          {record.syncStatus === "failed" ? (
+            <Tooltip title={record.syncError}>
+              <Tag color="error" data-testid="sync-status-tag">Lỗi đồng bộ</Tag>
+            </Tooltip>
+          ) : (
+            <Tag color="warning" data-testid="sync-status-tag">Chờ đồng bộ</Tag>
+          )}
+        </Space>
+      ) : (
+        value || "-"
+      ),
     sorter: (a, b) =>
       (a.contractNumber || "").localeCompare(b.contractNumber || ""),
   },

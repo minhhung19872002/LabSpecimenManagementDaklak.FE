@@ -19,6 +19,7 @@ import { useNetworkStatus } from "../../../hooks/useNetworkStatus";
 import { isServerReachable } from "../../../services/offline/connectivity";
 import { cacheApprovedIndicators } from "../../../services/offline/offlineResultService";
 import { cacheTestRequest } from "../../../services/offline/db";
+import { syncManager } from "../../../services/offline/syncManager";
 
 // Statuses that have no results yet -> skip caching approved indicators.
 const NO_RESULT_STATUSES = new Set<TestRequestStatus>([
@@ -146,6 +147,19 @@ export const useTestRequestList = () => {
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  // Phiếu tạo offline vừa sync xong (hoặc lỗi) → tải lại để thay dòng tạm bằng phiếu thật
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      loadData();
+    };
+    syncManager.on("syncComplete", handleSyncComplete);
+    syncManager.on("itemsDiscarded", handleSyncComplete);
+    return () => {
+      syncManager.off("syncComplete", handleSyncComplete);
+      syncManager.off("itemsDiscarded", handleSyncComplete);
+    };
   }, [loadData]);
 
   const handleDownloadTemplate = useCallback(async () => {

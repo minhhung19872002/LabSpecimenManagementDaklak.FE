@@ -515,7 +515,14 @@ export interface TestRequestDto {
   lastModifierId?: string | null;
   creationTime?: string;
   creatorId?: string | null;
+
+  // Client-only: phiếu tạo/sửa offline chưa đồng bộ lên server
+  isOffline?: boolean;
+  syncStatus?: TestRequestSyncStatus;
+  syncError?: string;
 }
+
+export type TestRequestSyncStatus = 'pending' | 'syncing' | 'failed';
 
 export interface CreateTestRequestDto {
   // Contract Info

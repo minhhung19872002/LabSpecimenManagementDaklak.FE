@@ -379,6 +379,14 @@ export async function getPendingSyncCount(): Promise<number> {
   return db.countFromIndex('syncQueue', 'by-status', 'pending');
 }
 
+/**
+ * Các item chưa lên server (pending/syncing/failed) - dùng để hiển thị phiếu tạo offline khi đang online
+ */
+export async function getUnsyncedItemsByType(entityType: SyncEntityType): Promise<SyncQueueItem[]> {
+  const items = await getSyncItemsByType(entityType);
+  return items.filter(item => item.status !== 'synced');
+}
+
 export async function getPendingSyncCountByType(entityType: SyncEntityType): Promise<number> {
   const db = await getDB();
   const allPending = await db.getAllFromIndex('syncQueue', 'by-status', 'pending');
@@ -483,6 +491,12 @@ export async function getCachedTestRequest(id: string): Promise<CachedTestReques
   return db.get('testRequests', id);
 }
 
+export async function removeCachedTestRequest(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('testRequests', id);
+  await removeCachedEntity('TestRequest', id);
+}
+
 export async function getOfflineTestRequests(): Promise<CachedTestRequest[]> {
   const db = await getDB();
   const all = await db.getAll('testRequests');
@@ -534,6 +548,24 @@ export async function setLastSyncTimestamp(timestamp: Date): Promise<void> {
     value: timestamp.toISOString(),
   });
   await setLastSyncTimestampByType('TestRequest', timestamp);
+}
+
+/**
+ * Map clientId (id tạm khi tạo offline) -> serverId sau khi sync thành công.
+ * Dùng để chuyển link/trang chi tiết đang mở bằng id tạm sang id thật.
+ */
+export async function setSyncedIdMapping(clientId: string, serverId: string): Promise<void> {
+  const db = await getDB();
+  await db.put('syncMetadata', {
+    key: 'idMap:' + clientId,
+    value: serverId,
+  });
+}
+
+export async function getSyncedServerId(clientId: string): Promise<string | null> {
+  const db = await getDB();
+  const metadata = await db.get('syncMetadata', 'idMap:' + clientId);
+  return metadata ? (metadata.value as string) : null;
 }
 
 export async function getDeviceId(): Promise<string> {
