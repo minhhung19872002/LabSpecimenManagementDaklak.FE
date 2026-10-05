@@ -9,6 +9,7 @@ import {
   Table,
   Alert,
   Tooltip,
+  Popconfirm,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -83,7 +84,35 @@ interface TestRequestDetailContainerProps {
   // Offline support
   isOnline?: boolean;
   isOfflineData?: boolean;
+  onRetrySync?: () => Promise<void>;
+  onDiscardOffline?: () => Promise<void>;
 }
+
+// Thử đồng bộ lại phiếu tạo offline bị lỗi - tự quản loading
+const RetrySyncButton = React.memo<{
+  onSubmit: () => Promise<void>;
+  disabled?: boolean;
+}>(function RetrySyncButton({ onSubmit, disabled }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <Button
+      size="small"
+      danger
+      loading={loading}
+      disabled={disabled || loading}
+      onClick={async () => {
+        setLoading(true);
+        try {
+          await onSubmit();
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      Thử đồng bộ lại
+    </Button>
+  );
+});
 
 // In phiếu bàn giao - tự quản loading, không drill state từ parent
 const PrintHandoverButton = React.memo<{
@@ -145,6 +174,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   // Offline support
   isOnline = true,
   isOfflineData = false,
+  onRetrySync,
+  onDiscardOffline,
 }) => {
   const navigate = useNavigate();
 
@@ -610,7 +641,56 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           />
         )}
 
-        {isOfflineData && isOnline && (
+        {data.syncStatus === "failed" && (
+          <Alert
+            data-testid="sync-failed-alert"
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="Phiếu tạo offline chưa đồng bộ được lên máy chủ"
+            description={
+              <Space direction="vertical">
+                <span>Lỗi: {data.syncError || "Không xác định"}</span>
+                <span>Phiếu vẫn được lưu trên máy này. Sửa lỗi (nếu cần) rồi thử đồng bộ lại.</span>
+              </Space>
+            }
+            action={
+              <Space direction="vertical">
+                {isOnline && onRetrySync && <RetrySyncButton onSubmit={onRetrySync} />}
+                {onDiscardOffline && (
+                  <Popconfirm
+                    title="Xóa phiếu tạo offline này?"
+                    description="Phiếu chưa lên máy chủ, xóa rồi sẽ không khôi phục được."
+                    okText="Xóa"
+                    okButtonProps={{ danger: true }}
+                    cancelText="Hủy"
+                    onConfirm={onDiscardOffline}
+                  >
+                    <Button size="small" data-testid="discard-offline-button">
+                      Xóa phiếu này
+                    </Button>
+                  </Popconfirm>
+                )}
+              </Space>
+            }
+          />
+        )}
+
+        {(data.syncStatus === "pending" || data.syncStatus === "syncing") && (
+          <Alert
+            data-testid="sync-pending-alert"
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={
+              isOnline
+                ? "Phiếu tạo offline đang được đồng bộ lên máy chủ..."
+                : "Phiếu tạo offline - sẽ tự đồng bộ khi có mạng"
+            }
+          />
+        )}
+
+        {isOfflineData && isOnline && !data.syncStatus && (
           <Alert
             message={
               <Space>

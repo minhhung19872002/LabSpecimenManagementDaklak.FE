@@ -1126,7 +1126,7 @@ export const useTestRequestFormActions = ({
       const payload = {
         quotationId: sourceQuotationId || undefined,
         contractNumber: values.contractNumber || undefined,
-        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ssZZ') : undefined,
+        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ssZ') : undefined,
         sentToAccounting: values.sentToAccounting || false,
         paymentReceived: values.paymentReceived || false,
         sentToDepartment: values.sentToDepartment || false,
@@ -1292,7 +1292,7 @@ export const useTestRequestFormActions = ({
       // Build preview input from form data
       const previewInput: PreviewTestRequestFormInput = {
         contractNumber: values.contractNumber || "",
-        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ssZZ') : undefined,
+        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ssZ') : undefined,
         sentToAccounting: values.sentToAccounting || false,
         paymentReceived: values.paymentReceived || false,
         sentToDepartment: values.sentToDepartment || false,

@@ -1,7 +1,13 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, message, Spin, Modal, Input, Form, Alert, Space } from "antd";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { PATH_ROUTES } from "../../constants";
+import {
+  syncManager,
+  type FailedItemEvent,
+  type SyncedItemEvent,
+} from "../../services/offline/syncManager";
 import { useTranslation } from "react-i18next";
 import {
   testRequestService,
@@ -87,16 +93,73 @@ const TestRequestDetail: React.FC = () => {
 
   usePageTitleOverride(data?.contractNumber || undefined);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (id) {
       loadData(id);
     }
   }, [id]);
 
+  // Đang xem phiếu tạo offline (id tạm) → sync xong thì chuyển sang id thật, lỗi thì tải lại để hiện lỗi
+  useEffect(() => {
+    if (!id) return;
+
+    const handleItemSynced = (payload: unknown) => {
+      const event = payload as SyncedItemEvent;
+      if (event.clientId !== id || event.operationType !== "create" || !event.serverId) return;
+      // BE dùng ClientId làm Id phiếu → cùng URL, chỉ cần tải lại dữ liệu từ server
+      if (event.serverId === id) {
+        loadData(id);
+        return;
+      }
+      navigate(PATH_ROUTES.testRequests.detail(event.serverId), { replace: true });
+    };
+
+    const handleItemFailed = (payload: unknown) => {
+      const event = payload as FailedItemEvent;
+      if (event.clientId === id) loadData(id);
+    };
+
+    syncManager.on("itemSynced", handleItemSynced);
+    syncManager.on("itemFailed", handleItemFailed);
+    return () => {
+      syncManager.off("itemSynced", handleItemSynced);
+      syncManager.off("itemFailed", handleItemFailed);
+    };
+  }, [id, navigate]);
+
+  const handleRetrySync = async () => {
+    try {
+      await syncManager.resetFailedItems();
+      if (id) await loadData(id);
+    } catch (error) {
+      console.error("Retry sync failed:", error);
+      message.error("Không thể đồng bộ lại phiếu");
+    }
+  };
+
+  const handleDiscardOffline = async () => {
+    if (!id) return;
+    try {
+      await syncManager.discardFailedItem(id);
+      message.success("Đã xóa phiếu tạo offline");
+      navigate(PATH_ROUTES.testRequests.index, { replace: true });
+    } catch (error) {
+      console.error("Discard offline test request failed:", error);
+      message.error("Không thể xóa phiếu tạo offline");
+    }
+  };
+
   const loadData = async (requestId: string) => {
     setLoading(true);
     try {
       const response = await offlineTestRequestService.getWithStatus(requestId);
+      if (response.resolvedId && response.resolvedId !== requestId) {
+        // Link cũ dùng id tạm của phiếu tạo offline → chuyển sang id thật
+        navigate(PATH_ROUTES.testRequests.detail(response.resolvedId), { replace: true });
+        return;
+      }
       setData(response.data);
       setIsOfflineData(response.isOfflineData);
     } catch (error: any) {
@@ -557,6 +620,8 @@ const TestRequestDetail: React.FC = () => {
         // Offline support
         isOnline={isOnline}
         isOfflineData={isOfflineData}
+        onRetrySync={handleRetrySync}
+        onDiscardOffline={handleDiscardOffline}
       />
 
       {/* In KQ đơn */}

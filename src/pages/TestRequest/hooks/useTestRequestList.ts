@@ -16,6 +16,7 @@ import {
 import { getTestRequestColumns } from "../components/columns";
 import { useActionPermission } from "../../../hooks/useActionPermission";
 import { useNetworkStatus } from "../../../hooks/useNetworkStatus";
+import { syncManager } from "../../../services/offline/syncManager";
 
 export const useTestRequestList = () => {
   const navigate = useNavigate();
@@ -78,6 +79,19 @@ export const useTestRequestList = () => {
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  // Phiếu tạo offline vừa sync xong (hoặc lỗi) → tải lại để thay dòng tạm bằng phiếu thật
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      loadData();
+    };
+    syncManager.on("syncComplete", handleSyncComplete);
+    syncManager.on("itemsDiscarded", handleSyncComplete);
+    return () => {
+      syncManager.off("syncComplete", handleSyncComplete);
+      syncManager.off("itemsDiscarded", handleSyncComplete);
+    };
   }, [loadData]);
 
   const handleDownloadTemplate = useCallback(async () => {
