@@ -147,10 +147,14 @@ const baseService: BaseCrudService<NCRDto, CreateNCRDto, UpdateNCRDto, NCRListPa
   delete: ncrApiService.delete,
 };
 
-const offlineEnabledService = createOfflineService<NCRDto, CreateNCRDto, UpdateNCRDto, NCRListParams>('NCR', baseService);
+const offlineEnabledService = createOfflineService<NCRDto, CreateNCRDto, UpdateNCRDto, NCRListParams>('NCR', baseService, {
+  // NCR tạo mới trên server luôn ở trạng thái Mở; bản sửa offline đã có status trong data
+  toOfflineRecord: (data) => ({ status: (data as Partial<UpdateNCRDto>).status ?? NCRStatus.Open }),
+});
 
 export const ncrService = {
   getList: offlineEnabledService.getList,
+  getListWithPending: offlineEnabledService.getListWithPending,
   get: offlineEnabledService.get,
   create: offlineEnabledService.create,
   update: offlineEnabledService.update,

@@ -21,6 +21,9 @@ import { useNavigate } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
+import type { OfflineSyncInfo } from "../../services/offline/createOfflineService";
+import { useReloadOnSync } from "../../hooks/useReloadOnSync";
+import SyncStatusTag from "../../components/common/SyncStatusTag";
 import { QuotationListDto } from "../../types/quotation";
 import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
@@ -28,10 +31,12 @@ import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import "../../styles/ListCard.css";
 
+type QuotationRow = QuotationListDto & OfflineSyncInfo;
+
 const QuotationList: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<QuotationListDto[]>([]);
+  const [data, setData] = useState<QuotationRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -41,7 +46,7 @@ const QuotationList: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await quotationService.getList({
+      const result = await quotationService.getListWithPending({
         filter: searchFilter || undefined,
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
@@ -60,10 +65,16 @@ const QuotationList: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
+  useReloadOnSync(fetchData);
+
   const handleDelete = async (id: string) => {
     try {
-      await quotationService.delete(id);
-      message.success("Xóa báo giá thành công");
+      const { queued } = await quotationService.delete(id);
+      message.success(
+        queued
+          ? "Đã xóa báo giá trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+          : "Xóa báo giá thành công"
+      );
       fetchData();
     } catch (error) {
       console.error("Failed to delete quotation:", error);
@@ -87,22 +98,32 @@ const QuotationList: React.FC = () => {
     setPageSize(size);
   };
 
-  const columns: ColumnsType<QuotationListDto> = [
+  const columns: ColumnsType<QuotationRow> = [
     {
       title: "Số báo giá",
       dataIndex: "quotationNumber",
       key: "quotationNumber",
       width: 160,
-      render: (text, record) => (
-        <a
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(PATH_ROUTES.quotations.view(record.id));
-          }}
-        >
-          {text}
-        </a>
-      ),
+      render: (text, record) => {
+        const link = (
+          <a
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(PATH_ROUTES.quotations.view(record.id));
+            }}
+          >
+            {text || "-"}
+          </a>
+        );
+        return record.syncStatus ? (
+          <Space direction="vertical" size={2}>
+            {link}
+            <SyncStatusTag record={record} />
+          </Space>
+        ) : (
+          link
+        );
+      },
     },
     {
       title: "Ngày tạo",

@@ -4,6 +4,8 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { employeeService, EmployeeDto } from "../../../services/employeeService";
+import { isQueuedOffline, OfflineSyncInfo } from "../../../services/offline/createOfflineService";
+import { useReloadOnSync } from "../../../hooks/useReloadOnSync";
 import { departmentService } from "../../../services/masterDataService";
 import roleManagementService, { RoleDto } from "../../../services/roleManagementService";
 import { ROLES, PATH_ROUTES } from "../../../constants";
@@ -24,6 +26,9 @@ export const ROLE_OPTIONS = [
   { value: ROLES.LAB_TECHNICIAN, label: "Thử nghiệm viên", color: "#FA8C16" },
 ];
 
+/** Dòng danh sách nhân viên, có thể là bản ghi tạo offline chưa đồng bộ */
+export type EmployeeRow = EmployeeDto & OfflineSyncInfo;
+
 export const POSITION_OPTIONS = [
   "Giám đốc",
   "Phó Giám đốc",
@@ -38,7 +43,7 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
   const navigate = useNavigate();
 
   // List state
-  const [employees, setEmployees] = useState<EmployeeDto[]>([]);
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -148,7 +153,7 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
         params.role = roleFilter;
       }
 
-      const result = await employeeService.getList(params);
+      const result = await employeeService.getListWithPending(params);
       setEmployees(result.items || []);
       setTotalCount(result.totalCount);
     } catch (error) {
@@ -171,6 +176,12 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
       loadData();
     }
   }, [loadData, departments.length]);
+
+  const reloadAfterSync = useCallback(() => {
+    loadData();
+    loadStatistics();
+  }, [loadData, loadStatistics]);
+  useReloadOnSync(reloadAfterSync);
 
   // Search handlers
   const handleSearchInputChange = useCallback((value: string) => {
@@ -317,7 +328,7 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
       try {
         if (editingItem) {
           // Update employee
-          await employeeService.update(editingItem.id, {
+          const updated = await employeeService.update(editingItem.id, {
             fullName: formData.fullName,
             email: formData.email,
             phone: formData.phone || "",
@@ -330,14 +341,18 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
               ? formData.accountExpirationDate.toISOString()
               : null,
           });
-          message.success("Đã cập nhật thông tin nhân viên");
+          message.success(
+            isQueuedOffline(updated)
+              ? "Đã lưu thay đổi nhân viên trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+              : "Đã cập nhật thông tin nhân viên"
+          );
           setIsModalOpen(false);
           loadData();
         } else {
           // Create employee
           const isManualPassword = formData.passwordMode === "manual";
 
-          await employeeService.create({
+          const created = await employeeService.create({
             username: formData.username,
             fullName: formData.fullName,
             email: formData.email,
@@ -358,8 +373,11 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
           loadData();
           loadStatistics();
 
-          // Only show password sent modal if auto-generated
-          if (!isManualPassword) {
+          if (isQueuedOffline(created)) {
+            // Chưa có tài khoản thật trên server → chưa gửi mật khẩu, không hiện modal "đã gửi mật khẩu"
+            message.success("Đã lưu nhân viên trên máy, sẽ tạo tài khoản trên máy chủ khi có mạng");
+          } else if (!isManualPassword) {
+            // Only show password sent modal if auto-generated
             setNewEmployeeInfo({ email: formData.email });
             setIsPasswordModalOpen(true);
           } else {

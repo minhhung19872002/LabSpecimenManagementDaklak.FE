@@ -8,3 +8,4 @@ export * from './useQualityManagerReminderPopup';
 export * from './useNetworkStatus';
 export * from './useHeaderHeight';
 export * from './useColumnResize';
+export * from './useReloadOnSync';

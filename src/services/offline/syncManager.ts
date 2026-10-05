@@ -647,6 +647,21 @@ class SyncManager {
   }
 
   /**
+   * Xoá 1 bản ghi tạo offline chưa lên server (bỏ item 'create' khỏi hàng đợi).
+   * Trả về false nếu không phải bản ghi tạo offline hoặc đã sync xong (khi đó xoá trên server theo id thật).
+   */
+  async discardPendingCreate(clientId: string): Promise<boolean> {
+    let item = await this.getQueueItem(clientId);
+    if (item?.operationType === 'create' && item.status === 'syncing') {
+      await this.waitForIdle();
+      item = await this.getQueueItem(clientId);
+    }
+    if (!item || item.operationType !== 'create' || item.status === 'synced') return false;
+    await this.discardItems([item]);
+    return true;
+  }
+
+  /**
    * Xóa khỏi hàng đợi + xóa bản cache tạm của dữ liệu tạo offline (id = clientId),
    * nếu không danh sách offline vẫn hiện bản tạm dù mục đồng bộ đã bị xóa
    */

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { message } from 'antd';
+import { isQueuedOffline } from '../../../services/offline/createOfflineService';
 import employeeService, {
   EmployeeDto,
   UpdateEmployeeDto,
@@ -121,8 +122,12 @@ export const useEmployeeDetail = (employeeId: string): UseEmployeeDetailReturn =
     if (!employeeId) return false;
     setSaving(true);
     try {
-      await employeeService.update(employeeId, data);
-      message.success('Cập nhật thông tin thành công');
+      const updated = await employeeService.update(employeeId, data);
+      message.success(
+        isQueuedOffline(updated)
+          ? 'Đã lưu thay đổi trên máy, sẽ đồng bộ lên máy chủ khi có mạng'
+          : 'Cập nhật thông tin thành công'
+      );
       await fetchEmployee();
       return true;
     } catch (error: unknown) {

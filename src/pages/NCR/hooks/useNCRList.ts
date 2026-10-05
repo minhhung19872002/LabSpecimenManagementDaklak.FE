@@ -12,6 +12,8 @@ import {
   NCRSeverity,
   NCRStatus,
 } from "../../../services/ncrService";
+import { isQueuedOffline, type OfflineSyncInfo } from "../../../services/offline/createOfflineService";
+import { useReloadOnSync } from "../../../hooks/useReloadOnSync";
 import {
   departmentService,
   DepartmentDto,
@@ -19,7 +21,7 @@ import {
 import { ncrSchema, NCRFormData } from "../schemas";
 import { getNCRColumns } from "../components/columns";
 
-export interface NCRDisplay extends NCRDto {
+export interface NCRDisplay extends NCRDto, OfflineSyncInfo {
   reportedByName?: string;
   assignedToName?: string;
   closedByName?: string;
@@ -100,7 +102,7 @@ export const useNCRList = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await ncrService.getList({
+      const response = await ncrService.getListWithPending({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
         sorting: "creationTime desc",
@@ -136,6 +138,12 @@ export const useNCRList = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const reloadAfterSync = useCallback(() => {
+    loadData();
+    loadStats();
+  }, [loadData, loadStats]);
+  useReloadOnSync(reloadAfterSync);
 
   // Handlers
   const handleSearch = useCallback(() => {
@@ -217,8 +225,8 @@ export const useNCRList = () => {
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        await ncrService.delete(id);
-        message.success("Đã xóa NCR");
+        const { queued } = await ncrService.delete(id);
+        message.success(queued ? "Đã xóa NCR trên máy, sẽ đồng bộ lên máy chủ khi có mạng" : "Đã xóa NCR");
         loadData();
         loadStats();
       } catch (error) {
@@ -254,8 +262,12 @@ export const useNCRList = () => {
             dueDate: dayjs(formData.dueDate).toISOString(),
             notes: formData.notes || undefined,
           };
-          await ncrService.update(editingItem.id, updateData);
-          message.success("Đã cập nhật NCR");
+          const updated = await ncrService.update(editingItem.id, updateData);
+          message.success(
+            isQueuedOffline(updated)
+              ? "Đã lưu thay đổi NCR trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+              : "Đã cập nhật NCR"
+          );
         } else {
           const createData: CreateNCRDto = {
             title: formData.title,
@@ -267,8 +279,12 @@ export const useNCRList = () => {
             dueDate: dayjs(formData.dueDate).toISOString(),
             notes: formData.notes || undefined,
           };
-          await ncrService.create(createData);
-          message.success("Đã tạo NCR mới");
+          const created = await ncrService.create(createData);
+          message.success(
+            isQueuedOffline(created)
+              ? "Đã lưu NCR trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+              : "Đã tạo NCR mới"
+          );
         }
 
         setIsModalOpen(false);

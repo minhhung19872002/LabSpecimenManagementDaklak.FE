@@ -7,10 +7,12 @@ import {
   subcontractorService,
   GetSubcontractorListInput,
 } from "../../../services/subcontractorService";
+import { isQueuedOffline, type OfflineSyncInfo } from "../../../services/offline/createOfflineService";
+import { useReloadOnSync } from "../../../hooks/useReloadOnSync";
 import { subcontractorSchema, SubcontractorFormData } from "../schemas";
 import { getSubcontractorColumns } from "../components/columns";
 
-export interface Subcontractor {
+export interface Subcontractor extends OfflineSyncInfo {
   id: string;
   code: string;
   name: string;
@@ -109,7 +111,7 @@ export const useSubcontractorList = () => {
         isActive: statusFilter === "all" ? undefined : statusFilter === "active",
       };
 
-      const result = await subcontractorService.getList(params);
+      const result = await subcontractorService.getListWithPending(params);
       const items = result.items.map((sub: any) => ({
         id: sub.id,
         code: sub.code,
@@ -127,6 +129,9 @@ export const useSubcontractorList = () => {
         contractEndDate: sub.contractEndDate,
         notes: sub.notes,
         createdAt: sub.creationTime,
+        _isUnsyncedCreate: sub._isUnsyncedCreate,
+        syncStatus: sub.syncStatus,
+        syncError: sub.syncError,
       }));
       setData(items);
       setTotalCount(result.totalCount);
@@ -142,6 +147,8 @@ export const useSubcontractorList = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useReloadOnSync(loadData);
 
   // Search handlers
   const handleSearchInputChange = useCallback((value: string) => {
@@ -233,8 +240,12 @@ export const useSubcontractorList = () => {
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        await subcontractorService.delete(id);
-        message.success("Xóa nhà thầu phụ thành công!");
+        const { queued } = await subcontractorService.delete(id);
+        message.success(
+          queued
+            ? "Đã xóa nhà thầu phụ trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+            : "Xóa nhà thầu phụ thành công!"
+        );
         loadData();
       } catch (error) {
         console.error("Error deleting subcontractor:", error);
@@ -263,7 +274,8 @@ export const useSubcontractorList = () => {
           name: formData.name,
           address: formData.address || "",
           phone: formData.phone,
-          email: formData.email || "",
+          // BE [EmailAddress] chỉ cho null, chuỗi rỗng bị 400 → trống thì không gửi
+          email: formData.email || undefined,
           contactPerson: formData.contactPerson,
           taxCode: formData.taxCode || "",
           isActive: formData.status === "active",
@@ -278,11 +290,19 @@ export const useSubcontractorList = () => {
         };
 
         if (editingItem) {
-          await subcontractorService.update(editingItem.id, payload);
-          message.success("Cập nhật nhà thầu phụ thành công!");
+          const updated = await subcontractorService.update(editingItem.id, payload);
+          message.success(
+            isQueuedOffline(updated)
+              ? "Đã lưu thay đổi nhà thầu phụ trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+              : "Cập nhật nhà thầu phụ thành công!"
+          );
         } else {
-          await subcontractorService.create(payload);
-          message.success("Thêm nhà thầu phụ thành công!");
+          const created = await subcontractorService.create(payload);
+          message.success(
+            isQueuedOffline(created)
+              ? "Đã lưu nhà thầu phụ trên máy, sẽ đồng bộ lên máy chủ khi có mạng"
+              : "Thêm nhà thầu phụ thành công!"
+          );
         }
 
         setIsModalOpen(false);

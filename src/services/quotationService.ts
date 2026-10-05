@@ -71,12 +71,29 @@ const baseService: BaseCrudService<QuotationListDto, CreateUpdateQuotationDto, C
   delete: quotationApiService.delete,
 };
 
-const offlineEnabledService = createOfflineService<QuotationListDto, CreateUpdateQuotationDto, CreateUpdateQuotationDto, GetQuotationListInput>('Quotation', baseService);
+const offlineEnabledService = createOfflineService<QuotationListDto, CreateUpdateQuotationDto, CreateUpdateQuotationDto, GetQuotationListInput>('Quotation', baseService, {
+  // Cột số mẫu / số chỉ tiêu / tổng tiền của danh sách - tính giống Quotation.RecalculateTotalCost ở BE
+  toOfflineRecord: (data) => {
+    const samples = (data as Partial<CreateUpdateQuotationDto>).samples ?? [];
+    return {
+      sampleCount: samples.length,
+      indicatorCount: samples.reduce((sum, s) => sum + (s.indicators?.length ?? 0), 0),
+      totalCost: samples.reduce(
+        (sum, s) => sum + (s.indicators ?? []).reduce((t, i) => t + (i.unitPrice || 0), 0) * (s.quantity || 1),
+        0,
+      ),
+    };
+  },
+});
 
 export const quotationService = {
   getList: offlineEnabledService.getList,
+  getListWithPending: offlineEnabledService.getListWithPending,
   get: async (id: string): Promise<QuotationDto> => {
     if (offlineEnabledService.isOnline()) {
+      const unsynced = await offlineEnabledService.getUnsynced(id);
+      if (unsynced) return unsynced as unknown as QuotationDto;
+      id = await offlineEnabledService.resolveId(id);
       try {
         return await quotationApiService.get(id);
       } catch (error) {

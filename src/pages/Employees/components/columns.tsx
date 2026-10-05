@@ -9,6 +9,8 @@ import {
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { EmployeeDto } from "../../../services/employeeService";
+import type { OfflineSyncInfo } from "../../../services/offline/createOfflineService";
+import SyncStatusTag from "../../../components/common/SyncStatusTag";
 import dayjs from "dayjs";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
@@ -28,9 +30,11 @@ interface GetColumnsOptions {
   roles: RoleOption[];
 }
 
+const UNSYNCED_TOOLTIP = "Nhân viên chưa đồng bộ lên máy chủ";
+
 export const getEmployeeColumns = (
   options: GetColumnsOptions,
-): ColumnsType<EmployeeDto> => {
+): ColumnsType<EmployeeDto & OfflineSyncInfo> => {
   const getRoleTags = (
     roles: string[] | string | undefined,
     record: EmployeeDto,
@@ -108,6 +112,7 @@ export const getEmployeeColumns = (
             <div style={{ fontSize: 12, color: "#666" }}>
               @{record.username}
             </div>
+            <SyncStatusTag record={record} />
           </div>
         </Space>
       ),
@@ -227,13 +232,15 @@ export const getEmployeeColumns = (
       render: (isActive: boolean, record) => {
         const canEdit = authService.hasPermission(PERMISSIONS.Users.Edit);
         return (
-          <Switch
-            checked={isActive}
-            onChange={(checked) => options.onToggleActive(record.id, checked)}
-            checkedChildren="Hoạt động"
-            unCheckedChildren="Vô hiệu"
-            disabled={!canEdit}
-          />
+          <Tooltip title={record._isUnsyncedCreate ? UNSYNCED_TOOLTIP : undefined}>
+            <Switch
+              checked={isActive}
+              onChange={(checked) => options.onToggleActive(record.id, checked)}
+              checkedChildren="Hoạt động"
+              unCheckedChildren="Vô hiệu"
+              disabled={!canEdit || record._isUnsyncedCreate}
+            />
+          </Tooltip>
         );
       },
     },
@@ -245,14 +252,17 @@ export const getEmployeeColumns = (
       render: (_, record) => {
         const canEdit = authService.hasPermission(PERMISSIONS.Users.Edit);
         const canGrantTemp = authService.hasPermission(PERMISSIONS.TemporaryAccess.Create);
+        // Bản ghi tạo offline chưa có tài khoản trên server → các thao tác gọi API trực tiếp đều chưa dùng được
+        const unsynced = Boolean(record._isUnsyncedCreate);
 
         return (
           <Space size="small">
             {canGrantTemp && options.onAddSchedule && (
-              <Tooltip title="Cấp quyền tạm thời">
+              <Tooltip title={unsynced ? UNSYNCED_TOOLTIP : "Cấp quyền tạm thời"}>
                 <Button
                   type="link"
                   size="small"
+                  disabled={unsynced}
                   icon={<ClockCircleOutlined />}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -262,20 +272,22 @@ export const getEmployeeColumns = (
               </Tooltip>
             )}
             {canEdit && (
-              <Tooltip title="Sửa">
+              <Tooltip title={unsynced ? UNSYNCED_TOOLTIP : "Sửa"}>
                 <Button
                   type="link"
                   size="small"
+                  disabled={unsynced}
                   icon={<EditOutlined />}
                   onClick={() => options.onNavigateToDetail(record.id)}
                 />
               </Tooltip>
             )}
             {canEdit && (
-              <Tooltip title="Đặt lại mật khẩu">
+              <Tooltip title={unsynced ? UNSYNCED_TOOLTIP : "Đặt lại mật khẩu"}>
                 <Button
                   type="link"
                   size="small"
+                  disabled={unsynced}
                   icon={<KeyOutlined />}
                   onClick={() => options.onResetPassword(record)}
                 />

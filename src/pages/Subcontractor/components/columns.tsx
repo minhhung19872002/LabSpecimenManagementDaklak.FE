@@ -4,6 +4,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { Subcontractor } from "../hooks";
 import StatusTag from "../../../components/common/StatusTag";
+import SyncStatusTag from "../../../components/common/SyncStatusTag";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 
@@ -33,6 +34,15 @@ export const getSubcontractorColumns = (
     key: "code",
     width: 180,
     fixed: "left",
+    render: (code: string, record) =>
+      record.syncStatus ? (
+        <Space direction="vertical" size={2}>
+          <span>{code || "-"}</span>
+          <SyncStatusTag record={record} />
+        </Space>
+      ) : (
+        code
+      ),
   },
   {
     title: "Tên nhà thầu phụ",
