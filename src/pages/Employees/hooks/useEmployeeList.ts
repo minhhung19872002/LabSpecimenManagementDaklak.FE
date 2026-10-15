@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { message } from "antd";
 import { useForm } from "react-hook-form";
+import dayjs from "dayjs";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { employeeService, EmployeeDto } from "../../../services/employeeService";
 import { isQueuedOffline, OfflineSyncInfo } from "../../../services/offline/createOfflineService";
@@ -336,7 +337,7 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
             isActive: formData.isActive ?? true,
             isTemporaryAccount: formData.isTemporaryAccount,
             accountExpirationDate: formData.isTemporaryAccount && formData.accountExpirationDate
-              ? formData.accountExpirationDate.toISOString()
+              ? dayjs(formData.accountExpirationDate).format("YYYY-MM-DD")
               : null,
           });
           message.success(
@@ -361,7 +362,7 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
             isActive: formData.isActive ?? true,
             isTemporaryAccount: formData.isTemporaryAccount,
             accountExpirationDate: formData.isTemporaryAccount && formData.accountExpirationDate
-              ? formData.accountExpirationDate.toISOString()
+              ? dayjs(formData.accountExpirationDate).format("YYYY-MM-DD")
               : undefined,
             useManualPassword: isManualPassword,
             password: isManualPassword ? formData.password || undefined : undefined,
