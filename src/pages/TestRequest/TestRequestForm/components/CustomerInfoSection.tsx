@@ -55,6 +55,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           <Form.Item
             name="customerName"
             label="Tên CS/DN"
+            normalize={(value) => value?.toUpperCase()}
             rules={[
               { required: true, message: "Vui lòng nhập tên khách hàng" },
             ]}
