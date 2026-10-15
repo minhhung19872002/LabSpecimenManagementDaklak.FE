@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { message } from "antd";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { employeeService, EmployeeDto } from "../../../services/employeeService";
 import { isQueuedOffline, OfflineSyncInfo } from "../../../services/offline/createOfflineService";
 import { useReloadOnSync } from "../../../hooks/useReloadOnSync";
 import { departmentService } from "../../../services/masterDataService";
 import roleManagementService, { RoleDto } from "../../../services/roleManagementService";
-import { ROLES, PATH_ROUTES } from "../../../constants";
+import { ROLES } from "../../../constants";
 import { employeeSchema, EmployeeFormData } from "../schemas";
 import { getEmployeeColumns } from "../components/columns";
 
@@ -40,7 +39,6 @@ export const POSITION_OPTIONS = [
 
 export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) => void }) => {
   const { onAddSchedule } = opts || {};
-  const navigate = useNavigate();
 
   // List state
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
@@ -328,9 +326,9 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
       try {
         if (editingItem) {
           // Update employee
+          // Tên đăng nhập & email không cho đổi khi sửa → không gửi email lên
           const updated = await employeeService.update(editingItem.id, {
             fullName: formData.fullName,
-            email: formData.email,
             phone: formData.phone || "",
             // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
             departmentId: formData.departmentId,
@@ -449,23 +447,18 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
     return role?.id;
   }, [rolesList]);
 
-  // Navigate to detail handler
-  const handleNavigateToDetail = useCallback((id: string) => {
-    navigate(PATH_ROUTES.employees.detail(id));
-  }, [navigate]);
-
   // Columns
   const columns = useMemo(
     () =>
       getEmployeeColumns({
-        onNavigateToDetail: handleNavigateToDetail,
+        onEdit: handleEdit,
         onToggleActive: handleToggleActive,
         onResetPassword: handleResetPassword,
         onViewRoles: handleViewRoles,
         onAddSchedule,
         roles: ROLE_OPTIONS,
       }),
-    [handleNavigateToDetail, handleToggleActive, handleResetPassword, handleViewRoles, onAddSchedule]
+    [handleEdit, handleToggleActive, handleResetPassword, handleViewRoles, onAddSchedule]
   );
 
   return {

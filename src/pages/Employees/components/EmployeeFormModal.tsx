@@ -212,6 +212,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                         {...field}
                         prefix={<MailOutlined />}
                         placeholder="email@labdaklak.vn"
+                        disabled={isEditing}
                       />
                     )}
                   />
@@ -371,6 +372,9 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                               )
                             }
                             format="DD/MM/YYYY"
+                            disabledDate={(current) =>
+                              current && current < dayjs().startOf("day")
+                            }
                             placeholder="Chọn ngày hết hạn"
                             style={{ width: "100%" }}
                           />
