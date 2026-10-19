@@ -165,19 +165,16 @@ export const useIndicatorsActions = ({
 
   const handleDeleteIndicator = async (id: string) => {
     try {
-      const canDelete = await indicatorService.canDelete(id);
-      if (!canDelete) {
-        message.error(
-          "Không thể xóa chỉ tiêu này vì đã được sử dụng trong phiếu yêu cầu"
-        );
-        return;
-      }
+      // BE checks usage (phiếu yêu cầu, báo giá...) and returns a detailed reason
       await indicatorService.delete(id);
       message.success("Xóa chỉ tiêu thành công!");
       fetchData();
       onDataChange?.();
     } catch (error: unknown) {
-      message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
+      message.error({
+        content: getApiErrorMessage(error, "Không thể xóa chỉ tiêu"),
+        duration: 8,
+      });
     }
   };
 
@@ -216,9 +213,10 @@ export const useIndicatorsActions = ({
           }
           if (result.failedCount > 0) {
             const errorNames = result.errors.map((e) => e.name).join(", ");
-            message.warning(
-              `${result.failedCount} chỉ tiêu không thể xóa: ${errorNames}`
-            );
+            message.warning({
+              content: `${result.failedCount} chỉ tiêu không thể xóa vì đang được sử dụng: ${errorNames}`,
+              duration: 8,
+            });
           }
           setSelectedRowKeys([]);
           fetchData();
