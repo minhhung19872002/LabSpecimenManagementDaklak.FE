@@ -43,6 +43,7 @@ const StickySummaryBar: React.FC<StickySummaryBarProps> = ({
     contract: { label: "Hợp đồng", color: "green" },
     task: { label: "Nhiệm vụ", color: "orange" },
     subContract: { label: "HĐ phụ", color: "purple" },
+    surveillance: { label: "Giám sát/ NC", color: "cyan" },
   };
   const sampleTypeValues = Array.isArray(sampleType)
     ? sampleType

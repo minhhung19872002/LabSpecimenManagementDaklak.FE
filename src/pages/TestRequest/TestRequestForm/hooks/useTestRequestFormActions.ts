@@ -161,11 +161,11 @@ export const useTestRequestFormActions = ({
 
     // Fields to compare (simple fields)
     const fieldsToCompare = [
-      'contractNumber', 'customerName', 'address', 'taxCode', 'contactPerson', 'phone',
+      'contractNumber', 'customerName', 'address', 'taxCode', 'contactPerson', 'phone', 'email',
       'province', 'ward', 'methodWestHighlandInstitute', 'methodCustomer', 'methodCustomerDetail',
       'resultLanguage', 'resultCopyCount', 'separatePassedResults', 'conformityDeclaration',
       'otherRequirements', 'subContract', 'samplingRequirement', 'deliveryDirectPickup',
-      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract', 'sampleTypeTask', 'sampleTypeSubContract',
+      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract', 'sampleTypeTask', 'sampleTypeSubContract', 'sampleTypeSurveillance',
       'sampleStorage', 'totalCost', 'totalCostInWords',
       'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
       'paymentReceived', 'sentToDepartment', 'resultReturned', 'subcontractor'
@@ -538,6 +538,19 @@ export const useTestRequestFormActions = ({
     });
     setIndicatorLaboratoryMap(newLabMap);
 
+    // Copy custom prices from source sample to duplicated sample
+    const newPrices: Record<string, number> = {};
+    const sourcePrefix = `${key}_`;
+    for (const [priceKey, priceValue] of Object.entries(customPrices)) {
+      if (priceKey.startsWith(sourcePrefix)) {
+        const suffix = priceKey.slice(sourcePrefix.length);
+        newPrices[`${newSample.key}_${suffix}`] = priceValue;
+      }
+    }
+    if (Object.keys(newPrices).length > 0) {
+      setCustomPrices((prev) => ({ ...prev, ...newPrices }));
+    }
+
     setSamples([...samples, newSample]);
   };
 
@@ -619,6 +632,7 @@ export const useTestRequestFormActions = ({
     }
     setIndicatorModalVisible(false);
     setCurrentSampleKey(null);
+    setCheckedIndicators([]); // Reset checked để không bị dính khi lưu form
   };
 
   const handleIndicatorModalCancel = () => {
@@ -626,6 +640,7 @@ export const useTestRequestFormActions = ({
     setCurrentSampleKey(null);
     setTempSelectedIndicators([]);
     setTempSelectedIndicatorMethods([]);
+    setCheckedIndicators([]); // Reset checked để không bị dính khi lưu form
   };
 
   // OLD: Toggle indicator (deprecated, kept for backward compat)
@@ -925,6 +940,7 @@ export const useTestRequestFormActions = ({
     const sampleTypeContract = selectedSampleTypes.includes("contract");
     const sampleTypeTask = selectedSampleTypes.includes("task");
     const sampleTypeSubContract = selectedSampleTypes.includes("subContract");
+    const sampleTypeSurveillance = selectedSampleTypes.includes("surveillance");
     const normalizedSubContract = sampleTypeSubContract
       ? values.subContract?.trim()
       : undefined;
@@ -1047,7 +1063,6 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(methodKey),
                 isSubcontract: method?.isSubcontract || false,
               };
             })
@@ -1075,7 +1090,6 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(indId),
               };
             });
 
@@ -1126,6 +1140,7 @@ export const useTestRequestFormActions = ({
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
         phone: values.phone || undefined,
+        email: values.email?.trim() || undefined,
         totalSampleCount: samples.length,
         methodWestHighlandInstitute: values.methodRequirement === "westHighlandInstitute",
         methodCustomer: values.methodRequirement === "customerRequest",
@@ -1145,6 +1160,7 @@ export const useTestRequestFormActions = ({
         sampleTypeContract,
         sampleTypeTask,
         sampleTypeSubContract,
+        sampleTypeSurveillance,
         resultDeliveryDate: values.expectedCompletionDate
           ? values.expectedCompletionDate.format('YYYY-MM-DD')
           : undefined,
@@ -1291,6 +1307,7 @@ export const useTestRequestFormActions = ({
       const sampleTypeContract = selectedSampleTypes.includes("contract");
       const sampleTypeTask = selectedSampleTypes.includes("task");
       const sampleTypeSubContract = selectedSampleTypes.includes("subContract");
+      const sampleTypeSurveillance = selectedSampleTypes.includes("surveillance");
       const normalizedSubContract = sampleTypeSubContract
         ? values.subContract?.trim()
         : undefined;
@@ -1317,6 +1334,7 @@ export const useTestRequestFormActions = ({
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
         phone: values.phone || undefined,
+        email: values.email?.trim() || undefined,
         totalSampleCount: samples.length,
         methodWestHighlandInstitute: values.methodWestHighlandInstitute || false,
         methodCustomer: values.methodCustomer || false,
@@ -1335,6 +1353,7 @@ export const useTestRequestFormActions = ({
         sampleTypeContract,
         sampleTypeTask,
         sampleTypeSubContract,
+        sampleTypeSurveillance,
         resultDeliveryDate: values.resultDeliveryDate
           ? values.resultDeliveryDate.toISOString()
           : undefined,

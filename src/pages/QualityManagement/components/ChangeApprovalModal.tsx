@@ -122,6 +122,7 @@ const FIELD_LABELS: Record<string, string> = {
   taxCode: 'Mã số thuế',
   contactPerson: 'Người liên hệ',
   phone: 'Số điện thoại',
+  email: 'Email',
   provinceCode: 'Tỉnh/Thành phố',
   province: 'Tỉnh/Thành phố',
   districtCode: 'Quận/Huyện',
@@ -150,6 +151,7 @@ const FIELD_LABELS: Record<string, string> = {
   sampleTypeContract: 'Mẫu hợp đồng',
   sampleTypeTask: 'Mẫu nhiệm vụ',
   sampleTypeSubContract: 'Mẫu thầu phụ',
+  sampleTypeSurveillance: 'Mẫu giám sát/ nghiên cứu',
   sampleStorage: 'Lưu mẫu',
   supervisorId: 'Người phụ trách',
   directorId: 'Giám đốc',
@@ -220,6 +222,7 @@ const CHECKBOX_FIELDS = [
   'sampleTypeContract', 'SampleTypeContract',
   'sampleTypeTask', 'SampleTypeTask',
   'sampleTypeSubContract', 'SampleTypeSubContract',
+  'sampleTypeSurveillance', 'SampleTypeSurveillance',
   'sentToAccounting', 'SentToAccounting',
   'paymentReceived', 'PaymentReceived',
   'sentToDepartment', 'SentToDepartment',
@@ -1205,7 +1208,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   );
 
   const sampleTypeFields = fieldChanges.filter(f =>
-    matchField(f.fieldName, ['sampleTypeService', 'sampleTypeContract', 'sampleTypeTask', 'sampleTypeSubContract'])
+    matchField(f.fieldName, ['sampleTypeService', 'sampleTypeContract', 'sampleTypeTask', 'sampleTypeSubContract', 'sampleTypeSurveillance'])
   );
 
   const deliveryFields = fieldChanges.filter(f =>

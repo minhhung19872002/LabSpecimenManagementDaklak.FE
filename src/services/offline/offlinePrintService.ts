@@ -50,7 +50,7 @@ export const TEMPLATE_NAMES = {
 // Backend template file name (must match what's downloaded during prefetch)
 export const TEMPLATE_FILE_NAMES = {
   [TEMPLATE_NAMES.TEST_REQUEST_FORM]:
-    'BM01-QT07- XXYCĐNHĐ_3.2 phieu yeu cau.template.docx',
+    'BM01-QT07- XXYCĐNHĐ_4.0 phieu yeu cau.template.docx',
   [TEMPLATE_NAMES.RESULT_FORM_BM01]:
     'Form trả KQ - BM01-QT13-BCKQ_3.2.template.docx',
   [TEMPLATE_NAMES.RESULT_FORM_BM02]:
@@ -425,6 +425,7 @@ function buildTestRequestPlaceholders(
     TaxNo: data.taxCode || '',
     ContactPerson: data.contactPerson || '',
     PhoneNumber: data.phone || '',
+    Email: data.email || '',
     SampleTotal: sampleCount.toString(),
     ResultCopies: resultCopies,
     CertifiedCopies: resultCopies,
@@ -476,6 +477,7 @@ function buildTestRequestPlaceholders(
     CB_Service: checkbox(data.sampleTypeService),
     CB_Contract: checkbox(data.sampleTypeContract),
     CB_QLNN: checkbox(data.sampleTypeTask),
+    CB_MGS: checkbox(data.sampleTypeSurveillance),
     CB_SubContract: checkbox(data.sampleTypeSubContract),
 
     // Checkbox - Sample Storage

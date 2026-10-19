@@ -14,6 +14,8 @@ import {
   ConfirmIndicatorInput,
   BulkConfirmIndicatorsInput,
   ConfirmDeliveryInput,
+  PrintHandoverOutput,
+  TestRequestDeliveryHistoryDto,
   PublishedReportDto,
   CostChangeHistoryDto,
   UpdateIndicatorLaboratoryInput
@@ -114,6 +116,7 @@ export interface PreviewTestRequestFormInput {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
   totalSampleCount: number;
   methodWestHighlandInstitute: boolean;
   methodCustomer: boolean;
@@ -132,6 +135,7 @@ export interface PreviewTestRequestFormInput {
   sampleTypeContract: boolean;
   sampleTypeTask: boolean;
   sampleTypeSubContract: boolean;
+  sampleTypeSurveillance: boolean;
   resultDeliveryDate?: string;
   sampleStorage: number; // 0=No, 1=Yes
   totalCost: number;
@@ -586,6 +590,29 @@ export const testRequestService = {
   },
 
   /**
+   * In phiếu bàn giao (BM03 - Sổ quản lý mẫu).
+   * Chỉ in, không đổi trạng thái. Mỗi lần in đều ghi lịch sử.
+   */
+  printHandover: async (testRequestId: string): Promise<PrintHandoverOutput> => {
+    const response = await api.post<PrintHandoverOutput>(
+      `${BASE_URL}/${testRequestId}/print-handover`
+    );
+    return response.data;
+  },
+
+  /**
+   * Lịch sử in phiếu bàn giao (mới nhất trước)
+   */
+  getDeliveryHistories: async (
+    testRequestId: string
+  ): Promise<TestRequestDeliveryHistoryDto[]> => {
+    const response = await api.get<TestRequestDeliveryHistoryDto[]>(
+      `${BASE_URL}/${testRequestId}/delivery-histories`
+    );
+    return response.data;
+  },
+
+  /**
    * Lấy danh sách báo cáo đã xuất của TestRequest (để xem lịch sử)
    */
   getPublishedReports: async (testRequestId: string): Promise<PublishedReportDto[]> => {
@@ -776,6 +803,7 @@ export const offlineTestRequestService = {
       taxCode: data.taxCode,
       contactPerson: data.contactPerson,
       phone: data.phone,
+      email: data.email,
       notes: data.notes,
       expectedCompletionDate: data.expectedCompletionDate,
       resultLanguage: data.resultLanguage,
@@ -801,6 +829,7 @@ export const offlineTestRequestService = {
       sampleTypeContract: data.sampleTypeContract || false,
       sampleTypeTask: data.sampleTypeTask || false,
       sampleTypeSubContract: data.sampleTypeSubContract || false,
+      sampleTypeSurveillance: data.sampleTypeSurveillance || false,
       agreeTerms: data.agreeTerms || false,
     } as unknown as TestRequestDto;
 

@@ -55,6 +55,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           <Form.Item
             name="customerName"
             label="Tên CS/DN"
+            normalize={(value) => value?.toUpperCase()}
             rules={[
               { required: true, message: "Vui lòng nhập tên khách hàng" },
             ]}
@@ -145,14 +146,23 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           </Form.Item>
         </Col>
       </Row>
-      {/* Row 2: Địa chỉ (full width) */}
-      <Form.Item
-        name="address"
-        label="Địa chỉ"
-        rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
-      >
-        <Input placeholder="Nhập địa chỉ" disabled={isFieldLocked("address")} />
-      </Form.Item>
+      {/* Row 2: Địa chỉ | Email */}
+      <Row gutter={[16, 0]}>
+        <Col xs={24} sm={16}>
+          <Form.Item
+            name="address"
+            label="Địa chỉ"
+            rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
+          >
+            <Input placeholder="Nhập địa chỉ" disabled={isFieldLocked("address")} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Form.Item name="email" label="Email">
+            <Input placeholder="Nhập email" maxLength={256} />
+          </Form.Item>
+        </Col>
+      </Row>
       {/* Row 3: Mã số thuế | Người liên hệ | Điện thoại */}
       <Row gutter={[16, 0]}>
         <Col xs={24} sm={8}>

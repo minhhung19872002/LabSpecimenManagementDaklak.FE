@@ -454,6 +454,7 @@ export interface TestRequestDto {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
 
   // Sample count
   totalSampleCount: number;
@@ -476,6 +477,7 @@ export interface TestRequestDto {
   sampleTypeContract: boolean;
   sampleTypeTask: boolean;
   sampleTypeSubContract: boolean;
+  sampleTypeSurveillance: boolean;
   resultDeliveryDate?: string;
   sampleStorage: SampleStorageOption;
   totalCost: number;
@@ -543,6 +545,7 @@ export interface CreateTestRequestDto {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
 
   // Sample count
   totalSampleCount?: number;
@@ -565,6 +568,7 @@ export interface CreateTestRequestDto {
   sampleTypeContract?: boolean;
   sampleTypeTask?: boolean;
   sampleTypeSubContract?: boolean;
+  sampleTypeSurveillance?: boolean;
   resultDeliveryDate?: string;
   sampleStorage?: SampleStorageOption;
   totalCost?: number;
@@ -609,6 +613,7 @@ export interface UpdateTestRequestDto {
   taxCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
 
   // Sample count
   totalSampleCount?: number;
@@ -631,6 +636,7 @@ export interface UpdateTestRequestDto {
   sampleTypeContract?: boolean;
   sampleTypeTask?: boolean;
   sampleTypeSubContract?: boolean;
+  sampleTypeSurveillance?: boolean;
   resultDeliveryDate?: string;
   sampleStorage?: SampleStorageOption;
   totalCost?: number;
@@ -755,6 +761,21 @@ export interface BulkConfirmIndicatorsInput {
 // Input for BPGN confirming delivery to customer
 export interface ConfirmDeliveryInput {
   note?: string;
+}
+
+// Kết quả "In phiếu bàn giao" (BM03 - Sổ quản lý mẫu)
+export interface PrintHandoverOutput {
+  fileName: string;                     // File .docx trong wwwroot/temp, mở bằng Document Editor
+  status: TestRequestStatus;            // Trạng thái sau khi in
+}
+
+// Lịch sử in phiếu bàn giao
+export interface TestRequestDeliveryHistoryDto {
+  id: string;
+  testRequestId: string;
+  printedDate: string;
+  printedByUserName?: string;
+  statusAfter: TestRequestStatus;
 }
 
 // DTO for published report (log history)

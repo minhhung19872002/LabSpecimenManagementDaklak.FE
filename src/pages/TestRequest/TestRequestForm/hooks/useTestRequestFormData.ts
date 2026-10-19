@@ -478,7 +478,7 @@ export const useTestRequestFormData = () => {
       const provinceName = provinces.find(p => p.code === selectedOrg.provinceCode)?.name;
 
       form.setFieldsValue({
-        customerName: selectedOrg.name,
+        customerName: selectedOrg.name?.toUpperCase(),
         province: provinceName || '',
         ward: wardName || '',
         address: selectedOrg.address,
@@ -514,7 +514,7 @@ export const useTestRequestFormData = () => {
       const provinceName = provinces.find(p => p.code === foundOrg.provinceCode)?.name;
 
       form.setFieldsValue({
-        customerName: foundOrg.name,
+        customerName: foundOrg.name?.toUpperCase(),
         province: provinceName || '',
         ward: wardName || '',
         address: foundOrg.address,
@@ -650,6 +650,7 @@ export const useTestRequestFormData = () => {
       if (data.sampleTypeContract) selectedSampleTypes.push("contract");
       if (data.sampleTypeTask) selectedSampleTypes.push("task");
       if (data.sampleTypeSubContract) selectedSampleTypes.push("subContract");
+      if (data.sampleTypeSurveillance) selectedSampleTypes.push("surveillance");
       form.setFieldsValue({ sampleType: selectedSampleTypes });
 
       if (data.methodCustomer) {
@@ -826,7 +827,7 @@ export const useTestRequestFormData = () => {
 
       // Fill customer info from quotation
       form.setFieldsValue({
-        customerName: quotation.customerName,
+        customerName: quotation.customerName?.toUpperCase(),
         province: provinceName || '',
         ward: wardName || '',
         address: quotation.address || org?.address,
@@ -950,6 +951,7 @@ export const useTestRequestFormData = () => {
         taxCode: data.taxCode || "",
         contactPerson: data.contactPerson || "",
         phone: data.phone || "",
+        email: data.email || "",
       });
 
       // Generate samples from test request samples

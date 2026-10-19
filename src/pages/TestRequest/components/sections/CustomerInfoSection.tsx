@@ -39,6 +39,10 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({ data }) => {
           <Text type="secondary">Điện thoại:</Text>
           <Text strong>{data.phone || "-"}</Text>
         </div>
+        <div className="detail-item">
+          <Text type="secondary">Email:</Text>
+          <Text>{data.email || "-"}</Text>
+        </div>
       </div>
     </div>
   );
