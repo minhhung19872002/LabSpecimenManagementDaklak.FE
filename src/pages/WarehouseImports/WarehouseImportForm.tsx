@@ -99,6 +99,8 @@ const WarehouseImportForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  // Receipt created on this page whose confirm then failed: retries must update it, not create a duplicate.
+  const createdReceiptIdRef = useRef<string | null>(null);
 
   const [pageLoading, setPageLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -832,10 +834,11 @@ const WarehouseImportForm: React.FC = () => {
     setSaving(true);
     try {
       const payload = buildPayload(data);
-      if (isEdit && id) {
-        await warehouseImportReceiptService.update(id, payload);
+      const existingId = id ?? createdReceiptIdRef.current;
+      if (existingId) {
+        await warehouseImportReceiptService.update(existingId, payload);
         message.success("Đã lưu nháp phiếu nhập kho");
-        navigate(`/warehouse-imports/${id}`, { replace: true });
+        navigate(`/warehouse-imports/${existingId}`, { replace: true });
       } else {
         const result = await warehouseImportReceiptService.create(payload);
         message.success("Đã tạo phiếu nhập kho");
@@ -859,12 +862,13 @@ const WarehouseImportForm: React.FC = () => {
     setConfirming(true);
     try {
       const payload = buildPayload(data);
-      let receiptId = id;
-      if (isEdit && id) {
-        await warehouseImportReceiptService.update(id, payload);
+      let receiptId = id ?? createdReceiptIdRef.current;
+      if (receiptId) {
+        await warehouseImportReceiptService.update(receiptId, payload);
       } else {
         const created = await warehouseImportReceiptService.create(payload);
         receiptId = created.id;
+        createdReceiptIdRef.current = created.id;
       }
       const confirmed = await warehouseImportReceiptService.confirm(receiptId as string);
       setReceipt(confirmed);
