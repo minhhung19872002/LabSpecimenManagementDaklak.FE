@@ -1,5 +1,5 @@
 import { Button, Space, Tag, Tooltip } from "antd";
-import { EditOutlined } from "../../../components/common/Icon";
+import Icon, { EditOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import {
@@ -25,6 +25,31 @@ const getStatusTag = (status: TestRequestStatus) => {
   return <StatusTag color={color}>{label}</StatusTag>;
 };
 
+const getSubContractTag = (subContractName?: string) => {
+  const tag = (
+    <Tag
+      // inline-flex: bỏ vertical-align -0.125em mặc định của bootstrap-icons để icon canh giữa với chữ
+      icon={<Icon name="bank" style={{ display: "inline-flex" }} />}
+      style={{
+        backgroundColor: "#DB2777",
+        color: "#FFFFFF",
+        border: "none",
+        borderRadius: 999,
+        padding: "2px 8px",
+        margin: 0,
+        fontWeight: 600,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+      }}
+    >
+      Thầu phụ
+    </Tag>
+  );
+  // Có tên đơn vị thầu phụ thì hiện khi rê chuột
+  return subContractName ? <Tooltip title={subContractName}>{tag}</Tooltip> : tag;
+};
+
 export const getTestRequestColumns = (
   options: GetColumnsOptions,
 ): ColumnsType<TestRequestDto> => [
@@ -32,12 +57,20 @@ export const getTestRequestColumns = (
     title: "Số hợp đồng",
     dataIndex: "contractNumber",
     key: "contractNumber",
-    width: 140,
+    width: 170,
     fixed: "left",
-    render: (value: string, record: TestRequestDto) =>
-      record.syncStatus ? (
-        <Space direction="vertical" size={2}>
+    render: (value: string, record: TestRequestDto) => {
+      const contractCell = record.sampleTypeSubContract ? (
+        <Space size={6} align="center" wrap={false}>
           <span>{value || "-"}</span>
+          {getSubContractTag(record.subContract)}
+        </Space>
+      ) : (
+        value || "-"
+      );
+      return record.syncStatus ? (
+        <Space direction="vertical" size={2}>
+          {contractCell}
           {record.syncStatus === "failed" ? (
             <Tooltip title={record.syncError}>
               <Tag color="error" data-testid="sync-status-tag">Lỗi đồng bộ</Tag>
@@ -47,8 +80,9 @@ export const getTestRequestColumns = (
           )}
         </Space>
       ) : (
-        value || "-"
-      ),
+        contractCell
+      );
+    },
     sorter: (a, b) =>
       (a.contractNumber || "").localeCompare(b.contractNumber || ""),
   },
