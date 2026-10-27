@@ -460,7 +460,10 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
             handleProductFieldChange(record.key, "quantity", values.floatValue ?? 0)
           }
           allowNegative={false}
-          decimalScale={0}
+          decimalScale={4}
+          thousandSeparator="."
+          decimalSeparator=","
+          allowedDecimalSeparators={[",", "."]}
           customInput={Input}
           size="small"
           style={{ width: "100%" }}
@@ -497,6 +500,10 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
             handleProductFieldChange(record.key, "avgConsumptionPerSample", values.floatValue ?? null)
           }
           allowNegative={false}
+          decimalScale={6}
+          thousandSeparator="."
+          decimalSeparator=","
+          allowedDecimalSeparators={[",", "."]}
           customInput={Input}
           size="small"
           style={{ width: "100%" }}
