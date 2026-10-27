@@ -42,6 +42,13 @@ export const formatNumber = (value: number): string => {
 };
 
 /**
+ * Option cho toLocaleString khi hiển thị số lượng tồn kho / tiêu hao.
+ * DB lưu numeric không giới hạn, số có thể rất nhỏ (0,000000005) → mặc định chỉ 3 số lẻ sẽ hiện thành 0.
+ * Tối đa 10 số lẻ: đủ hiện số rất nhỏ mà vẫn che sai số float khi FE cộng/trừ (10.1 - 10 = 0.0999999999999996).
+ */
+export const QUANTITY_FORMAT: Intl.NumberFormatOptions = { maximumFractionDigits: 10 };
+
+/**
  * Strip all HTML tags from a string, returning plain text (using DOMParser)
  * Handles: block elements (p, br → newline), list items (ul→"- ", ol→"1. "), HTML entities auto-decoded
  * @param html - HTML string

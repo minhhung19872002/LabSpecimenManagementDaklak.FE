@@ -23,6 +23,7 @@ import { PATH_ROUTES } from "../../constants/routes";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import "../../styles/ListCard.css";
 import "./StockAdjustmentDetail.css";
+import { QUANTITY_FORMAT } from "../../utils/formatters";
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({
   label,
@@ -174,7 +175,7 @@ const StockAdjustmentDetail: React.FC = () => {
       align: "right" as const,
       render: (_: any, record: StockAdjustmentItemDto) => {
         if (record.consumableQuantityBefore != null && record.consumableQuantityBefore > 0 && record.volumeUnitName) {
-          return `${record.consumableQuantityBefore.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
+          return `${record.consumableQuantityBefore.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${record.volumeUnitName}`;
         }
         if (!record.quantityBefore && record.quantityBefore !== 0) return "-";
         return formatConsumableQuantity(record.quantityBefore, record);
@@ -212,7 +213,7 @@ const StockAdjustmentDetail: React.FC = () => {
       align: "right" as const,
       render: (v: number, record: StockAdjustmentItemDto) => {
         const unit = record.actualUnitName || record.unitName || "";
-        return `${v.toLocaleString("vi-VN")} ${unit}`.trim();
+        return `${v.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${unit}`.trim();
       },
     },
     {
@@ -228,7 +229,7 @@ const StockAdjustmentDetail: React.FC = () => {
           const sign = v > 0 ? "+" : "";
           return (
             <span style={{ color, fontWeight: 600 }}>
-              {sign}{v.toLocaleString("vi-VN")}
+              {sign}{v.toLocaleString("vi-VN", QUANTITY_FORMAT)}
             </span>
           );
         }
@@ -239,7 +240,7 @@ const StockAdjustmentDetail: React.FC = () => {
         const sign = diff > 0 ? "+" : "";
         return (
           <div style={{ color, fontWeight: 600 }}>
-            <div>{sign}{diff.toLocaleString("vi-VN")} {unit}</div>
+            <div>{sign}{diff.toLocaleString("vi-VN", QUANTITY_FORMAT)} {unit}</div>
             {expected !== 0 && (
               <div style={{ fontSize: 12 }}>{sign}{((diff / Math.abs(expected)) * 100).toFixed(1)}%</div>
             )}

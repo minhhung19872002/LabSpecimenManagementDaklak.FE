@@ -4,6 +4,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { ProductMaterialReceiptHistoryDto, StockByUnitDto } from "../../../services/productService";
 import { formatStockDisplay } from "../../MaterialReceipts/MaterialReceipt/utils";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 const { Link } = Typography;
 
@@ -80,7 +81,7 @@ const MaterialReceiptHistoryTable: React.FC<MaterialReceiptHistoryTableProps> = 
     {
       title: "Số lượng nhận",
       width: 135,
-      render: (_, record) => `${record.receivedQuantity.toLocaleString("vi-VN")} ${record.storageUnitName || record.unitName || ""}`.trim(),
+      render: (_, record) => `${record.receivedQuantity.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${record.storageUnitName || record.unitName || ""}`.trim(),
     },
     {
       title: "Hạn sử dụng",

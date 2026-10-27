@@ -3,6 +3,7 @@ import type { ColumnsType } from "antd/es/table";
 import { ProductDto, ProductType, ProductTypeLabels } from "../../../services/productService";
 import { IndicatorName } from "../../../components/common";
 import dayjs from "dayjs";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 export interface ColumnConfig {
   key: string;
@@ -151,7 +152,7 @@ export const getProductColumns = (
               {record.stockByUnits.map((entry, i) => {
                 if (entry.volumePerUnit && entry.volumePerUnit > 0 && entry.volumeUnitName) {
                   const vol = entry.quantity * entry.volumePerUnit;
-                  return <div key={i}>{`${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName}`}</div>;
+                  return <div key={i}>{`${vol.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${entry.volumeUnitName}`}</div>;
                 }
                 const unit = entry.packagingUnitName || "";
                 return <div key={i}>{`${entry.quantity} ${unit}`.trim()}</div>;
@@ -160,7 +161,7 @@ export const getProductColumns = (
           );
         }
         if (record.consumableImportedQuantity > 0 && record.volumeUnitName) {
-          return `${record.consumableImportedQuantity.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
+          return `${record.consumableImportedQuantity.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${record.volumeUnitName}`;
         }
         const unitName = record.baseUnitName || "";
         return `${record.storageAvailableQuantity} ${unitName}`.trim();
@@ -178,7 +179,7 @@ export const getProductColumns = (
       render: (qty: number, record: ProductDto) => {
         if (!qty) return "-";
         const unitName = record.volumeUnitName || record.baseUnitName || "";
-        return `${qty.toLocaleString("vi-VN")} ${unitName}`.trim();
+        return `${qty.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${unitName}`.trim();
       },
     });
   }
@@ -204,7 +205,7 @@ export const getProductColumns = (
           if (expected < 0) {
             return (
               <div style={{ color: "#ff4d4f" }}>
-                <div>{`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}</div>
+                <div>{`${expected.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${firstVolumeUnit}`}</div>
               </div>
             );
           }
@@ -221,14 +222,14 @@ export const getProductColumns = (
                   const intPart = Math.floor(unitExpectedBase);
                   const decPart = unitExpectedBase - intPart;
                   if (decPart === 0) {
-                    return <div key={i}>{`${unitExpectedBase.toLocaleString("vi-VN")} ${unit}`.trim()}</div>;
+                    return <div key={i}>{`${unitExpectedBase.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${unit}`.trim()}</div>;
                   }
                   const vol = Math.round(decPart * entry.volumePerUnit);
-                  return <div key={i}>{`${intPart.toLocaleString("vi-VN")} ${unit} - ${vol.toLocaleString("vi-VN")} ${entry.volumeUnitName || ""}`}</div>;
+                  return <div key={i}>{`${intPart.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${unit} - ${vol.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${entry.volumeUnitName || ""}`}</div>;
                 })}
                 {firstVolumeUnit && (
                   <div style={{ fontSize: 12, color: "#888" }}>
-                    {`${expected.toLocaleString("vi-VN")} ${firstVolumeUnit}`}
+                    {`${expected.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${firstVolumeUnit}`}
                   </div>
                 )}
               </div>
@@ -241,7 +242,7 @@ export const getProductColumns = (
         const volumeUnit = record.volumeUnitName || "";
 
         if (record.volumePerUnit && record.volumePerUnit > 0 && volumeUnit) {
-          const volumeLine = `${expected.toLocaleString("vi-VN")} ${volumeUnit}`;
+          const volumeLine = `${expected.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${volumeUnit}`;
           if (expected < 0) {
             return (
               <div style={{ color: "#ff4d4f" }}>
@@ -253,9 +254,9 @@ export const getProductColumns = (
           const intPart = Math.floor(expectedBase);
           const decPart = expectedBase - intPart;
           if (decPart === 0) {
-            return `${expectedBase.toLocaleString("vi-VN")} ${storageUnit}`;
+            return `${expectedBase.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${storageUnit}`;
           }
-          const packagingLine = `${intPart.toLocaleString("vi-VN")} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN")} ${volumeUnit}`;
+          const packagingLine = `${intPart.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${storageUnit} - ${Math.round(decPart * record.volumePerUnit).toLocaleString("vi-VN", QUANTITY_FORMAT)} ${volumeUnit}`;
           return (
             <div>
               <div>{packagingLine}</div>
@@ -264,7 +265,7 @@ export const getProductColumns = (
           );
         }
 
-        return `${expected.toLocaleString("vi-VN")} ${storageUnit}`.trim();
+        return `${expected.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${storageUnit}`.trim();
       },
     });
   }

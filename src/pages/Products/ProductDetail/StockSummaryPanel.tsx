@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Spin } from "antd";
 import { ProductLotStockDto } from "../../../services/productService";
 import { getLotStatus, getLotVolumeQty, getLotVolumeUnit, getNextFefoLot } from "./utils";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 const LOT_PALETTE = [
   "#1a5fd0", "#2f9e6b", "#e8a83a", "#7c6bd6", "#4aa3c7",
@@ -101,7 +102,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
 
         <div className="stock-summary__value-row">
           <span className="stock-summary__big-number">
-            {stats.totalAvailable.toLocaleString("vi-VN")}
+            {stats.totalAvailable.toLocaleString("vi-VN", QUANTITY_FORMAT)}
           </span>
           <span className="stock-summary__unit">{stats.unit}</span>
         </div>
@@ -124,7 +125,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
                 <div key={i} className="stock-summary__legend-item">
                   <span className="stock-summary__legend-dot" style={{ background: seg.color }} />
                   <strong>{seg.lotNo}</strong>
-                  <span>{seg.volume.toLocaleString("vi-VN")} {stats.unit}</span>
+                  <span>{seg.volume.toLocaleString("vi-VN", QUANTITY_FORMAT)} {stats.unit}</span>
                 </div>
               ))}
             </div>
@@ -146,7 +147,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
           <div className="stock-summary__expired-row">
             <span>Hết hạn &middot; chờ huỷ</span>
             <span>
-              {stats.expiredCount} lô &middot; {stats.expiredVolume.toLocaleString("vi-VN")} {stats.unit}
+              {stats.expiredCount} lô &middot; {stats.expiredVolume.toLocaleString("vi-VN", QUANTITY_FORMAT)} {stats.unit}
             </span>
           </div>
         )}

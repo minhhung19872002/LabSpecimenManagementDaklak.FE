@@ -11,6 +11,7 @@ import { getApiErrorMessage } from "../../utils/errorHandler";
 import { PATH_ROUTES } from "../../constants/routes";
 import { message } from "antd";
 import "../../styles/ListCard.css";
+import { QUANTITY_FORMAT } from "../../utils/formatters";
 
 const formatCurrency = (value?: number) => {
   if (value == null) return "-";
@@ -98,7 +99,7 @@ const ProductSourceList: React.FC = () => {
       key: "totalImported",
       width: 120,
       align: "right",
-      render: (v: number) => v?.toLocaleString("vi-VN") ?? "-",
+      render: (v: number) => v?.toLocaleString("vi-VN", QUANTITY_FORMAT) ?? "-",
     },
     {
       title: "SL khả dụng",
@@ -106,7 +107,7 @@ const ProductSourceList: React.FC = () => {
       key: "availableQuantity",
       width: 120,
       align: "right",
-      render: (v: number) => v?.toLocaleString("vi-VN") ?? "-",
+      render: (v: number) => v?.toLocaleString("vi-VN", QUANTITY_FORMAT) ?? "-",
     },
     {
       title: "Giá nhập mới nhất",

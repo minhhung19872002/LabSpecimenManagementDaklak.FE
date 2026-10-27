@@ -354,8 +354,9 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
           if (field === "quantity" || field === "estimatedSamplesPerYear") {
             const qty = field === "quantity" ? (value ?? 0) : updated.quantity;
             const samples = field === "estimatedSamplesPerYear" ? value : updated.estimatedSamplesPerYear;
+            // Làm tròn 15 chữ số có nghĩa để bỏ sai số float (VD 0.07/7 = 0.010000000000000002)
             updated.avgConsumptionPerSample =
-              samples && samples > 0 ? qty / samples : null;
+              samples && samples > 0 ? Number((qty / samples).toPrecision(15)) : null;
           }
           return updated;
         })
@@ -460,7 +461,6 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
             handleProductFieldChange(record.key, "quantity", values.floatValue ?? 0)
           }
           allowNegative={false}
-          decimalScale={4}
           thousandSeparator="."
           decimalSeparator=","
           allowedDecimalSeparators={[",", "."]}
@@ -500,7 +500,6 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
             handleProductFieldChange(record.key, "avgConsumptionPerSample", values.floatValue ?? null)
           }
           allowNegative={false}
-          decimalScale={6}
           thousandSeparator="."
           decimalSeparator=","
           allowedDecimalSeparators={[",", "."]}

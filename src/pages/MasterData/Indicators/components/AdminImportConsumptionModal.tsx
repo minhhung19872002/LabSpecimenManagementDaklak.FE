@@ -19,6 +19,7 @@ import type {
   AdminConsumptionPreviewDto,
   AdminConsumptionPreviewItem,
 } from "../../../../services/importService";
+import { QUANTITY_FORMAT } from "../../../../utils/formatters";
 
 export interface AdminImportConsumptionModalProps {
   open: boolean;
@@ -40,7 +41,7 @@ const renderHtmlOrText = (text?: string) =>
   );
 
 const formatNumber = (value?: number | null) =>
-  value === null || value === undefined ? "-" : value.toLocaleString("vi-VN");
+  value === null || value === undefined ? "-" : value.toLocaleString("vi-VN", QUANTITY_FORMAT);
 
 const columns: ColumnsType<AdminConsumptionPreviewItem & { key: number }> = [
   { title: "Dòng", dataIndex: "rowNumber", key: "rowNumber", width: 60 },

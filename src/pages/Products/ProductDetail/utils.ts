@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { ProductLotStockDto } from "../../../services/productService";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 export type LotStatus = "ok" | "near" | "expired" | "empty";
 
@@ -30,7 +31,7 @@ export function formatLotBaseQty(
   volumeUnitName?: string,
 ): string {
   const unit = packagingUnitName || "";
-  const fmt = (n: number) => n.toLocaleString("vi-VN");
+  const fmt = (n: number) => n.toLocaleString("vi-VN", QUANTITY_FORMAT);
   if (!Number.isFinite(baseQty)) {
     return `0 ${unit}`.trim();
   }

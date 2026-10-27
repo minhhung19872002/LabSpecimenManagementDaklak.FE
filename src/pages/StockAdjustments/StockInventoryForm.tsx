@@ -25,6 +25,7 @@ import { getApiErrorMessage } from "../../utils/errorHandler";
 import { PATH_ROUTES } from "../../constants/routes";
 import { formatStockPackaging, formatConsumption, renderExpectedStock } from "./utils";
 import "../../styles/ListCard.css";
+import { QUANTITY_FORMAT } from "../../utils/formatters";
 
 interface WarehouseSection {
   warehouseId: string;
@@ -146,7 +147,8 @@ const StockInventoryForm: React.FC = () => {
 
           if (hasVolume && (!existing.actualUnitId || existing.actualUnitId === lot.volumeUnitId)) {
             storage = Math.floor(existing.actualQuantity / lot.volumePerUnit!);
-            consumable = Math.round((existing.actualQuantity - storage * lot.volumePerUnit!) * 100) / 100;
+            // Không làm tròn 2 số lẻ (số lượng có thể rất nhỏ), chỉ bỏ sai số float
+            consumable = Number((existing.actualQuantity - storage * lot.volumePerUnit!).toPrecision(15));
           } else {
             storage = existing.actualQuantity;
           }
@@ -277,7 +279,8 @@ const StockInventoryForm: React.FC = () => {
 
     const hasVolume = lot.volumePerUnit && lot.volumePerUnit > 0 && lot.volumeUnitId;
     if (hasVolume) {
-      return (item.actualQuantityStorage ?? 0) * lot.volumePerUnit! + (item.actualQuantityConsumable ?? 0);
+      // toPrecision(15): bỏ sai số float (0.2 + 0.1 = 0.30000000000000004) vì DB lưu numeric không làm tròn
+      return Number(((item.actualQuantityStorage ?? 0) * lot.volumePerUnit! + (item.actualQuantityConsumable ?? 0)).toPrecision(15));
     }
     return item.actualQuantityStorage ?? 0;
   };
@@ -428,9 +431,9 @@ const StockInventoryForm: React.FC = () => {
         align: "right" as const,
         render: (_: any, record: WarehouseProductLotDto) => {
           if (record.volumePerUnit && record.volumePerUnit > 0 && record.volumeUnitName) {
-            return `${record.consumableQuantity.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
+            return `${record.consumableQuantity.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${record.volumeUnitName}`;
           }
-          return `${record.remainingBaseQuantity.toLocaleString("vi-VN")} ${record.baseUnitName || ""}`.trim();
+          return `${record.remainingBaseQuantity.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${record.baseUnitName || ""}`.trim();
         },
       },
       {
@@ -471,7 +474,6 @@ const StockInventoryForm: React.FC = () => {
                     updateItem(section.warehouseId, record.productId, record.lotNumber, "actualQuantityStorage", values.floatValue ?? null);
                   }}
                   allowNegative
-                  decimalScale={2}
                   thousandSeparator="."
                   decimalSeparator=","
                   customInput={Input}
@@ -493,7 +495,6 @@ const StockInventoryForm: React.FC = () => {
                       updateItem(section.warehouseId, record.productId, record.lotNumber, "actualQuantityConsumable", values.floatValue ?? null);
                     }}
                     allowNegative
-                    decimalScale={2}
                     thousandSeparator="."
                     decimalSeparator=","
                     customInput={Input}
@@ -532,7 +533,7 @@ const StockInventoryForm: React.FC = () => {
 
           return (
             <div style={{ color, fontWeight: diff !== 0 ? 600 : undefined }}>
-              <div>{sign}{diff.toLocaleString("vi-VN")} {unit}</div>
+              <div>{sign}{diff.toLocaleString("vi-VN", QUANTITY_FORMAT)} {unit}</div>
               {pct !== null && <div style={{ fontSize: 12 }}>{sign}{pct}%</div>}
             </div>
           );

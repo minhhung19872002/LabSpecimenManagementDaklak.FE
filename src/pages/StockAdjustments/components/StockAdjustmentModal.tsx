@@ -28,6 +28,7 @@ import {
   ProductTypeLabels,
 } from "../../../services/productService";
 import dayjs from "dayjs";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 interface StockAdjustmentModalProps {
   open: boolean;
@@ -276,13 +277,13 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                 <tr key={item.productId}>
                   <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0" }}>{item.productName}</td>
                   <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right" }}>
-                    {item.snapshotQuantity.toLocaleString("vi-VN")} {item.unitName}
+                    {item.snapshotQuantity.toLocaleString("vi-VN", QUANTITY_FORMAT)} {item.unitName}
                   </td>
                   <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right", fontWeight: 600, color: "#faad14" }}>
-                    {item.currentQuantity.toLocaleString("vi-VN")} {item.unitName}
+                    {item.currentQuantity.toLocaleString("vi-VN", QUANTITY_FORMAT)} {item.unitName}
                   </td>
                   <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right" }}>
-                    {item.actualQuantity.toLocaleString("vi-VN")} {item.unitName}
+                    {item.actualQuantity.toLocaleString("vi-VN", QUANTITY_FORMAT)} {item.unitName}
                   </td>
                 </tr>
               ))}
@@ -315,7 +316,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       title: "SL khả dụng",
       dataIndex: "quantityBefore",
       width: 120,
-      render: (val: number) => val?.toLocaleString("vi-VN") ?? 0,
+      render: (val: number) => val?.toLocaleString("vi-VN", QUANTITY_FORMAT) ?? 0,
     },
     {
       title: "Số lượng thực tế",
@@ -323,7 +324,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       width: 150,
       render: (val: number, record: ItemRow) =>
         isReadonly ? (
-          val?.toLocaleString("vi-VN") ?? 0
+          val?.toLocaleString("vi-VN", QUANTITY_FORMAT) ?? 0
         ) : (
           <InputNumber
             min={0}
@@ -339,7 +340,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       width: 120,
       render: (val: number) => {
         const color = val > 0 ? "#ff4d4f" : val < 0 ? "#52c41a" : undefined;
-        return <span style={{ color, fontWeight: 500 }}>{val > 0 ? `-${val.toLocaleString("vi-VN")}` : val < 0 ? `+${Math.abs(val).toLocaleString("vi-VN")}` : "0"}</span>;
+        return <span style={{ color, fontWeight: 500 }}>{val > 0 ? `-${val.toLocaleString("vi-VN", QUANTITY_FORMAT)}` : val < 0 ? `+${Math.abs(val).toLocaleString("vi-VN", QUANTITY_FORMAT)}` : "0"}</span>;
       },
     },
     ...(!isReadonly

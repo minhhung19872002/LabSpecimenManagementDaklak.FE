@@ -17,6 +17,7 @@ import {
   LOT_BAR_COLORS,
 } from "./utils";
 import type { TimeRange } from "./LotStockFilterBar";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -129,7 +130,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
       align: "right",
       render: (_, r) =>
         r.consumableStockBefore != null
-          ? <Text strong>{`${r.consumableStockBefore.toLocaleString("vi-VN")} ${r.consumableStockUnitName || ""}`.trim()}</Text>
+          ? <Text strong>{`${r.consumableStockBefore.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${r.consumableStockUnitName || ""}`.trim()}</Text>
           : "—",
     },
   ];
@@ -190,7 +191,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
               <div className="lot-card__meta-label">Tồn của lô</div>
               <div className="lot-card__qty-display">
                 <span className="lot-card__qty-number" style={{ color: status === "ok" ? "#096DD9" : statusCfg.color }}>
-                  {remainingVolume.toLocaleString("vi-VN")}
+                  {remainingVolume.toLocaleString("vi-VN", QUANTITY_FORMAT)}
                 </span>
                 <span className="lot-card__qty-unit">{volumeUnit}</span>
               </div>
@@ -234,7 +235,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
               <div className="lot-card__stock-label">Tồn kho đầu kỳ</div>
               <div className="lot-card__stock-value">
                 <span className="lot-card__stock-number">
-                  {openingVolume.toLocaleString("vi-VN")}
+                  {openingVolume.toLocaleString("vi-VN", QUANTITY_FORMAT)}
                 </span>
                 <span className="lot-card__stock-unit">{volumeUnit}</span>
               </div>
@@ -247,7 +248,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
               <div className="lot-card__stock-label">Tiêu hao trong kỳ</div>
               <div className="lot-card__stock-value">
                 <span className="lot-card__stock-number" style={{ color: "#CF1322" }}>
-                  {theoreticalVol.toLocaleString("vi-VN")}
+                  {theoreticalVol.toLocaleString("vi-VN", QUANTITY_FORMAT)}
                 </span>
                 <span className="lot-card__stock-unit">{volumeUnit}</span>
               </div>
@@ -257,7 +258,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
               <div className="lot-card__stock-label" style={{ color: "#096DD9" }}>Tồn cuối kỳ</div>
               <div className="lot-card__stock-value">
                 <span className="lot-card__stock-number" style={{ color: "#096DD9" }}>
-                  {closingVolume.toLocaleString("vi-VN")}
+                  {closingVolume.toLocaleString("vi-VN", QUANTITY_FORMAT)}
                 </span>
                 <span className="lot-card__stock-unit" style={{ color: "#40a9ff" }}>{volumeUnit}</span>
               </div>

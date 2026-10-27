@@ -1,4 +1,5 @@
 import type { CentralWarehouseProductDto } from "../../../services/materialReceiptService";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 export const formatExpiryDate = (date?: string | null): string => {
   if (!date) return "—";
@@ -17,7 +18,7 @@ export const formatStockDisplay = (
 ): string => {
   if (baseQty == null) return "—";
 
-  const formattedQty = baseQty.toLocaleString("vi-VN");
+  const formattedQty = baseQty.toLocaleString("vi-VN", QUANTITY_FORMAT);
   if (!consumableUnit || !volumePerUnit || volumePerUnit <= 0) {
     return `${formattedQty} ${storageUnit || ""}`.trim();
   }
@@ -26,9 +27,9 @@ export const formatStockDisplay = (
   const fractionalQty = Math.max(0, baseQty - storageQty);
   const consumableQty = Math.round(fractionalQty * volumePerUnit);
   if (consumableQty === 0) {
-    return `${storageQty.toLocaleString("vi-VN")} ${storageUnit || ""}`.trim();
+    return `${storageQty.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${storageUnit || ""}`.trim();
   }
-  return `${storageQty.toLocaleString("vi-VN")} ${storageUnit || ""} - ${consumableQty.toLocaleString("vi-VN")} ${consumableUnit}`.trim();
+  return `${storageQty.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${storageUnit || ""} - ${consumableQty.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${consumableUnit}`.trim();
 };
 
 export interface MaterialReceiptLineItem {
