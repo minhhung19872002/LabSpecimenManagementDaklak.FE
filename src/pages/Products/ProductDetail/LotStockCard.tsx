@@ -13,6 +13,7 @@ import {
   formatLotBaseQty,
   getLotVolumeQty,
   getLotVolumeUnit,
+  formatLotUsagePercent,
   LOT_STATUS_CONFIG,
   LOT_BAR_COLORS,
 } from "./utils";
@@ -146,9 +147,9 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   const closingBaseQty = openingBaseQty - lot.theoreticalConsumption;
   const closingVolume = openingVolume - theoreticalVol;
   const usedPct = openingVolume > 0
-    ? Math.min(100, Math.round((theoreticalVol / openingVolume) * 100))
+    ? Math.min(100, (theoreticalVol / openingVolume) * 100)
     : 0;
-  const remainPct = 100 - usedPct;
+  const usagePct = formatLotUsagePercent(usedPct);
 
   return (
     <div
@@ -211,7 +212,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
           />
         </div>
         <div className="lot-card__progress-text">
-          Đã dùng <strong>{usedPct}%</strong> &middot; còn {remainPct}%
+          Đã dùng <strong>{usagePct.used}%</strong> &middot; còn {usagePct.remain}%
         </div>
       </div>
 

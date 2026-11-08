@@ -69,6 +69,16 @@ export function getLotVolumeUnit(lot: ProductLotStockDto): string {
   return lot.volumeUnitName || lot.packagingUnitName || lot.baseUnitName || "";
 }
 
+// "Đã dùng 0,0000017% · còn 99,9999983%": tiêu hao rất nhỏ so với tồn (0,0008 g / 50.000 g)
+// mà làm tròn 2 số lẻ thì luôn ra 0% → lấy đủ số lẻ để thấy 2 chữ số có nghĩa.
+export function formatLotUsagePercent(usedPct: number): { used: string; remain: string } {
+  const digits = usedPct > 0 && usedPct < 0.01
+    ? Math.min(20, Math.ceil(-Math.log10(usedPct)) + 1)
+    : 2;
+  const fmt = (n: number) => n.toLocaleString("vi-VN", { maximumFractionDigits: digits });
+  return { used: fmt(usedPct), remain: fmt(100 - usedPct) };
+}
+
 export const LOT_STATUS_CONFIG: Record<LotStatus, { label: string; color: string; bg: string; border: string }> = {
   ok: { label: "Còn hạn", color: "#389E0D", bg: "#F6FFED", border: "#b7eb8f" },
   near: { label: "Sắp hết hạn", color: "#D46B08", bg: "#FFFBE6", border: "#ffe58f" },
