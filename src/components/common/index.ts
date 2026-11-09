@@ -4,6 +4,7 @@ export { default as QRCodeGenerator, BatchQRCodeGenerator, MiniQRCode } from './
 export { default as ExcelImport } from './ExcelImport';
 export { default as StatusTag } from './StatusTag';
 export { default as OfflineIndicator } from './OfflineIndicator';
+export { default as ClearCacheButton, clearCacheAndReload, confirmClearCache } from './ClearCacheButton';
 export { default as SyncStatusTag } from './SyncStatusTag';
 export { default as Icon } from './Icon';
 export * from './Icon';

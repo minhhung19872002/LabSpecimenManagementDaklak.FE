@@ -41,6 +41,7 @@ import settingsService, {
 import { ROLES, STORAGE_KEYS } from "../../constants";
 import { UserInfo, authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { confirmClearCache } from "../../components/common/ClearCacheButton";
 import "./SettingsPage.css";
 
 /**
@@ -588,27 +589,7 @@ const SettingsPage: React.FC = () => {
                 type="primary"
                 danger
                 icon={<ReloadOutlined />}
-                onClick={() => {
-                  Modal.confirm({
-                    title: "Xóa cache & tải lại",
-                    content: "Ứng dụng sẽ xóa toàn bộ bộ nhớ đệm và tải lại trang. Bạn có chắc chắn?",
-                    okText: "Xóa & tải lại",
-                    cancelText: "Hủy",
-                    centered: true,
-                    onOk() {
-                      const reload = () => window.location.reload();
-                      if ("caches" in window) {
-                        caches
-                          .keys()
-                          .then((names) => Promise.all(names.map((name) => caches.delete(name))))
-                          .then(reload)
-                          .catch(reload);
-                      } else {
-                        reload();
-                      }
-                    },
-                  });
-                }}
+                onClick={confirmClearCache}
               >
                 Xóa cache
               </Button>
