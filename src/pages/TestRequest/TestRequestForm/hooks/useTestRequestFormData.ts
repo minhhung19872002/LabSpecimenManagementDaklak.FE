@@ -943,6 +943,16 @@ export const useTestRequestFormData = () => {
         ? (await getWardsByProvince(data.provinceCode || "")).find(w => w.code === data.wardCode)?.name
         : undefined;
 
+      // Clone thông tin chung của hợp đồng gốc.
+      // KHÔNG clone: số HĐ, ngày HĐ/ngày YC (= hôm nay), ngày trả KQ dự kiến, trạng thái & cờ quy trình,
+      // số phiếu thu, yêu cầu thay đổi, báo giá gốc.
+      const selectedSampleTypes: string[] = [];
+      if (data.sampleTypeService) selectedSampleTypes.push("service");
+      if (data.sampleTypeContract) selectedSampleTypes.push("contract");
+      if (data.sampleTypeTask) selectedSampleTypes.push("task");
+      if (data.sampleTypeSubContract) selectedSampleTypes.push("subContract");
+      if (data.sampleTypeSurveillance) selectedSampleTypes.push("surveillance");
+
       form.setFieldsValue({
         customerName: data.customerName,
         province: provinceName || data.province || "",
@@ -952,33 +962,56 @@ export const useTestRequestFormData = () => {
         contactPerson: data.contactPerson || "",
         phone: data.phone || "",
         email: data.email || "",
+        sampleType: selectedSampleTypes,
+        subContract: data.subContract,
+        methodRequirement: data.methodCustomer ? "customerRequest" : "westHighlandInstitute",
+        methodCustomerDetail: data.methodCustomerDetail,
+        resultLanguage: data.resultLanguage,
+        resultCopyCount: data.resultCopyCount,
+        separatePassedResults: data.separatePassedResults,
+        conformityDeclaration: data.conformityDeclaration,
+        otherRequirements: data.otherRequirements,
+        samplingRequirement: data.samplingRequirement,
+        deliveryDirectPickup: data.deliveryDirectPickup,
+        deliveryPostal: data.deliveryPostal,
+        returnStoredSample: data.returnStoredSample,
+        sampleStorageOption: data.sampleStorage,
       });
 
-      // Generate samples from test request samples
-      const activeSamples = (data.samples || []).filter(s => !s.isCancelled);
+      // Clone mẫu + chỉ tiêu (bỏ mẫu đã hủy / mẫu không còn chỉ tiêu, bỏ chỉ tiêu KH hủy — giống màn sửa)
+      const activeSamples = (data.samples || [])
+        .filter((s) => !s.isCancelled)
+        .map((s) => ({
+          sample: s,
+          indicators: (s.indicators || []).filter(
+            (ind) => ind.indicatorId && ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+          ),
+        }))
+        .filter(({ indicators }) => indicators.length > 0);
       const generatedSamples: SampleFormData[] = [];
       const generatedDates: Record<string, IndicatorDateInfo> = {};
+      const generatedCustomPrices: Record<string, number> = {};
 
-      activeSamples.forEach((sample, sampleIndex) => {
+      activeSamples.forEach(({ sample, indicators: activeIndicators }, sampleIndex) => {
         const sampleKey = `tr-sample-${Date.now()}-${sampleIndex}`;
         const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
 
-        const activeIndicators = (sample.indicators || []).filter(
-          (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
-        );
-
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         activeIndicators.forEach((ind) => {
-          if (ind.indicatorId && ind.testMethodId) {
-            const methodKey = createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId);
-            indicatorMethodsList.push(methodKey);
+          const methodId = ind.testMethodId || PENDING_TEST_METHOD_ID;
+          const methodKey = createIndicatorMethodKey(ind.indicatorId, methodId, ind.specimenTypeId);
+          indicatorMethodsList.push(methodKey);
 
-            if (!generatedDates[methodKey]) {
-              generatedDates[methodKey] = {
-                transferDate: dayjs(),
-                requestDate: undefined,
-              };
-            }
+          // Giữ đơn giá đã chỉnh trong hợp đồng gốc thay vì giá danh mục
+          if (ind.unitPrice !== undefined && ind.unitPrice !== null) {
+            generatedCustomPrices[`${sampleKey}_${methodKey}`] = ind.unitPrice;
+          }
+
+          if (!generatedDates[methodKey]) {
+            generatedDates[methodKey] = {
+              transferDate: dayjs(),
+              requestDate: undefined,
+            };
           }
         });
 
@@ -992,17 +1025,19 @@ export const useTestRequestFormData = () => {
           status: SampleStatus.Normal,
           statusText: "",
           processingStatus: "",
-          notes: "",
-          storageLocation: "",
+          notes: sample.notes || "",
+          storageLocation: sample.storageLocation || "",
           specimenTypeId: sample.specimenTypeId,
           specimenTypeName: sample.specimenTypeName || "",
           indicatorIds: indicatorMethodsList.map((k) => parseIndicatorMethodKey(k).indicatorId),
           indicatorMethods: indicatorMethodsList,
           attachments: [],
+          isSharedSample: sample.isSharedSample || false,
         });
       });
 
       setSamples(generatedSamples);
+      setCustomPrices(generatedCustomPrices);
       setSelectedIndicatorDates(generatedDates);
 
       message.success(`Đã tải dữ liệu từ hợp đồng ${data.contractNumber || data.requestNumber}`);
