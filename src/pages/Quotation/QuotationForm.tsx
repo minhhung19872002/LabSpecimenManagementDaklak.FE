@@ -49,6 +49,7 @@ import QuotationIndicatorSelectionModal, {
 } from "./components/QuotationIndicatorSelectionModal";
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import ImportQuotationSamplesModal from "./components/ImportQuotationSamplesModal";
+import { getPdfIndicatorNames } from "./utils";
 import { IndicatorName } from "../../components/common";
 import {
   isHeavyMetalComboMet,
@@ -1087,7 +1088,7 @@ const QuotationForm: React.FC = () => {
             sampleName: sample.sampleName,
             quantity: sample.quantity || 1,
             indicators: sorted.map((ind) => ({
-              indicatorName: ind.indicatorName,
+              ...getPdfIndicatorNames(ind),
               quantity: 1,
               unitPrice: ind.unitPrice,
               note: ind.note || undefined,
