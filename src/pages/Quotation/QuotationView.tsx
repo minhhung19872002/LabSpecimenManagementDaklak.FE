@@ -40,6 +40,7 @@ import { IndicatorName } from "../../components/common";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
+import { getPdfIndicatorNames } from "./utils";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   isHeavyMetalComboMet,
@@ -136,7 +137,7 @@ const QuotationView: React.FC = () => {
           sampleName: sample.sampleName,
           quantity: sample.quantity || 1,
           indicators: sorted.map((ind, idx) => ({
-            indicatorName: ind.indicatorName,
+            ...getPdfIndicatorNames(ind),
             quantity: 1,
             unitPrice: ind.unitPrice,
             note: ind.note || undefined,
