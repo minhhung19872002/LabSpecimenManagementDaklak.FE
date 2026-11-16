@@ -40,7 +40,11 @@ import { IndicatorName } from "../../components/common";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
-import { getPdfIndicatorNames } from "./utils";
+import {
+  getPdfIndicatorNames,
+  buildQuotationPdfFileName,
+  downloadPdfFromObjectUrl,
+} from "./utils";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   isHeavyMetalComboMet,
@@ -157,13 +161,7 @@ const QuotationView: React.FC = () => {
         samples: getEmailSamples(),
         totalPrice: quotation.totalCost,
       });
-      const a = document.createElement("a");
-      a.href = pdfUrl;
-      a.download = "BaoGia.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(pdfUrl);
+      downloadPdfFromObjectUrl(pdfUrl, buildQuotationPdfFileName(quotation.quotationNumber));
     } catch (error: any) {
       console.error("Failed to download PDF:", error);
       message.error(getApiErrorMessage(error, "Tải PDF thất bại. Vui lòng thử lại."));
