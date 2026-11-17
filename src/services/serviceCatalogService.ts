@@ -136,8 +136,9 @@ export interface ImportServicePricesResultDto {
 }
 
 /** BE ApiResponseWrapperFilter làm phẳng ListResultDto thành mảng trần — chấp nhận cả 2 dạng */
-const toList = <T,>(data: T[] | { items?: T[] } | null | undefined): T[] =>
-  Array.isArray(data) ? data : data?.items ?? [];
+function toList<T>(data: T[] | { items?: T[] } | null | undefined): T[] {
+  return Array.isArray(data) ? data : data?.items ?? [];
+}
 
 const SERVICE_URL = "/api/v1/service-catalog";
 
