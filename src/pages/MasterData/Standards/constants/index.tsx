@@ -10,6 +10,7 @@ import type { ColumnsType } from "antd/es/table";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
+import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
 
 export const DEFAULT_PAGE_SIZE = 50;
 
@@ -73,7 +74,7 @@ export const getStandardColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 120,
+    width: 160,
     render: (_, record) => {
       const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
       const canDelete = authService.hasPermission(
@@ -82,6 +83,11 @@ export const getStandardColumns = (
 
       return (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="standards"
+            entityId={record.id}
+            title={record.name}
+          />
           {canEdit && (
             <Tooltip
               title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}

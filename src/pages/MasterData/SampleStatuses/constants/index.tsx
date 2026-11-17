@@ -9,6 +9,7 @@ import type { ColumnsType } from "antd/es/table";
 import { SampleConditionDto } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
+import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
 
 export const getConditionColumns = (
   handleEdit: (record: SampleConditionDto) => void,
@@ -47,14 +48,18 @@ export const getConditionColumns = (
     },
   ];
 
-  // Only add actions column if user has at least one permission
-  if (canEdit || canDelete) {
-    columns.push({
+  // Cột thao tác luôn hiển thị (Lịch sử) + Sửa/Xóa theo quyền
+  columns.push({
       title: "Thao tác",
       key: "actions",
-      width: 150,
+      width: 180,
       render: (_, record) => (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="sampleConditions"
+            entityId={record.id}
+            title={record.name}
+          />
           {canEdit && (
             <>
               <Tooltip title="Sửa">
@@ -96,7 +101,6 @@ export const getConditionColumns = (
         </Space>
       ),
     });
-  }
 
   return columns;
 };

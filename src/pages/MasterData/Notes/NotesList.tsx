@@ -22,6 +22,7 @@ import { API_BASE_URL } from "../../../services/api";
 import { NoteDto, CreateNoteDto, UpdateNoteDto } from "../../../types/note";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
+import MasterDataHistoryButton from "../../../components/common/MasterDataHistory/MasterDataHistoryButton";
 import { NotesTabProps, NotesActions, NoteImportPreviewDto } from "./types";
 import ImportNoteModal from "./components/ImportNoteModal";
 import RichTextEditor from "../../../components/common/RichTextEditor";
@@ -336,9 +337,14 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
     {
       title: "Thao tác",
       key: "actions",
-      width: 120,
+      width: 150,
       render: (_, record) => (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="notes"
+            entityId={record.id}
+            title={record.code}
+          />
           {canEdit && (
             <Button
               type="link"

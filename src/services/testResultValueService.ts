@@ -101,8 +101,11 @@ export const testResultValueService = {
   /**
    * Lấy danh sách kết quả kèm theo danh sách chỉ tiêu
    */
-  async getWithIndicators(): Promise<TestResultValueDto[]> {
-    const response = await api.get(`${BASE_URL}/with-indicators`);
+  async getWithIndicators(excludeDeletedIndicators?: boolean): Promise<TestResultValueDto[]> {
+    // excludeDeletedIndicators: true ở màn danh mục (ẩn chỉ tiêu đã xóa); màn nhập KQ để mặc định
+    const response = await api.get(`${BASE_URL}/with-indicators`, {
+      params: excludeDeletedIndicators ? { excludeDeletedIndicators } : undefined,
+    });
     return response.data.items || response.data;
   },
 

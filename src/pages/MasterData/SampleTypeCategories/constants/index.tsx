@@ -9,6 +9,7 @@ import type { ColumnsType } from "antd/es/table";
 import { GroupedCategoryData, SpecimenTypeWithKey } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
+import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
 
 export const getCategoryColumns = (
   handleEdit: (record: GroupedCategoryData) => void,
@@ -47,7 +48,7 @@ export const getCategoryColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 150,
+    width: 180,
     render: (_, record) => {
       if (record.id === "uncategorized") {
         return <span style={{ color: "#999" }}>-</span>;
@@ -58,6 +59,11 @@ export const getCategoryColumns = (
 
       return (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="sampleTypeCategories"
+            entityId={record.id}
+            title={record.name}
+          />
           {canEdit && (
             <>
               <Tooltip title="Sửa">

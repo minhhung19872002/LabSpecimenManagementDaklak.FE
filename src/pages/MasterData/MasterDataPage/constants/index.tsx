@@ -8,6 +8,8 @@ import { ImportType } from "../../../../components/common/ImportExcelModal";
 import { MasterDataItem, UserLookupDto } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
+import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
+import { isMasterDataHistoryEntityType } from "../../../../types/masterDataHistory";
 
 export const categoryPermissionMap: Record<string, string> = {
   departments: PERMISSIONS.Departments.Default,
@@ -185,14 +187,25 @@ export const getColumns = (
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
-  // Only show actions column if user has at least one permission
-  if (canEdit || canDelete) {
+  const historyEntityType = isMasterDataHistoryEntityType(activeCategory)
+    ? activeCategory
+    : null;
+
+  // Cột thao tác: Lịch sử (ai xem được danh mục đều xem được) + Sửa/Xóa theo quyền
+  if (canEdit || canDelete || historyEntityType) {
     baseColumns.push({
       title: "Thao tác",
       key: "actions",
-      width: 100,
+      width: 130,
       render: (_, record) => (
         <Space size="small">
+          {historyEntityType && (
+            <MasterDataHistoryButton
+              entityType={historyEntityType}
+              entityId={record.id}
+              title={record.name}
+            />
+          )}
           {canEdit && (
             <Button
               type="link"

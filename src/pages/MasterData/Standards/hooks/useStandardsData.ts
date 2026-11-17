@@ -39,7 +39,7 @@ export const useStandardsData = () => {
     setLoading(true);
     try {
       const [standardsData, groupsData, indicatorsData, methodsData, specimenTypesActiveData, specimenTypesWithIndsData] = await Promise.all([
-        standardService.getWithIndicators(),
+        standardService.getWithIndicators(true),
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         testMethodService.getWithIndicators(),

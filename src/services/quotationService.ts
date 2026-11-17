@@ -12,7 +12,7 @@ const BASE_URL = "/api/v1/quotations";
 // PDF generation DTOs
 export interface QuotationPdfIndicatorDto {
   indicatorName: string;
-  /** Tên có định dạng (HTML) từ master data — BE render in nghiêng/chỉ số dưới/trên */
+  /** Tên có định dạng (HTML) snapshot lúc lập báo giá — BE render in nghiêng/chỉ số dưới/trên */
   indicatorFormattedName?: string;
   quantity: number;
   unitPrice: number;
