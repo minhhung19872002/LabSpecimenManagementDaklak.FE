@@ -9,6 +9,13 @@ import {
 /** Cột "Mọi nền mẫu" (dịch vụ không gắn nền mẫu) */
 export const ALL_SPECIMEN_KEY = "__all__";
 
+/** Chip lọc nhóm nền mẫu "Tất cả" */
+export const ALL_CATEGORY = "__all__";
+
+const NO_GROUP_KEY = "__none__";
+const NO_GROUP_NAME = "Chưa phân nhóm";
+const NO_CATEGORY_NAME = "Khác";
+
 export const specimenKeyOf = (specimenTypeId?: string | null): string => specimenTypeId || ALL_SPECIMEN_KEY;
 
 export const formatPrice = (value?: number | null): string =>
@@ -18,79 +25,122 @@ export const formatShortDate = (value?: string | null): string => (value ? dayjs
 
 export const toApiDate = (value: dayjs.Dayjs): string => value.format("YYYY-MM-DD");
 
+export type ServiceCatalogTab = "grid" | "list";
+
+export interface ServiceRule {
+  code: string;
+  text: string;
+}
+
+/** Quy tắc áp dụng (theo BA TIHE_1611) */
+export const SERVICE_RULES: ServiceRule[] = [
+  { code: "Unique", text: "[Chỉ tiêu + Nền mẫu + Phương pháp + Ngày hiệu lực] — không có 2 mức giá trong cùng 1 ngày." },
+  { code: "5.1", text: "Tạo hàng loạt: 1 Phương pháp → chọn nhiều Chỉ tiêu × Nền mẫu → 1 Giá/TAT chung → hệ thống nhân ma trận." },
+  { code: "5.2", text: "Ma trận giá: dòng = Chỉ tiêu + Phương pháp, cột = Nền mẫu, ô = Giá; nhấp đúp sửa, Enter tự lưu." },
+  { code: "5.3", text: "Cập nhật giá hàng loạt theo % hoặc số tiền, bắt buộc Ngày hiệu lực mới → sinh version giá." },
+  { code: "5.4", text: "Xuất bảng giá ra .xlsx, nhập ngược lại; hệ thống kiểm tra Mã dịch vụ rồi cập nhật." },
+  { code: "BR-06", text: "Không xóa cứng khi đã phát sinh giao dịch — ngừng sử dụng thay vì xóa. Phiếu / báo giá cũ giữ giá đã lưu." },
+];
+
 export interface SpecimenColumn {
   key: string;
   specimenTypeId: string | null;
   name: string;
+  /** Nhóm nền mẫu (loại mẫu) — dùng cho chip "Cột nền mẫu" */
+  categoryName: string;
 }
 
-/** 1 dòng ma trận = Phương pháp + Chỉ tiêu; ô = dịch vụ theo nền mẫu */
+/**
+ * Ma trận giá (theo mock): nhóm chỉ tiêu ▸ dòng Chỉ tiêu + Phương pháp; ô = dịch vụ theo nền mẫu.
+ */
 export interface ServiceMatrixRow {
   key: string;
-  kind: "method" | "indicator";
-  testMethodId: string;
-  testMethodCode: string;
-  testMethodName: string;
+  kind: "group" | "row";
+  groupName: string;
+  /** Số dòng chỉ tiêu trong nhóm (dòng nhóm) */
+  rowCount?: number;
+  testMethodId?: string;
+  testMethodCode?: string;
+  testMethodName?: string;
+  testMethodFormattedName?: string | null;
   indicatorId?: string;
+  indicatorCode?: string;
   indicatorName?: string;
   indicatorFormattedName?: string | null;
-  indicatorGroupName?: string | null;
   isSubIndicator?: boolean;
   cells: Record<string, ServiceCatalogItemDto>;
-  /** Toàn bộ dịch vụ của dòng (dòng phương pháp = mọi dịch vụ con) */
+  /** Toàn bộ dịch vụ của dòng (dòng nhóm = mọi dịch vụ con) */
   serviceIds: string[];
   children?: ServiceMatrixRow[];
 }
 
-/** Gom dịch vụ thành cây Phương pháp ▸ Chỉ tiêu, giữ thứ tự BE trả về */
+export const isMatrixRowKey = (key: string | number | bigint): boolean => String(key).startsWith("r:");
+
+const compareVi = (a?: string | null, b?: string | null) => (a ?? "").localeCompare(b ?? "", "vi");
+
+/** Gom dịch vụ thành cây Nhóm chỉ tiêu ▸ (Chỉ tiêu + Phương pháp) */
 export const buildServiceMatrix = (services: ServiceCatalogItemDto[]): ServiceMatrixRow[] => {
-  const methods = new Map<string, ServiceMatrixRow>();
-  const indicatorRows = new Map<string, ServiceMatrixRow>();
+  const groups = new Map<string, ServiceMatrixRow>();
+  const rows = new Map<string, ServiceMatrixRow>();
 
   for (const s of services) {
-    let method = methods.get(s.testMethodId);
-    if (!method) {
-      method = {
-        key: `m:${s.testMethodId}`,
-        kind: "method",
-        testMethodId: s.testMethodId,
-        testMethodCode: s.testMethodCode,
-        testMethodName: s.testMethodName,
+    const groupKey = s.indicatorGroupId || NO_GROUP_KEY;
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = {
+        key: `g:${groupKey}`,
+        kind: "group",
+        groupName: s.indicatorGroupName || NO_GROUP_NAME,
         cells: {},
         serviceIds: [],
         children: [],
       };
-      methods.set(s.testMethodId, method);
+      groups.set(groupKey, group);
     }
-    const rowKey = `i:${s.testMethodId}:${s.indicatorId}`;
-    let row = indicatorRows.get(rowKey);
+    const rowKey = `r:${s.indicatorId}:${s.testMethodId}`;
+    let row = rows.get(rowKey);
     if (!row) {
       row = {
         key: rowKey,
-        kind: "indicator",
+        kind: "row",
+        groupName: group.groupName,
         testMethodId: s.testMethodId,
         testMethodCode: s.testMethodCode,
         testMethodName: s.testMethodName,
+        testMethodFormattedName: s.testMethodFormattedName,
         indicatorId: s.indicatorId,
+        indicatorCode: s.indicatorCode,
         indicatorName: s.indicatorName,
         indicatorFormattedName: s.indicatorFormattedName,
-        indicatorGroupName: s.indicatorGroupName,
         isSubIndicator: !!s.parentIndicatorId,
         cells: {},
         serviceIds: [],
       };
-      indicatorRows.set(rowKey, row);
-      method.children!.push(row);
+      rows.set(rowKey, row);
+      group.children!.push(row);
     }
     row.cells[specimenKeyOf(s.specimenTypeId)] = s;
     row.serviceIds.push(s.id);
-    method.serviceIds.push(s.id);
+    group.serviceIds.push(s.id);
   }
-  return [...methods.values()];
+
+  const result = [...groups.values()];
+  for (const g of result) {
+    g.children!.sort(
+      (a, b) => compareVi(a.indicatorName, b.indicatorName) || compareVi(a.testMethodName, b.testMethodName)
+    );
+    g.rowCount = g.children!.length;
+  }
+  return result.sort((a, b) =>
+    a.key === `g:${NO_GROUP_KEY}` ? 1 : b.key === `g:${NO_GROUP_KEY}` ? -1 : compareVi(a.groupName, b.groupName)
+  );
 };
 
 /** Các cột nền mẫu đang có dịch vụ ("Mọi nền mẫu" đứng đầu) */
-export const collectSpecimenColumns = (services: ServiceCatalogItemDto[]): SpecimenColumn[] => {
+export const collectSpecimenColumns = (
+  services: ServiceCatalogItemDto[],
+  categoryBySpecimenId: Map<string, string>
+): SpecimenColumn[] => {
   const columns = new Map<string, SpecimenColumn>();
   for (const s of services) {
     const key = specimenKeyOf(s.specimenTypeId);
@@ -99,13 +149,30 @@ export const collectSpecimenColumns = (services: ServiceCatalogItemDto[]): Speci
         key,
         specimenTypeId: s.specimenTypeId ?? null,
         name: s.specimenTypeName || "Mọi nền mẫu",
+        categoryName: s.specimenTypeId ? categoryBySpecimenId.get(s.specimenTypeId) || NO_CATEGORY_NAME : "",
       });
     }
   }
   return [...columns.values()].sort((a, b) =>
-    a.key === ALL_SPECIMEN_KEY ? -1 : b.key === ALL_SPECIMEN_KEY ? 1 : a.name.localeCompare(b.name, "vi")
+    a.key === ALL_SPECIMEN_KEY
+      ? -1
+      : b.key === ALL_SPECIMEN_KEY
+        ? 1
+        : compareVi(a.categoryName, b.categoryName) || compareVi(a.name, b.name)
   );
 };
+
+/** Nhóm nền mẫu có trong các cột (cho chip lọc) */
+export const collectSpecimenCategories = (columns: SpecimenColumn[]): string[] =>
+  [...new Set(columns.map((c) => c.categoryName).filter(Boolean))];
+
+/** Cột hiển thị theo chip nhóm nền mẫu ("Mọi nền mẫu" luôn hiện) */
+export const filterSpecimenColumns = (columns: SpecimenColumn[], category: string): SpecimenColumn[] =>
+  category === ALL_CATEGORY ? columns : columns.filter((c) => c.key === ALL_SPECIMEN_KEY || c.categoryName === category);
+
+/** Có giá mới sắp áp dụng sau ngày đang xem */
+export const hasUpcomingAfter = (s: ServiceCatalogItemDto, viewDate: string): boolean =>
+  s.upcomingPrice != null && !!s.upcomingEffectiveDate && dayjs(s.upcomingEffectiveDate).format("YYYY-MM-DD") > viewDate;
 
 export const serviceDisplayName = (s: ServiceCatalogItemDto): string =>
   `${s.indicatorName} · ${s.specimenTypeName || "Mọi nền mẫu"} · ${s.testMethodName}`;

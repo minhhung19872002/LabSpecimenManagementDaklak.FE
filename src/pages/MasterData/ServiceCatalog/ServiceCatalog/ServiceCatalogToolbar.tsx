@@ -1,39 +1,34 @@
 import React, { useState } from "react";
-import { Button, Checkbox, Col, DatePicker, Input, Popconfirm, Row, Select, Space, Tag, Typography } from "antd";
+import { Button, Checkbox, DatePicker, Input, Popconfirm, Radio, Select, Space, Typography } from "antd";
 import type { Dayjs } from "dayjs";
-import {
-  CloseOutlined,
-  DeleteOutlined,
-  DownloadOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  UploadOutlined,
-} from "../../../../components/common/Icon";
-import type { SpecimenColumn } from "./utils";
+import { DeleteOutlined, ReloadOutlined, SearchOutlined } from "../../../../components/common/Icon";
+import { ALL_CATEGORY } from "./utils";
 
 export interface ServiceCatalogToolbarProps {
+  /** grid = Ma trận giá, list = Danh sách & lịch sử version */
+  mode: "grid" | "list";
   keyword: string;
   testMethodId?: string;
   methodOptions: { value: string; label: string }[];
   priceDate: Dayjs;
   showInactive: boolean;
-  specimenColumns: SpecimenColumn[];
-  hiddenSpecimenKeys: string[];
-  selectedCount: number;
+  /** Nhóm nền mẫu cho chip "Cột nền mẫu" */
+  specimenCategories: string[];
+  specimenCategory: string;
+  /** VD: "12 nhóm · 85 dòng chỉ tiêu" / "320 dịch vụ" */
+  countText: string;
+  allExpanded: boolean;
+  selectedRowCount: number;
+  selectedServiceCount: number;
   loading: boolean;
-  canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
-  canImport: boolean;
   onKeywordChange: (value: string) => void;
   onTestMethodChange: (value?: string) => void;
   onPriceDateChange: (value: Dayjs) => void;
   onShowInactiveChange: (value: boolean) => void;
-  onToggleSpecimenColumn: (key: string) => void;
-  onBulkCreate: () => void;
-  onExport: () => void;
-  onImport: () => void;
+  onSpecimenCategoryChange: (value: string) => void;
+  onToggleExpandAll: () => void;
   onBulkPrice: () => void;
   onClearSelection: () => void;
   onDeleteSelected: () => Promise<void>;
@@ -47,7 +42,7 @@ const DeleteSelectedButton = React.memo<{ count: number; onDelete: () => Promise
     return (
       <Popconfirm
         title={`Xóa ${count} dịch vụ đã chọn?`}
-        description="Phiếu cũ vẫn giữ tên / giá đã lưu."
+        description="Phiếu / báo giá cũ vẫn giữ tên và giá đã lưu."
         okText="Xóa"
         cancelText="Hủy"
         okButtonProps={{ danger: true }}
@@ -60,7 +55,7 @@ const DeleteSelectedButton = React.memo<{ count: number; onDelete: () => Promise
           }
         }}
       >
-        <Button danger size="small" icon={<DeleteOutlined />} loading={loading}>
+        <Button danger icon={<DeleteOutlined />} loading={loading}>
           Xóa
         </Button>
       </Popconfirm>
@@ -68,134 +63,129 @@ const DeleteSelectedButton = React.memo<{ count: number; onDelete: () => Promise
   }
 );
 
+/** Thanh lọc của Ma trận giá / Danh sách dịch vụ */
 const ServiceCatalogToolbar: React.FC<ServiceCatalogToolbarProps> = ({
+  mode,
   keyword,
   testMethodId,
   methodOptions,
   priceDate,
   showInactive,
-  specimenColumns,
-  hiddenSpecimenKeys,
-  selectedCount,
+  specimenCategories,
+  specimenCategory,
+  countText,
+  allExpanded,
+  selectedRowCount,
+  selectedServiceCount,
   loading,
-  canCreate,
   canEdit,
   canDelete,
-  canImport,
   onKeywordChange,
   onTestMethodChange,
   onPriceDateChange,
   onShowInactiveChange,
-  onToggleSpecimenColumn,
-  onBulkCreate,
-  onExport,
-  onImport,
+  onSpecimenCategoryChange,
+  onToggleExpandAll,
   onBulkPrice,
   onClearSelection,
   onDeleteSelected,
   onReload,
-}) => (
-  <div style={{ marginBottom: 12 }}>
-    <Row gutter={[12, 12]} align="middle">
-      <Col xs={24} md={7}>
-        <Input
-          allowClear
-          prefix={<SearchOutlined />}
-          placeholder="Tìm mã DV, chỉ tiêu, nền mẫu, phương pháp..."
-          value={keyword}
-          onChange={(e) => onKeywordChange(e.target.value)}
-        />
-      </Col>
-      <Col xs={24} md={6}>
-        <Select
-          allowClear
-          showSearch
-          optionFilterProp="label"
-          placeholder="Tất cả phương pháp"
-          value={testMethodId}
-          onChange={(v) => onTestMethodChange(v ?? undefined)}
-          options={methodOptions}
-          style={{ width: "100%" }}
-        />
-      </Col>
-      <Col>
-        <Space>
-          <span>Giá tại ngày</span>
-          <DatePicker
-            value={priceDate}
-            format="DD/MM/YYYY"
-            allowClear={false}
-            onChange={(v) => v && onPriceDateChange(v)}
+}) => {
+  const isGrid = mode === "grid";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
+        <Space wrap size={10}>
+          <Input
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder={isGrid ? "Tìm theo tên chỉ tiêu..." : "Tìm theo mã DV, chỉ tiêu, nền mẫu..."}
+            value={keyword}
+            onChange={(e) => onKeywordChange(e.target.value)}
+            style={{ width: 260 }}
           />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Tất cả phương pháp"
+            value={testMethodId}
+            onChange={onTestMethodChange}
+            options={methodOptions}
+            style={{ width: 260 }}
+          />
+          <Space size={6}>
+            <Typography.Text type="secondary">Giá tại ngày</Typography.Text>
+            <DatePicker
+              value={priceDate}
+              format="DD/MM/YYYY"
+              allowClear={false}
+              onChange={(v) => v && onPriceDateChange(v)}
+            />
+          </Space>
+          <Checkbox checked={showInactive} onChange={(e) => onShowInactiveChange(e.target.checked)}>
+            Hiện dịch vụ ngừng
+          </Checkbox>
         </Space>
-      </Col>
-      <Col>
-        <Checkbox checked={showInactive} onChange={(e) => onShowInactiveChange(e.target.checked)}>
-          Hiện dịch vụ ngừng
-        </Checkbox>
-      </Col>
-      <Col flex="auto" style={{ textAlign: "right" }}>
-        <Space wrap>
-          {canCreate && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={onBulkCreate}>
-              Tạo dịch vụ hàng loạt
-            </Button>
-          )}
-          <Button icon={<DownloadOutlined />} onClick={onExport}>
-            Xuất Excel
-          </Button>
-          {canImport && (
-            <Button icon={<UploadOutlined />} onClick={onImport}>
-              Nhập danh sách
-            </Button>
+        <Space size={10}>
+          {isGrid && (
+            <>
+              <Typography.Text type="secondary">
+                {selectedRowCount > 0
+                  ? `Đã chọn ${selectedRowCount} dòng · ${selectedServiceCount} dịch vụ`
+                  : "Chưa chọn dòng nào"}
+              </Typography.Text>
+              {selectedRowCount > 0 && (
+                <Button type="text" size="small" onClick={onClearSelection}>
+                  Bỏ chọn
+                </Button>
+              )}
+              {canDelete && selectedServiceCount > 0 && (
+                <DeleteSelectedButton count={selectedServiceCount} onDelete={onDeleteSelected} />
+              )}
+              {canEdit && (
+                <Button type="primary" disabled={selectedServiceCount === 0} onClick={onBulkPrice}>
+                  Cập nhật giá hàng loạt
+                </Button>
+              )}
+            </>
           )}
           <Button icon={<ReloadOutlined />} loading={loading} onClick={onReload} />
         </Space>
-      </Col>
-    </Row>
-
-    {specimenColumns.length > 0 && (
-      <div style={{ marginTop: 10 }}>
-        <Typography.Text type="secondary" style={{ marginRight: 8 }}>
-          Cột nền mẫu:
-        </Typography.Text>
-        {specimenColumns.map((c) => (
-          <Tag.CheckableTag
-            key={c.key}
-            checked={!hiddenSpecimenKeys.includes(c.key)}
-            onChange={() => onToggleSpecimenColumn(c.key)}
-          >
-            {c.name}
-          </Tag.CheckableTag>
-        ))}
       </div>
-    )}
 
-    {selectedCount > 0 && (
-      <div
-        style={{
-          marginTop: 10,
-          padding: "6px 12px",
-          background: "#e6f4ff",
-          border: "1px solid #91caff",
-          borderRadius: 6,
-        }}
-      >
-        <Space wrap>
-          <b>Đã chọn {selectedCount} dịch vụ</b>
-          {canEdit && (
-            <Button type="primary" size="small" onClick={onBulkPrice}>
-              Cập nhật giá hàng loạt
-            </Button>
-          )}
-          {canDelete && <DeleteSelectedButton count={selectedCount} onDelete={onDeleteSelected} />}
-          <Button size="small" icon={<CloseOutlined />} onClick={onClearSelection}>
-            Bỏ chọn
-          </Button>
-        </Space>
-      </div>
-    )}
-  </div>
-);
+      {isGrid && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
+          <Space wrap size={8}>
+            {specimenCategories.length > 0 && (
+              <>
+                <Typography.Text type="secondary">Cột nền mẫu:</Typography.Text>
+                <Radio.Group
+                  optionType="button"
+                  buttonStyle="solid"
+                  value={specimenCategory}
+                  onChange={(e) => onSpecimenCategoryChange(e.target.value)}
+                  options={[
+                    { value: ALL_CATEGORY, label: "Tất cả" },
+                    ...specimenCategories.map((c) => ({ value: c, label: c })),
+                  ]}
+                />
+              </>
+            )}
+          </Space>
+          <Space size={10}>
+            <Button onClick={onToggleExpandAll}>{allExpanded ? "Thu gọn" : "Mở tất cả"}</Button>
+            <Typography.Text type="secondary">{countText}</Typography.Text>
+          </Space>
+        </div>
+      )}
+      {!isGrid && (
+        <div style={{ textAlign: "right" }}>
+          <Typography.Text type="secondary">{countText}</Typography.Text>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default ServiceCatalogToolbar;

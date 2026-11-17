@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { Modal, message } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import {
@@ -18,16 +18,28 @@ import { getApiErrorMessage } from "../../../utils/errorHandler";
 import ServiceCatalogView from "./ServiceCatalog/ServiceCatalogView";
 import type { ServiceCellAction, ServiceEditingCell } from "./ServiceCatalog/ServiceMatrixTable";
 import {
+  ALL_CATEGORY,
   buildServiceMatrix,
+  collectSpecimenCategories,
   collectSpecimenColumns,
   exportServicesToExcel,
+  filterSpecimenColumns,
+  isMatrixRowKey,
+  type ServiceCatalogTab,
   type ServiceMatrixRow,
   type SpecimenColumn,
 } from "./ServiceCatalog/utils";
-import BulkCreateDrawer, { type BulkCreatePrefill } from "./BulkCreateDrawer";
+import BulkCreateModal, { type BulkCreatePrefill } from "./BulkCreateModal";
 import BulkPriceModal from "./BulkPriceModal";
 import ImportPricesModal from "./ImportPricesModal";
 import PriceHistoryModal from "./PriceHistoryModal";
+
+/** Các nút trên header "Ngân hàng dữ liệu" gọi vào */
+export interface ServiceCatalogActions {
+  openBuilder: () => void;
+  exportExcel: () => void;
+  openImport: () => void;
+}
 
 const flattenIndicators = (items: IndicatorDto[]): IndicatorDto[] => {
   const map = new Map<string, IndicatorDto>();
@@ -38,8 +50,10 @@ const flattenIndicators = (items: IndicatorDto[]): IndicatorDto[] => {
   return [...map.values()];
 };
 
+const rowKeyOf = (s: ServiceCatalogItemDto) => `r:${s.indicatorId}:${s.testMethodId}`;
+
 /** Container L2 — Dịch vụ & Bảng giá */
-const ServiceCatalogPage: React.FC = () => {
+const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCatalogPage(_props, ref) {
   const [services, setServices] = useState<ServiceCatalogItemDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [testMethods, setTestMethods] = useState<TestMethodDto[]>([]);
@@ -47,12 +61,15 @@ const ServiceCatalogPage: React.FC = () => {
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
 
+  const [activeTab, setActiveTab] = useState<ServiceCatalogTab>("grid");
+  const [showRules, setShowRules] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [testMethodId, setTestMethodId] = useState<string | undefined>();
   const [priceDate, setPriceDate] = useState<Dayjs>(dayjs());
   const [showInactive, setShowInactive] = useState(false);
-  const [hiddenSpecimenKeys, setHiddenSpecimenKeys] = useState<string[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [specimenCategory, setSpecimenCategory] = useState(ALL_CATEGORY);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [editing, setEditing] = useState<ServiceEditingCell | null>(null);
 
   const [bulkCreate, setBulkCreate] = useState<{ open: boolean; prefill: BulkCreatePrefill | null }>({
@@ -66,7 +83,6 @@ const ServiceCatalogPage: React.FC = () => {
   const canCreate = authService.hasPermission(PERMISSIONS.MasterData.Create);
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
-  const canImport = authService.hasPermission(PERMISSIONS.MasterData.Import);
 
   const loadServices = useCallback(async (date: Dayjs) => {
     setLoading(true);
@@ -113,10 +129,26 @@ const ServiceCatalogPage: React.FC = () => {
   }, [services, keyword, testMethodId, showInactive]);
 
   const matrixRows = useMemo(() => buildServiceMatrix(filteredServices), [filteredServices]);
-  const allSpecimenColumns = useMemo(() => collectSpecimenColumns(filteredServices), [filteredServices]);
+  const groupKeys = useMemo(() => matrixRows.map((r) => r.key), [matrixRows]);
+  const allExpanded = groupKeys.length > 0 && groupKeys.every((k) => expandedRowKeys.includes(k));
+
+  // Mặc định mở hết các nhóm mỗi khi tập nhóm thay đổi (lọc / tải lại)
+  useEffect(() => {
+    setExpandedRowKeys(groupKeys);
+  }, [groupKeys]);
+
+  const categoryBySpecimenId = useMemo(
+    () => new Map(specimenTypes.map((s) => [s.id, s.sampleTypeCategoryName ?? ""])),
+    [specimenTypes]
+  );
+  const allSpecimenColumns = useMemo(
+    () => collectSpecimenColumns(filteredServices, categoryBySpecimenId),
+    [filteredServices, categoryBySpecimenId]
+  );
+  const specimenCategories = useMemo(() => collectSpecimenCategories(allSpecimenColumns), [allSpecimenColumns]);
   const visibleSpecimenColumns = useMemo(
-    () => allSpecimenColumns.filter((c) => !hiddenSpecimenKeys.includes(c.key)),
-    [allSpecimenColumns, hiddenSpecimenKeys]
+    () => filterSpecimenColumns(allSpecimenColumns, specimenCategory),
+    [allSpecimenColumns, specimenCategory]
   );
 
   const methodOptions = useMemo(() => {
@@ -127,29 +159,40 @@ const ServiceCatalogPage: React.FC = () => {
     return [...seen.entries()].map(([value, label]) => ({ value, label }));
   }, [services]);
 
+  const selectedRowSet = useMemo(() => new Set(selectedRowKeys.filter(isMatrixRowKey)), [selectedRowKeys]);
   const selectedServices = useMemo(
-    () => services.filter((s) => selectedIds.has(s.id)),
-    [services, selectedIds]
+    () => filteredServices.filter((s) => selectedRowSet.has(rowKeyOf(s))),
+    [filteredServices, selectedRowSet]
   );
+  const rowCount = matrixRows.reduce((sum, g) => sum + (g.rowCount ?? 0), 0);
 
   const replaceService = useCallback((updated: ServiceCatalogItemDto) => {
     setServices((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   }, []);
 
-  const toggleSelect = useCallback((ids: string[], checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)));
-      return next;
-    });
-  }, []);
+  const reload = useCallback(() => loadServices(priceDate), [loadServices, priceDate]);
+
+  const openBuilder = useCallback(
+    (prefill: BulkCreatePrefill | null) => setBulkCreate({ open: true, prefill }),
+    []
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      openBuilder: () => openBuilder(testMethodId ? { testMethodId } : null),
+      exportExcel: () => exportServicesToExcel(filteredServices),
+      openImport: () => setImportOpen(true),
+    }),
+    [openBuilder, testMethodId, filteredServices]
+  );
 
   const handleEditCommit = useCallback(async () => {
     if (!editing) return;
     const service = services.find((s) => s.id === editing.serviceId);
     const value = editing.value;
     setEditing(null);
-    if (!service || value == null || value === service.unitPrice) return;
+    if (!service || value == null || value === service.priceAtDate) return;
     try {
       const updated = await serviceCatalogService.setPrice(service.id, {
         unitPrice: value,
@@ -188,7 +231,6 @@ const ServiceCatalogPage: React.FC = () => {
           try {
             await serviceCatalogService.delete(service.id);
             setServices((prev) => prev.filter((s) => s.id !== service.id));
-            toggleSelect([service.id], false);
             message.success("Đã xóa dịch vụ");
           } catch (error) {
             message.error(getApiErrorMessage(error, "Không xóa được dịch vụ"));
@@ -196,58 +238,61 @@ const ServiceCatalogPage: React.FC = () => {
         },
       });
     },
-    [replaceService, toggleSelect]
+    [replaceService]
   );
 
   const handleDeleteSelected = useCallback(async () => {
+    const ids = new Set(selectedServices.map((s) => s.id));
     try {
-      const count = await serviceCatalogService.deleteMany([...selectedIds]);
+      const count = await serviceCatalogService.deleteMany([...ids]);
       message.success(`Đã xóa ${count} dịch vụ`);
-      setServices((prev) => prev.filter((s) => !selectedIds.has(s.id)));
-      setSelectedIds(new Set());
+      setServices((prev) => prev.filter((s) => !ids.has(s.id)));
+      setSelectedRowKeys([]);
     } catch (error) {
       message.error(getApiErrorMessage(error, "Không xóa được dịch vụ"));
     }
-  }, [selectedIds]);
+  }, [selectedServices]);
 
-  const handleEmptyCellDoubleClick = useCallback((row: ServiceMatrixRow, column: SpecimenColumn) => {
-    setBulkCreate({
-      open: true,
-      prefill: { testMethodId: row.testMethodId, indicatorId: row.indicatorId, specimenTypeId: column.specimenTypeId },
-    });
-  }, []);
+  const handleEmptyCellDoubleClick = useCallback(
+    (row: ServiceMatrixRow, column: SpecimenColumn) =>
+      openBuilder({ testMethodId: row.testMethodId, indicatorId: row.indicatorId, specimenTypeId: column.specimenTypeId }),
+    [openBuilder]
+  );
 
-  const reload = useCallback(() => loadServices(priceDate), [loadServices, priceDate]);
+  const viewDate = priceDate.format("YYYY-MM-DD");
+  const closeBuilder = () => setBulkCreate({ open: false, prefill: null });
 
   return (
     <>
       <ServiceCatalogView
-        totalCount={filteredServices.length}
+        activeTab={activeTab}
+        showRules={showRules}
+        onTabChange={setActiveTab}
+        onToggleRules={() => setShowRules((v) => !v)}
+        gridCountText={`${matrixRows.length} nhóm · ${rowCount} dòng chỉ tiêu`}
+        listCountText={`${filteredServices.length} dịch vụ`}
         toolbar={{
           keyword,
           testMethodId,
           methodOptions,
           priceDate,
           showInactive,
-          specimenColumns: allSpecimenColumns,
-          hiddenSpecimenKeys,
-          selectedCount: selectedIds.size,
+          specimenCategories,
+          specimenCategory,
+          allExpanded,
+          selectedRowCount: selectedRowSet.size,
+          selectedServiceCount: selectedServices.length,
           loading,
-          canCreate,
           canEdit,
           canDelete,
-          canImport,
           onKeywordChange: setKeyword,
           onTestMethodChange: setTestMethodId,
           onPriceDateChange: setPriceDate,
           onShowInactiveChange: setShowInactive,
-          onToggleSpecimenColumn: (key) =>
-            setHiddenSpecimenKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key])),
-          onBulkCreate: () => setBulkCreate({ open: true, prefill: testMethodId ? { testMethodId } : null }),
-          onExport: () => exportServicesToExcel(filteredServices),
-          onImport: () => setImportOpen(true),
+          onSpecimenCategoryChange: setSpecimenCategory,
+          onToggleExpandAll: () => setExpandedRowKeys(allExpanded ? [] : groupKeys),
           onBulkPrice: () => setBulkPriceOpen(true),
-          onClearSelection: () => setSelectedIds(new Set()),
+          onClearSelection: () => setSelectedRowKeys([]),
           onDeleteSelected: handleDeleteSelected,
           onReload: reload,
         }}
@@ -255,22 +300,32 @@ const ServiceCatalogPage: React.FC = () => {
           rows: matrixRows,
           specimenColumns: visibleSpecimenColumns,
           loading,
-          selectedIds,
+          viewDate,
+          selectedRowKeys,
+          expandedRowKeys,
           editing,
           canCreate,
           canEdit,
           canDelete,
-          onCellClick: (s) => toggleSelect([s.id], !selectedIds.has(s.id)),
-          onCellDoubleClick: (s) => setEditing({ serviceId: s.id, value: s.unitPrice }),
+          onSelectionChange: setSelectedRowKeys,
+          onExpandedChange: setExpandedRowKeys,
+          onCellDoubleClick: (s) => setEditing({ serviceId: s.id, value: s.priceAtDate ?? s.unitPrice }),
           onEmptyCellDoubleClick: handleEmptyCellDoubleClick,
           onEditValueChange: (value) => setEditing((prev) => (prev ? { ...prev, value } : prev)),
           onEditCommit: handleEditCommit,
           onEditCancel: () => setEditing(null),
-          onRowSelect: toggleSelect,
           onCellAction: handleCellAction,
         }}
+        list={{
+          services: filteredServices,
+          loading,
+          viewDate,
+          canEdit,
+          canDelete,
+          onAction: handleCellAction,
+        }}
       />
-      <BulkCreateDrawer
+      <BulkCreateModal
         open={bulkCreate.open}
         prefill={bulkCreate.prefill}
         testMethods={testMethods}
@@ -279,17 +334,18 @@ const ServiceCatalogPage: React.FC = () => {
         indicatorGroups={indicatorGroups}
         existingServices={services}
         onDone={() => {
-          setBulkCreate({ open: false, prefill: null });
+          closeBuilder();
+          setActiveTab("grid");
           reload();
         }}
-        onCancel={() => setBulkCreate({ open: false, prefill: null })}
+        onCancel={closeBuilder}
       />
       <BulkPriceModal
         open={bulkPriceOpen}
         services={selectedServices}
         onDone={() => {
           setBulkPriceOpen(false);
-          setSelectedIds(new Set());
+          setSelectedRowKeys([]);
           reload();
         }}
         onCancel={() => setBulkPriceOpen(false)}
@@ -313,6 +369,6 @@ const ServiceCatalogPage: React.FC = () => {
       />
     </>
   );
-};
+});
 
 export default ServiceCatalogPage;

@@ -36,7 +36,7 @@ import SampleConditionsTab, {
 } from "../SampleStatuses";
 import UnitsTab, { type UnitActions } from "../Units";
 import ProductCatalogTab, { type ProductCatalogActions } from "../ProductCatalog";
-import ServiceCatalogPage from "../ServiceCatalog/ServiceCatalogPage";
+import ServiceCatalogPage, { type ServiceCatalogActions } from "../ServiceCatalog/ServiceCatalogPage";
 import BatchNormsPage from "../BatchNorms/BatchNormsPage";
 import YearlyForecastsPage from "../YearlyForecasts/YearlyForecastsPage";
 import ImportProductMasterDataModal from "./components/ImportProductMasterDataModal";
@@ -370,6 +370,7 @@ const MasterDataList: React.FC = () => {
   const notesRef = useRef<NotesActions>(null);
   const unitsRef = useRef<UnitActions>(null);
   const productCatalogRef = useRef<ProductCatalogActions>(null);
+  const servicesRef = useRef<ServiceCatalogActions>(null);
   const [productMasterImportOpen, setProductMasterImportOpen] = useState(false);
   const [exportingProductMaster, setExportingProductMaster] = useState(false);
 
@@ -714,6 +715,27 @@ const MasterDataList: React.FC = () => {
                 </>
               )}
 
+              {/* Services Tab (L2) */}
+              {activeCategory === "services" && (
+                <>
+                  <Button icon={<DownloadOutlined />} onClick={() => servicesRef.current?.exportExcel()}>
+                    Xuất Excel
+                  </Button>
+                  {authService.hasPermission(PERMISSIONS.MasterData.Import) && (
+                    <Button icon={<UploadOutlined />} onClick={() => servicesRef.current?.openImport()}>
+                      Nhập danh sách
+                    </Button>
+                  )}
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => servicesRef.current?.openBuilder()}
+                  >
+                    Tạo dịch vụ hàng loạt
+                  </Button>
+                </>
+              )}
+
               {/* Notes Tab */}
               {activeCategory === "notes" && (
                 <>
@@ -926,7 +948,7 @@ const MasterDataList: React.FC = () => {
                     refreshKey={productsRefreshKey}
                   />
                 ) : key === "services" ? (
-                  activeCategory === "services" && <ServiceCatalogPage />
+                  activeCategory === "services" && <ServiceCatalogPage ref={servicesRef} />
                 ) : key === "batchNorms" ? (
                   activeCategory === "batchNorms" && <BatchNormsPage />
                 ) : key === "yearlyForecasts" ? (
