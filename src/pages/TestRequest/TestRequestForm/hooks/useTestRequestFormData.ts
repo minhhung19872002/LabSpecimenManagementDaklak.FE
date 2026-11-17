@@ -206,6 +206,10 @@ export const useTestRequestFormData = () => {
   // Test methods and indicator-method mapping
   const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
   const [indicatorMethodsMap, setIndicatorMethodsMap] = useState<Record<string, IndicatorMethodInfo[]>>({});
+  // Snapshot chỉ tiêu/phương pháp của phiếu đang sửa — fallback khi danh mục đã xóa (xóa mềm)
+  // để dòng chỉ tiêu cũ vẫn hiển thị đúng tên đã lưu, không bị ẩn hay mất giá/combo khi lưu lại
+  const [savedIndicatorSnapshots, setSavedIndicatorSnapshots] = useState<Record<string, IndicatorDto>>({});
+  const [savedMethodSnapshots, setSavedMethodSnapshots] = useState<Record<string, IndicatorMethodInfo>>({});
 
   // Costs
   const [totalSampleCost, setTotalSampleCost] = useState(0);
@@ -724,6 +728,8 @@ export const useTestRequestFormData = () => {
         const expandedLabs: string[] = [];
         const restoredIndicatorIds: Record<string, string> = {}; // Store TestRequestSampleIndicator.id
         const restoredCustomPrices: Record<string, number> = {}; // Store saved unitPrice as custom price
+        const restoredIndicatorSnapshots: Record<string, IndicatorDto> = {};
+        const restoredMethodSnapshots: Record<string, IndicatorMethodInfo> = {};
 
         // Parse dates helper - handle both UTC formats
         const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
@@ -756,6 +762,34 @@ export const useTestRequestFormData = () => {
               restoredCustomPrices[`${sampleKey}_${methodKey}`] = ind.unitPrice;
             }
 
+            if (ind.indicatorId && !restoredIndicatorSnapshots[ind.indicatorId]) {
+              restoredIndicatorSnapshots[ind.indicatorId] = {
+                id: ind.indicatorId,
+                code: ind.indicatorCode || "",
+                name: ind.indicatorName || "",
+                formattedName: ind.indicatorFormattedName,
+                isActive: false,
+                indicatorGroupId: "",
+                sortOrder: 0,
+                parentIndicatorId: ind.parentIndicatorId,
+              } as IndicatorDto;
+            }
+            if (ind.testMethodId && !restoredMethodSnapshots[methodKey]) {
+              restoredMethodSnapshots[methodKey] = {
+                testMethodId: ind.testMethodId,
+                testMethodCode: ind.testMethodCode || "",
+                testMethodName: ind.testMethodName || "",
+                testMethodFormattedName: ind.testMethodFormattedName || undefined,
+                // Giá gốc trước combo (nếu có) để lưu lại không mất OriginalUnitPrice
+                unitPrice: ind.originalUnitPrice ?? ind.unitPrice ?? 0,
+                isActive: false,
+                parentIndicatorId: ind.parentIndicatorId,
+                specimenTypeId: ind.specimenTypeId || undefined,
+                specimenTypeName: ind.specimenTypeName || undefined,
+                isSubcontract: ind.isSubcontract,
+              };
+            }
+
             restoredDates[methodKey] = {
               transferDate: parseDate(ind.transferDate),
               requestDate: parseDate(ind.requestDate),
@@ -785,6 +819,8 @@ export const useTestRequestFormData = () => {
         setExpandedLabGroups(expandedLabs);
         setSampleIndicatorIdMap(restoredIndicatorIds);
         setCustomPrices(restoredCustomPrices);
+        setSavedIndicatorSnapshots(restoredIndicatorSnapshots);
+        setSavedMethodSnapshots(restoredMethodSnapshots);
       }
     } catch (error) {
       message.error("Không thể tải dữ liệu yêu cầu");
@@ -842,6 +878,7 @@ export const useTestRequestFormData = () => {
       const generatedCustomPrices: Record<string, number> = {};
 
       let globalIndex = 0;
+      const removedIndicatorNames = new Set<string>();
       quotation.samples.forEach((quotationSample) => {
         const qty = quotationSample.quantity || 1;
 
@@ -849,6 +886,11 @@ export const useTestRequestFormData = () => {
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         const quotationPricesByMethodKey: Record<string, number> = {};
         quotationSample.indicators.forEach((indicator) => {
+          // Chỉ tiêu đã bị xóa khỏi danh mục → không đưa vào phiếu mới (báo giá cũ vẫn giữ tên snapshot)
+          if (!knownIndicatorIds.has(indicator.indicatorId)) {
+            removedIndicatorNames.add(indicator.indicatorName || indicator.indicatorId);
+            return;
+          }
           const testMethodId = indicator.testMethodId || "";
           let resolvedSpecimenTypeId = indicator.specimenTypeId || undefined;
           if (!resolvedSpecimenTypeId) {
@@ -910,6 +952,9 @@ export const useTestRequestFormData = () => {
       setSourceQuotationId(quotationIdToLoad);
 
       message.success(`Đã tải dữ liệu từ báo giá ${quotation.quotationNumber}`);
+      if (removedIndicatorNames.size > 0) {
+        message.warning(`Các chỉ tiêu đã bị xóa khỏi danh mục nên không được đưa vào phiếu: ${[...removedIndicatorNames].join(", ")}`, 8);
+      }
     } catch (error) {
       console.error("Failed to load quotation:", error);
       message.error("Không thể tải dữ liệu từ báo giá");
@@ -979,13 +1024,20 @@ export const useTestRequestFormData = () => {
       });
 
       // Clone mẫu + chỉ tiêu (bỏ mẫu đã hủy / mẫu không còn chỉ tiêu, bỏ chỉ tiêu KH hủy — giống màn sửa)
+      const removedIndicatorNames = new Set<string>();
       const activeSamples = (data.samples || [])
         .filter((s) => !s.isCancelled)
         .map((s) => ({
           sample: s,
-          indicators: (s.indicators || []).filter(
-            (ind) => ind.indicatorId && ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
-          ),
+          indicators: (s.indicators || []).filter((ind) => {
+            if (!ind.indicatorId || ind.approvalStatus === IndicatorApprovalStatus.CustomerCancelled) return false;
+            // Chỉ tiêu đã bị xóa khỏi danh mục → không clone sang phiếu mới
+            if (!knownIndicatorIds.has(ind.indicatorId)) {
+              removedIndicatorNames.add(ind.indicatorName || ind.indicatorId);
+              return false;
+            }
+            return true;
+          }),
         }))
         .filter(({ indicators }) => indicators.length > 0);
       const generatedSamples: SampleFormData[] = [];
@@ -1041,6 +1093,9 @@ export const useTestRequestFormData = () => {
       setSelectedIndicatorDates(generatedDates);
 
       message.success(`Đã tải dữ liệu từ hợp đồng ${data.contractNumber || data.requestNumber}`);
+      if (removedIndicatorNames.size > 0) {
+        message.warning(`Các chỉ tiêu đã bị xóa khỏi danh mục nên không được sao chép: ${[...removedIndicatorNames].join(", ")}`, 8);
+      }
     } catch (error) {
       console.error("Failed to load test request:", error);
       message.error("Không thể tải dữ liệu từ hợp đồng");
@@ -1048,6 +1103,17 @@ export const useTestRequestFormData = () => {
       setLoadingData(false);
     }
   };
+
+  // Id chỉ tiêu còn trong danh mục (kể cả ngừng hoạt động và chỉ tiêu con) — dùng lọc chỉ tiêu đã xóa
+  // khi tạo phiếu mới từ báo giá / hợp đồng cũ
+  const knownIndicatorIds = useMemo(() => {
+    const ids = new Set<string>();
+    indicators.forEach((ind) => {
+      ids.add(ind.id);
+      ind.subIndicators?.forEach((sub) => ids.add(sub.id));
+    });
+    return ids;
+  }, [indicators]);
 
   // Index tra cứu O(1) — dùng trong calculateTotalCost, get*, và render loops
   const indicatorById = useMemo(
@@ -1062,6 +1128,24 @@ export const useTestRequestFormData = () => {
     () => new Map(testMethods.map((tm) => [tm.id, tm])),
     [testMethods],
   );
+  // Danh mục hiện hành trước, snapshot của phiếu (chỉ tiêu đã bị xóa khỏi danh mục) sau cùng
+  const resolveIndicator = useCallback(
+    (indicatorId: string): IndicatorDto | undefined =>
+      indicatorById.get(indicatorId) ?? savedIndicatorSnapshots[indicatorId],
+    [indicatorById, savedIndicatorSnapshots],
+  );
+  // Phương pháp theo danh mục (khớp cả nền mẫu để đúng giá); không còn trong danh mục → snapshot của phiếu
+  const resolveIndicatorMethod = useCallback(
+    (indicatorId: string, testMethodId?: string | null, specimenTypeId?: string | null): IndicatorMethodInfo | undefined => {
+      const methods = indicatorMethodsMap[indicatorId] || [];
+      const matched = methods.find(
+        (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === (specimenTypeId || null)
+      );
+      if (matched || !testMethodId) return matched;
+      return savedMethodSnapshots[createIndicatorMethodKey(indicatorId, testMethodId, specimenTypeId || undefined)];
+    },
+    [indicatorMethodsMap, savedMethodSnapshots],
+  );
 
   // Calculate total cost - now based on indicatorMethods with prices from TestMethodIndicator
   const calculateTotalCost = useCallback(() => {
@@ -1071,7 +1155,7 @@ export const useTestRequestFormData = () => {
       const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
       for (const mk of (sample.indicatorMethods || [])) {
         const { indicatorId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
-        const ind = indicatorById.get(indicatorId);
+        const ind = resolveIndicator(indicatorId);
         const gKey = stId || '_none';
         if (!groupedBySpecimenType[gKey]) groupedBySpecimenType[gKey] = [];
         groupedBySpecimenType[gKey].push(ind?.name);
@@ -1088,16 +1172,13 @@ export const useTestRequestFormData = () => {
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
         sample.indicatorMethods.forEach((key) => {
           const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
-          const methods = indicatorMethodsMap[indicatorId] || [];
-          // Must match both testMethodId AND specimenTypeId to get correct price
-          const method = methods.find(
-            (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
-          );
+          // Must match both testMethodId AND specimenTypeId to get correct price (fallback snapshot của phiếu)
+          const method = resolveIndicatorMethod(indicatorId, testMethodId, specimenTypeId);
           const customPriceKey = `${sample.key}_${key}`;
           const masterPrice = method?.unitPrice ?? 0;
           const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : masterPrice;
           if (customPrices[customPriceKey] !== undefined || method) {
-            const ind = indicatorById.get(indicatorId);
+            const ind = resolveIndicator(indicatorId);
             const stComboKey = specimenTypeId || '_none';
             const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
               (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
@@ -1109,7 +1190,7 @@ export const useTestRequestFormData = () => {
         sample.indicatorIds.forEach((indId) => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
-            const ind = indicatorById.get(indId);
+            const ind = resolveIndicator(indId);
             const isComboFree = (comboMetBySpecimenType['_none'] && isHgIndicator(ind?.name)) ||
               (ecoliComboMetBySpecimenType['_none'] && isEcoliIndicator(ind?.name));
             total += isComboFree ? 0 : methods[0].unitPrice;
@@ -1121,15 +1202,15 @@ export const useTestRequestFormData = () => {
       totalSampleCostRef.current = total;
       setTotalSampleCost(total);
     }
-  }, [samples, indicatorById, specimenTypeById, indicatorMethodsMap, customPrices]);
+  }, [samples, resolveIndicator, resolveIndicatorMethod, specimenTypeById, indicatorMethodsMap, customPrices]);
 
   // Get indicator info by id
   // useCallback để reference ổn định — không invalidate oan các useMemo phụ thuộc ở component con
   const getIndicatorInfo = useCallback(
     (indicatorId: string) => {
-      return indicatorById.get(indicatorId);
+      return resolveIndicator(indicatorId);
     },
-    [indicatorById],
+    [resolveIndicator],
   );
 
   // Get methods for an indicator
@@ -1150,7 +1231,7 @@ export const useTestRequestFormData = () => {
       (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
     );
     const fallbackSpecimenType = specimenTypeById.get(specimenTypeId);
-    const method = matchedMethod || (testMethodId === PENDING_TEST_METHOD_ID
+    const method = matchedMethod || savedMethodSnapshots[key] || (testMethodId === PENDING_TEST_METHOD_ID
       ? {
           testMethodId: PENDING_TEST_METHOD_ID,
           testMethodCode: "",
@@ -1168,7 +1249,8 @@ export const useTestRequestFormData = () => {
     if (!indicator && testMethodId) {
       const testMethod = testMethodById.get(testMethodId);
       const tmIndicator = testMethod?.indicators?.find((ind) => ind.indicatorId === indicatorId);
-      if (tmIndicator) {
+      // Chỉ tiêu đã xóa vẫn còn dòng TestMethodIndicator nhưng tên rỗng → bỏ qua, dùng snapshot bên dưới
+      if (tmIndicator && tmIndicator.indicatorName) {
         indicator = {
           id: tmIndicator.indicatorId,
           code: tmIndicator.indicatorCode,
@@ -1182,8 +1264,12 @@ export const useTestRequestFormData = () => {
       }
     }
 
+    if (!indicator) {
+      indicator = savedIndicatorSnapshots[indicatorId];
+    }
+
     return { indicator, method, indicatorId, testMethodId };
-  }, [indicatorById, indicatorMethodsMap, specimenTypeById, testMethodById]);
+  }, [indicatorById, indicatorMethodsMap, specimenTypeById, testMethodById, savedIndicatorSnapshots, savedMethodSnapshots]);
 
   const registerQuickCreatedIndicator = useCallback(
     (result: QuickCreateIndicatorResultItem) => {
@@ -1741,6 +1827,8 @@ export const useTestRequestFormData = () => {
 
     // Helpers
     getIndicatorInfo,
+    resolveIndicator,
+    resolveIndicatorMethod,
     getMethodsForIndicator,
     getIndicatorMethodInfo,
     getFilteredIndicators,

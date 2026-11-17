@@ -10,6 +10,7 @@ import type { ColumnsType } from "antd/es/table";
 import { IndicatorDto, IndicatorGroupDto, GroupedIndicatorData } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
+import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
 
 export const getIndicatorColumns = (
   handleEditIndicator: (indicator: IndicatorDto) => void,
@@ -62,13 +63,18 @@ export const getIndicatorColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 150,
+    width: 180,
     render: (_, record) => {
       const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
       const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       return (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="indicators"
+            entityId={record.id}
+            title={record.name}
+          />
           {canEdit && (
             <Tooltip title="Sửa">
               <Button
@@ -154,13 +160,18 @@ export const getGroupColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 100,
+    width: 130,
     render: (_, record) => {
       const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
       const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       return (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="indicatorGroups"
+            entityId={record.id}
+            title={record.name}
+          />
           {canEdit && (
             <Tooltip title="Sửa nhóm">
               <Button

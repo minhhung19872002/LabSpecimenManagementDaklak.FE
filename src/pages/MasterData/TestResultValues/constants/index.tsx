@@ -8,6 +8,7 @@ import type { ColumnsType } from "antd/es/table";
 import { GroupedTestResultValueData, TestResultValueIndicatorDto } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
+import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
 
 export const DEFAULT_PAGE_SIZE = 50;
 
@@ -62,13 +63,18 @@ export const getTestResultValueColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 100,
+    width: 130,
     render: (_, record) => {
       const canEdit = authService.hasPermission(PERMISSIONS.TestResultValues.Edit);
       const canDelete = authService.hasPermission(PERMISSIONS.TestResultValues.Delete);
 
       return (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="testResultValues"
+            entityId={record.id}
+            title={record.name}
+          />
           {canEdit && (
             <Tooltip title="Sửa">
               <Button

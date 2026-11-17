@@ -8,6 +8,7 @@ import {
 import { IndicatorName } from "../../../../components/common";
 import authService from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissions";
+import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
 import type { ColumnsType } from "antd/es/table";
 import { TestMethodDto } from "../../../../services/masterDataService";
 
@@ -47,13 +48,18 @@ export const getTestMethodColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 160,
+    width: 190,
     render: (_, record) => {
       const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
       const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       return (
         <Space size="small">
+          <MasterDataHistoryButton
+            entityType="testMethods"
+            entityId={record.id}
+            title={record.name}
+          />
           {canEdit && (
             <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
               <Button

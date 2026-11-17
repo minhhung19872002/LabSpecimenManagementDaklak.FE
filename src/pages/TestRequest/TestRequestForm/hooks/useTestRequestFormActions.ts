@@ -32,7 +32,10 @@ interface UseTestRequestFormActionsProps {
   id: string | undefined;
   samples: SampleFormData[];
   setSamples: React.Dispatch<React.SetStateAction<SampleFormData[]>>;
-  indicators: any[];
+  /** Tra chỉ tiêu theo danh mục, fallback snapshot của phiếu (chỉ tiêu đã xóa) */
+  resolveIndicator: (indicatorId: string) => any;
+  /** Tra phương pháp theo danh mục, fallback snapshot của phiếu (chỉ tiêu/phương pháp đã xóa) */
+  resolveIndicatorMethod: (indicatorId: string, testMethodId?: string | null, specimenTypeId?: string | null) => IndicatorMethodInfo | undefined;
   indicatorGroups: any[];
   provinces: any[];
   wards: any[];
@@ -105,7 +108,8 @@ export const useTestRequestFormActions = ({
   id,
   samples,
   setSamples,
-  indicators,
+  resolveIndicator,
+  resolveIndicatorMethod,
   indicatorGroups,
   provinces,
   wards,
@@ -253,17 +257,14 @@ export const useTestRequestFormActions = ({
       SpecimenTypeId: s.specimenTypeId,
       SpecimenTypeName: getSpecimenTypeName(s.specimenTypeId),
       Indicators: (s.indicators || []).map((ind: any) => {
-        // Find test method info from indicatorMethodsMap
-        const methods = indicatorMethodsMap[ind.indicatorId] || [];
         // Must match both testMethodId AND specimenTypeId to get correct method info
-        const method = methods.find(
-          (m) => m.testMethodId === ind.testMethodId && (m.specimenTypeId || null) === (ind.specimenTypeId || null)
-        );
+        const method = resolveIndicatorMethod(ind.indicatorId, ind.testMethodId, ind.specimenTypeId);
+        const indicatorInfo = resolveIndicator(ind.indicatorId);
         return {
           Id: ind.id || null,
           IndicatorId: ind.indicatorId,
-          IndicatorCode: indicators.find(i => i.id === ind.indicatorId)?.code || '',
-          IndicatorName: indicators.find(i => i.id === ind.indicatorId)?.name || '',
+          IndicatorCode: indicatorInfo?.code || '',
+          IndicatorName: indicatorInfo?.name || '',
           UnitPrice: ind.unitPrice,
           TestMethodId: ind.testMethodId,
           TestMethodCode: method?.testMethodCode || '',
@@ -1013,7 +1014,7 @@ export const useTestRequestFormActions = ({
         const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
         for (const mk of (sample.indicatorMethods || [])) {
           const { indicatorId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
-          const ind = indicators.find((i) => i.id === indicatorId);
+          const ind = resolveIndicator(indicatorId);
           const key = stId || '_none';
           if (!groupedBySpecimenType[key]) groupedBySpecimenType[key] = [];
           groupedBySpecimenType[key].push(ind?.name);
@@ -1031,16 +1032,13 @@ export const useTestRequestFormActions = ({
           ? sample.indicatorMethods.map((methodKey) => {
               const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(methodKey);
               const indicatorDates = selectedIndicatorDates[methodKey];
-              const methods = indicatorMethodsMap[indicatorId] || [];
               // Must match both testMethodId AND specimenTypeId to get correct price
-              const method = methods.find(
-                (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
-              );
+              const method = resolveIndicatorMethod(indicatorId, testMethodId, specimenTypeId);
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
               // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform, per specimen type)
-              const ind = indicators.find((i) => i.id === indicatorId);
+              const ind = resolveIndicator(indicatorId);
               const stComboKey = specimenTypeId || '_none';
               const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
                 (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
@@ -1068,7 +1066,7 @@ export const useTestRequestFormActions = ({
             })
           : sample.indicatorIds.map((indId) => {
               const indicatorDates = selectedIndicatorDates[indId];
-              const indicator = indicators.find((i) => i.id === indId);
+              const indicator = resolveIndicator(indId);
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
@@ -1374,7 +1372,7 @@ export const useTestRequestFormActions = ({
           const previewGrouped: Record<string, (string | undefined)[]> = {};
           for (const mk of (sample.indicatorMethods || [])) {
             const { indicatorId: iId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
-            const ind = indicators.find((i) => i.id === iId);
+            const ind = resolveIndicator(iId);
             const gKey = stId || '_none';
             if (!previewGrouped[gKey]) previewGrouped[gKey] = [];
             previewGrouped[gKey].push(ind?.name);
@@ -1396,11 +1394,8 @@ export const useTestRequestFormActions = ({
             notes: sample.notes || undefined,
             indicators: (sample.indicatorMethods || []).map((methodKey: IndicatorMethodKey) => {
               const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(methodKey);
-              const indicator = indicators.find((ind: any) => ind.id === indicatorId);
-              const methods = indicatorMethodsMap[indicatorId] || [];
-              const method = methods.find(
-                (m: IndicatorMethodInfo) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
-              );
+              const indicator = resolveIndicator(indicatorId);
+              const method = resolveIndicatorMethod(indicatorId, testMethodId, specimenTypeId);
               const previewStKey = specimenTypeId || '_none';
               const isComboFree = (previewComboByType[previewStKey] && isHgIndicator(indicator?.name)) ||
                 (previewEcoliComboByType[previewStKey] && isEcoliIndicator(indicator?.name));

@@ -35,7 +35,7 @@ export const useTestResultValuesData = () => {
     setLoading(true);
     try {
       const [valuesData, specimenTypesData, specimenTypesWithIndData, groupsData, indicatorsData] = await Promise.all([
-        testResultValueService.getWithIndicators(),
+        testResultValueService.getWithIndicators(true),
         specimenTypeService.getActive(),
         specimenTypeService.getWithIndicators(),
         indicatorGroupService.getActive(),

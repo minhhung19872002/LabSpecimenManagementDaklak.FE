@@ -822,8 +822,11 @@ export const standardService = {
     return response.data;
   },
   // Standards with indicators
-  getWithIndicators: async (): Promise<StandardWithIndicatorsDto[]> => {
-    const response = await api.get<StandardWithIndicatorsDto[]>(`${STANDARD_URL}/with-indicators`);
+  // excludeDeletedIndicators: true ở màn danh mục (ẩn chỉ tiêu đã xóa); màn nghiệp vụ để mặc định để phiếu cũ vẫn thấy
+  getWithIndicators: async (excludeDeletedIndicators?: boolean): Promise<StandardWithIndicatorsDto[]> => {
+    const response = await api.get<StandardWithIndicatorsDto[]>(`${STANDARD_URL}/with-indicators`, {
+      params: excludeDeletedIndicators ? { excludeDeletedIndicators } : undefined,
+    });
     return response.data;
   },
   getOneWithIndicators: async (id: string): Promise<StandardWithIndicatorsDto> => {

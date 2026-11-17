@@ -4,9 +4,9 @@ const htmlToPlainText = (html: string): string =>
   new DOMParser().parseFromString(html, "text/html").body.textContent ?? "";
 
 /**
- * Tên chỉ tiêu khi xuất PDF/gửi email báo giá: lấy theo master data (formattedName đọc từ
- * danh mục mỗi lần load) giống màn hình, KHÔNG dùng tên snapshot lưu lúc lập báo giá.
- * Đơn giá vẫn giữ theo báo giá (caller tự truyền unitPrice).
+ * Tên chỉ tiêu khi xuất PDF/gửi email báo giá: dùng formattedName SNAPSHOT lưu lúc lập báo giá
+ * (BE trả về snapshot, fallback master nếu thiếu) — giống màn hình chi tiết. Sửa/xóa master data
+ * sau đó không làm đổi tên trên báo giá đã lập. Đơn giá vẫn giữ theo báo giá (caller tự truyền unitPrice).
  *
  * Gửi cả tên plain: BE chỉ dùng formattedName khi có thẻ HTML, còn lại in indicatorName.
  */
