@@ -334,7 +334,7 @@ const BulkCreateForm: React.FC<Omit<BulkCreateModalProps, "open">> = ({
         size="small"
         current={step}
         items={[{ title: "Chọn phương pháp" }, { title: "Chọn chỉ tiêu & nền mẫu" }, { title: "Nhập giá & lưu" }]}
-        style={{ maxWidth: 720 }}
+        style={{ maxWidth: 900 }}
       />
 
       {/* Bước 1 */}
@@ -368,7 +368,7 @@ const BulkCreateForm: React.FC<Omit<BulkCreateModalProps, "open">> = ({
               onChange={(e) => setMethodQuery(e.target.value)}
               style={{ maxWidth: 520 }}
             />
-            <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid #F0F0F0", borderRadius: 8 }}>
+            <div style={{ maxHeight: "calc(100vh - 420px)", minHeight: 240, overflowY: "auto", border: "1px solid #F0F0F0", borderRadius: 8 }}>
               {filteredMethods.map((m) => {
                 const current = m.id === testMethodId;
                 return (
@@ -798,12 +798,14 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({ open, onCancel, ...re
   <Modal
     open={open}
     title="Tạo dịch vụ hàng loạt"
-    width={1120}
+    width="90vw"
+    style={{ maxWidth: 1400 }}
+    centered
     footer={null}
     destroyOnHidden
     maskClosable={false}
     onCancel={onCancel}
-    styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto", paddingRight: 4 } }}
+    styles={{ body: { height: "calc(100vh - 160px)", overflowY: "auto", paddingRight: 4 } }}
   >
     <BulkCreateForm {...rest} onCancel={onCancel} />
   </Modal>
