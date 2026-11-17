@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import {
   Form,
   Input,
@@ -38,6 +38,8 @@ import {
   LaboratorySelectionModal,
   StickySummaryBar,
 } from "./components";
+import { authService } from "../../../services/authService";
+import type { CustomIndicatorName } from "../../../utils/indicatorName";
 import "../TestRequestForm.css";
 import "../../../styles/ListCard.css";
 import { PATH_ROUTES } from "../../../constants";
@@ -134,6 +136,9 @@ const TestRequestForm: React.FC = () => {
     sampleIndicatorIdMap,
     customPrices,
     setCustomPrices,
+    customIndicatorNames,
+    setCustomIndicatorNames,
+    getMasterIndicator,
     originalData,
     sourceQuotationId,
     provinces,
@@ -228,11 +233,20 @@ const TestRequestForm: React.FC = () => {
     sourceQuotationId,
     customPrices,
     setCustomPrices,
+    customIndicatorNames,
     clearDraft,
   });
 
   // Ref to form sections to detect when scrolled past
   const formSectionsRef = useRef<HTMLDivElement>(null);
+
+  // Admin sửa tên chỉ tiêu trên phiếu (kể cả dòng đã gửi / đã chấp nhận TN) — lưu cùng nút "Lưu phiếu"
+  const canEditIndicatorName = useMemo(() => authService.isAdmin(), []);
+  const handleIndicatorNameChange = useCallback(
+    (key: string, value: CustomIndicatorName) =>
+      setCustomIndicatorNames((prev) => ({ ...prev, [key]: value })),
+    [setCustomIndicatorNames],
+  );
 
   // Wrapper ổn định (ref-indirection) cho các handler của SampleTableSection:
   // identity tạo đúng 1 lần nên React.memo của bảng mẫu có tác dụng khi gõ ở
@@ -475,6 +489,7 @@ const TestRequestForm: React.FC = () => {
               getIndicatorInfo={getIndicatorInfo}
               getIndicatorMethodInfo={getIndicatorMethodInfo}
               indicatorLaboratoryMap={indicatorLaboratoryMap}
+              customIndicatorNames={customIndicatorNames}
               specimenTypes={specimenTypes}
               specimenTypeOptions={specimenTypeOptions}
               handleSpecimenTypeSearch={stableSampleHandlers.handleSpecimenTypeSearch}
@@ -597,6 +612,10 @@ const TestRequestForm: React.FC = () => {
             onPriceChange={(key, price) =>
               setCustomPrices((prev) => ({ ...prev, [key]: price }))
             }
+            customIndicatorNames={customIndicatorNames}
+            getMasterIndicator={getMasterIndicator}
+            canEditIndicatorName={canEditIndicatorName}
+            onIndicatorNameChange={handleIndicatorNameChange}
           />
 
           {/* Laboratory Selection Modal */}
@@ -611,6 +630,8 @@ const TestRequestForm: React.FC = () => {
             indicatorsToSend={indicatorsToSend}
             getIndicatorMethodInfo={getIndicatorMethodInfo}
             handleConfirmSendToLaboratory={handleConfirmSendToLaboratory}
+            customIndicatorNames={customIndicatorNames}
+            currentSampleKey={currentSampleKey}
           />
         </Spin>
       </Card>

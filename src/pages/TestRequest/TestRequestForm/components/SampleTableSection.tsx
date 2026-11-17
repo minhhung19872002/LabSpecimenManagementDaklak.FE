@@ -39,6 +39,7 @@ import {
 import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 import { IndicatorName } from "../../../../components/common";
+import type { CustomIndicatorName } from "../../../../utils/indicatorName";
 import ImportSpecimenModal from "./ImportSpecimenModal";
 import ExistingSampleSelectionModal from "./ExistingSampleSelectionModal";
 import "./IndicatorSelectionModal.css"; // For tree-line styles
@@ -169,6 +170,8 @@ interface SampleTableSectionProps {
     testMethodId: string;
   };
   indicatorLaboratoryMap: Record<string, LaboratoryAssignment>;
+  /** Tên chỉ tiêu trên phiếu (admin sửa / từ báo giá), key "sampleKey_indicatorMethodKey" */
+  customIndicatorNames?: Record<string, CustomIndicatorName>;
   specimenTypes: SpecimenTypeDto[];
   specimenTypeOptions: { value: string; label: string }[];
   handleSpecimenTypeSearch: (searchText: string) => void;
@@ -195,6 +198,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   getIndicatorInfo,
   getIndicatorMethodInfo,
   indicatorLaboratoryMap,
+  customIndicatorNames = {},
   specimenTypes,
   specimenTypeOptions,
   handleSpecimenTypeSearch,
@@ -704,8 +708,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                         >
                           {!isSubIndicator && "- "}
                           <IndicatorName
-                            name={indicator.name}
-                            formattedName={indicator.formattedName}
+                            name={customIndicatorNames[`${record.key}_${key}`]?.name ?? indicator.name}
+                            formattedName={customIndicatorNames[`${record.key}_${key}`]?.formattedName ?? indicator.formattedName}
                           />
                           {method.isSubcontract && (
                             <Tag color="orange" style={{ fontSize: 10, lineHeight: "16px", padding: "0 4px", margin: 0 }}>
@@ -768,8 +772,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                   {!isSubIndicator && "- "}
                                   <IndicatorName
-                                    name={indicator.name}
-                                    formattedName={indicator.formattedName}
+                                    name={customIndicatorNames[`${record.key}_${key}`]?.name ?? indicator.name}
+                                    formattedName={customIndicatorNames[`${record.key}_${key}`]?.formattedName ?? indicator.formattedName}
                                   />
                                   {method.isSubcontract && (
                                     <Tag color="orange" style={{ fontSize: 10, lineHeight: "16px", padding: "0 4px", margin: 0 }}>

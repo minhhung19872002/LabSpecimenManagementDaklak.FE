@@ -42,6 +42,7 @@ import {
   QuotationSampleIndicatorFormData,
 } from "../../types/quotation";
 import { PATH_ROUTES } from "../../constants";
+import { authService } from "../../services/authService";
 import { formatCurrency } from "../../utils/formatters";
 import QuotationIndicatorSelectionModal, {
   SelectedMethodInfo,
@@ -164,6 +165,8 @@ const QuotationForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [samples, setSamples] = useState<QuotationSampleFormData[]>([]);
+  // Admin được sửa tên chỉ tiêu trên báo giá
+  const canEditIndicatorName = authService.isAdmin();
   const [modalVisible, setModalVisible] = useState(false);
   const [emailModalVisible, setEmailModalVisible] = useState(false);
   const [currentSampleKey, setCurrentSampleKey] = useState<string | null>(null);
@@ -250,6 +253,8 @@ const QuotationForm: React.FC = () => {
             specimenTypeId: ind.specimenTypeId || undefined,
             specimenTypeName: ind.specimenTypeName || undefined,
             note: ind.note || undefined,
+            // Nhân bản (admin): giữ tên đã sửa của báo giá nguồn
+            isCustomName: duplicateMode && canEditIndicatorName,
           })),
         })
       );
@@ -406,6 +411,7 @@ const QuotationForm: React.FC = () => {
             specimenTypeId: method.specimenTypeId,
             specimenTypeName: method.specimenTypeName,
             note: existing?.note,
+            isCustomName: method.isCustomName,
           };
         });
 
@@ -487,6 +493,7 @@ const QuotationForm: React.FC = () => {
       unitPrice: ind.unitPrice,
       specimenTypeId: ind.specimenTypeId,
       specimenTypeName: ind.specimenTypeName,
+      isCustomName: ind.isCustomName,
     })) || [];
   };
 
@@ -532,6 +539,9 @@ const QuotationForm: React.FC = () => {
             indicatorId: ind.indicatorId,
             testMethodId: ind.testMethodId,
             indicatorName: ind.indicatorName,
+            indicatorFormattedName: ind.isCustomName
+              ? ind.indicatorFormattedName || ind.indicatorName
+              : undefined,
             testMethodName: ind.testMethodName,
             unitPrice: ind.unitPrice,
             sortOrder: indIdx + 1,

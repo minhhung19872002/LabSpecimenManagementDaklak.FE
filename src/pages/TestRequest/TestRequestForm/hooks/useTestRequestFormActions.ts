@@ -24,6 +24,7 @@ import {
 import { generateSampleCode, getNextOrderNum, splitSampleCode, isNumericSuffix, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
+import type { CustomIndicatorName } from "../../../../utils/indicatorName";
 import { isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
 
 interface UseTestRequestFormActionsProps {
@@ -98,6 +99,9 @@ interface UseTestRequestFormActionsProps {
   customPrices: Record<string, number>;
   setCustomPrices: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 
+  // Tên chỉ tiêu trên phiếu (admin sửa / từ báo giá), key "sampleKey_indicatorMethodKey"
+  customIndicatorNames: Record<string, CustomIndicatorName>;
+
   // Draft management
   clearDraft: () => void;
 }
@@ -154,6 +158,7 @@ export const useTestRequestFormActions = ({
   sourceQuotationId,
   customPrices,
   setCustomPrices,
+  customIndicatorNames,
   clearDraft,
 }: UseTestRequestFormActionsProps) => {
 
@@ -1045,9 +1050,13 @@ export const useTestRequestFormActions = ({
               const customPriceKey = `${sample.key}_${methodKey}`;
               const masterPrice = method?.unitPrice || 0;
               const effectivePrice = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : masterPrice;
+              // Tên trên phiếu (không có → BE giữ tên đã lưu / lấy danh mục)
+              const customName = customIndicatorNames[customPriceKey];
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
+                indicatorName: customName?.name,
+                indicatorFormattedName: customName?.formattedName,
                 testMethodId:
                   testMethodId === PENDING_TEST_METHOD_ID
                     ? undefined
@@ -1076,9 +1085,12 @@ export const useTestRequestFormActions = ({
               const fallbackCustomKey = `${sample.key}_${indId}`;
               const fallbackMasterPrice = indicator?.unitPrice || 0;
               const fallbackEffectivePrice = customPrices[fallbackCustomKey] !== undefined ? customPrices[fallbackCustomKey] : fallbackMasterPrice;
+              const fallbackCustomName = customIndicatorNames[fallbackCustomKey];
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId: indId,
+                indicatorName: fallbackCustomName?.name,
+                indicatorFormattedName: fallbackCustomName?.formattedName,
                 testMethodId: undefined,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: isComboFree ? 0 : fallbackEffectivePrice,
@@ -1379,6 +1391,7 @@ export const useTestRequestFormActions = ({
               const previewCustomKey = `${sample.key}_${methodKey}`;
               const previewMasterPrice = method?.unitPrice || 0;
               const previewEffectivePrice = customPrices[previewCustomKey] !== undefined ? customPrices[previewCustomKey] : previewMasterPrice;
+              const previewCustomName = customIndicatorNames[previewCustomKey];
               return {
                 indicatorId,
                 testMethodId:
@@ -1386,8 +1399,10 @@ export const useTestRequestFormActions = ({
                     ? testMethodId
                     : undefined,
                 specimenTypeId: specimenTypeId || undefined,
-                indicatorName: indicator?.name || "",
-                indicatorFormattedName: indicator?.formattedName || undefined,
+                indicatorName: previewCustomName?.name || indicator?.name || "",
+                indicatorFormattedName: previewCustomName?.formattedName || indicator?.formattedName || undefined,
+                // Tên trên phiếu → BM05 dùng tên này thay tên danh mục
+                isCustomName: !!previewCustomName,
                 unitPrice: isComboFree ? 0 : previewEffectivePrice,
                 originalUnitPrice: isComboFree ? previewMasterPrice : undefined,
               };

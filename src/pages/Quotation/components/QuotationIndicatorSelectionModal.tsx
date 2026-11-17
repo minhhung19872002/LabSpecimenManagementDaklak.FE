@@ -19,7 +19,13 @@ import {
   Tooltip,
   Button,
 } from "antd";
-import { SearchOutlined, CloseOutlined } from "../../../components/common/Icon";
+import { SearchOutlined, CloseOutlined, EditOutlined } from "../../../components/common/Icon";
+import { authService } from "../../../services/authService";
+import {
+  CustomIndicatorName,
+  isSameIndicatorName,
+  pickCustomIndicatorName,
+} from "../../../utils/indicatorName";
 import { Icon } from "@iconify/react";
 import {
   testMethodService,
@@ -35,7 +41,7 @@ import {
   SampleTypeCategoryDto,
 } from "../../../services/masterDataService";
 import { formatCurrency } from "../../../utils/formatters";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, IndicatorNameEditModal } from "../../../components/common";
 import {
   isHeavyMetalComboMet,
   isHgIndicator,
@@ -57,6 +63,8 @@ export interface SelectedMethodInfo {
   unitPrice: number;
   specimenTypeId?: string;
   specimenTypeName?: string;
+  /** Admin đã sửa tên trên báo giá → gửi tên lên BE khi lưu */
+  isCustomName?: boolean;
 }
 
 // Existing indicator info passed from parent to pre-select
@@ -71,6 +79,7 @@ export interface ExistingMethodInfo {
   unitPrice: number;
   specimenTypeId?: string;
   specimenTypeName?: string;
+  isCustomName?: boolean;
 }
 
 interface QuotationIndicatorSelectionModalProps {
@@ -199,9 +208,22 @@ const QuotationIndicatorSelectionModal: React.FC<
   const [customPrices, setCustomPrices] = useState<Record<MethodKey, number>>(
     {},
   );
+  // Tên chỉ tiêu trên báo giá khác tên danh mục (admin sửa / đã lưu trước đó)
+  const [customNames, setCustomNames] = useState<
+    Record<MethodKey, CustomIndicatorName>
+  >({});
+  // Dòng admin đã sửa tên (kể cả khôi phục tên danh mục) → gửi tên lên BE
+  const [nameEditedKeys, setNameEditedKeys] = useState<Record<MethodKey, true>>(
+    {},
+  );
+  const [editingNameKey, setEditingNameKey] = useState<MethodKey | null>(null);
+  const canEditIndicatorName = useMemo(() => authService.isAdmin(), []);
 
   // Load data when modal opens, pre-populate from existingMethods after data loads
   useEffect(() => {
+    setCustomNames({});
+    setNameEditedKeys({});
+    setEditingNameKey(null);
     if (visible) {
       setSelectedKeys([]);
       setCustomPrices({});
@@ -287,6 +309,18 @@ const QuotationIndicatorSelectionModal: React.FC<
       if (existingMethods.length > 0) {
         const resolvedKeys: MethodKey[] = [];
         const resolvedPrices: Record<MethodKey, number> = {};
+        const resolvedNames: Record<MethodKey, CustomIndicatorName> = {};
+        const resolvedEditedKeys: Record<MethodKey, true> = {};
+        // Giữ tên đã lưu trên báo giá nếu khác tên danh mục
+        const keepSavedName = (key: MethodKey, em: ExistingMethodInfo) => {
+          const master = allIndicators.find((i) => i.id === em.indicatorId);
+          const custom = pickCustomIndicatorName(
+            { name: em.indicatorName, formattedName: em.indicatorFormattedName },
+            master,
+          );
+          if (custom) resolvedNames[key] = custom;
+          if (em.isCustomName) resolvedEditedKeys[key] = true;
+        };
 
         existingMethods.forEach((em) => {
           const methods = methodsMap[em.indicatorId] || [];
@@ -315,6 +349,7 @@ const QuotationIndicatorSelectionModal: React.FC<
             );
             resolvedKeys.push(resolvedKey);
             resolvedPrices[resolvedKey] = em.unitPrice;
+            keepSavedName(resolvedKey, em);
           } else {
             // Fallback: use the key as-is (with _null suffix if 2-part)
             const fallbackKey = em.key.split("_").length === 2
@@ -322,9 +357,12 @@ const QuotationIndicatorSelectionModal: React.FC<
               : em.key;
             resolvedKeys.push(fallbackKey);
             resolvedPrices[fallbackKey] = em.unitPrice;
+            keepSavedName(fallbackKey, em);
           }
         });
 
+        setCustomNames(resolvedNames);
+        setNameEditedKeys(resolvedEditedKeys);
         setSelectedKeys(resolvedKeys);
         setCustomPrices(resolvedPrices);
       }
@@ -602,10 +640,13 @@ const QuotationIndicatorSelectionModal: React.FC<
         : undefined;
       const masterPrice = method?.unitPrice || existing?.unitPrice || 0;
       const effectivePrice = getEffectivePrice(key, masterPrice);
+      const customName = customNames[key];
       return {
         indicatorId,
-        indicatorName: indicator?.name || existing?.indicatorName || "",
-        indicatorFormattedName: indicator?.formattedName || existing?.indicatorFormattedName || undefined,
+        indicatorName: customName?.name || indicator?.name || existing?.indicatorName || "",
+        indicatorFormattedName:
+          customName?.formattedName || indicator?.formattedName || existing?.indicatorFormattedName || undefined,
+        isCustomName: !!nameEditedKeys[key],
         testMethodId,
         testMethodName: method?.testMethodName || existing?.testMethodName || "",
         testMethodFormattedName: method?.testMethodFormattedName || existing?.testMethodFormattedName || undefined,
@@ -1210,6 +1251,12 @@ const QuotationIndicatorSelectionModal: React.FC<
                 );
                 const masterPrice = method?.unitPrice || 0;
                 const effectivePrice = getEffectivePrice(key, masterPrice);
+                const customName = customNames[key];
+                const isNameEdited =
+                  !!customName &&
+                  !!indicator &&
+                  !isSameIndicatorName(customName, indicator);
+                const displayName = customName?.name ?? indicator?.name ?? "";
 
                 return (
                   <div
@@ -1218,21 +1265,50 @@ const QuotationIndicatorSelectionModal: React.FC<
                     style={{ borderBottom: "1px solid #f5f5f5" }}
                   >
                     <div style={{ flex: 1, minWidth: 80, overflow: "hidden" }}>
-                      <TruncateTooltip
-                        title={indicator?.name || ""}
-                        style={{
-                          fontSize: 13,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          display: "block",
-                        }}
+                      <div
+                        style={{ display: "flex", alignItems: "center", gap: 4 }}
                       >
-                        <IndicatorName
-                          name={indicator?.name || ""}
-                          formattedName={indicator?.formattedName}
-                        />
-                      </TruncateTooltip>
+                        <TruncateTooltip
+                          title={displayName}
+                          style={{
+                            fontSize: 13,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            display: "block",
+                            minWidth: 0,
+                          }}
+                        >
+                          <IndicatorName
+                            name={displayName}
+                            formattedName={
+                              customName?.formattedName ?? indicator?.formattedName
+                            }
+                          />
+                        </TruncateTooltip>
+                        {canEditIndicatorName && (
+                          <Tooltip
+                            title={
+                              isNameEdited
+                                ? `Đã sửa tên trên báo giá (danh mục: ${indicator?.name || ""})`
+                                : "Sửa tên chỉ tiêu trên báo giá"
+                            }
+                          >
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<EditOutlined />}
+                              style={{
+                                flexShrink: 0,
+                                width: 22,
+                                height: 22,
+                                color: isNameEdited ? "#fa8c16" : "#8c8c8c",
+                              }}
+                              onClick={() => setEditingNameKey(key)}
+                            />
+                          </Tooltip>
+                        )}
+                      </div>
                       {method?.specimenTypeName && (
                         <div
                           style={{
@@ -1295,6 +1371,11 @@ const QuotationIndicatorSelectionModal: React.FC<
                             prev.filter((k) => k !== key),
                           );
                           setCustomPrices((prev) => {
+                            const next = { ...prev };
+                            delete next[key];
+                            return next;
+                          });
+                          setCustomNames((prev) => {
                             const next = { ...prev };
                             delete next[key];
                             return next;
@@ -1534,6 +1615,26 @@ const QuotationIndicatorSelectionModal: React.FC<
           </div>
         </div>
       </Spin>
+      <IndicatorNameEditModal
+        open={!!editingNameKey}
+        value={editingNameKey ? customNames[editingNameKey] : undefined}
+        masterName={
+          editingNameKey
+            ? indicators.find(
+                (i) => i.id === parseMethodKey(editingNameKey).indicatorId,
+              )
+            : undefined
+        }
+        onOk={(value) => {
+          if (editingNameKey) {
+            const key = editingNameKey;
+            setCustomNames((prev) => ({ ...prev, [key]: value }));
+            setNameEditedKeys((prev) => ({ ...prev, [key]: true }));
+          }
+          setEditingNameKey(null);
+        }}
+        onCancel={() => setEditingNameKey(null)}
+      />
     </Modal>
   );
 };

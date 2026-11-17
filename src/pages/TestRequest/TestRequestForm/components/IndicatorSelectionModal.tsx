@@ -57,6 +57,11 @@ import {
   isEcoliIndicator,
 } from "../constants";
 import "./IndicatorSelectionModal.css";
+import { IndicatorNameEditModal } from "../../../../components/common";
+import {
+  CustomIndicatorName,
+  isSameIndicatorName,
+} from "../../../../utils/indicatorName";
 
 const { Text } = Typography;
 
@@ -201,6 +206,13 @@ interface IndicatorSelectionModalProps {
   testRequestId?: string;
   contractNumber?: string;
   onQuickIndicatorCreated: (result: QuickCreateIndicatorResultItem) => void;
+  // Tên chỉ tiêu trên phiếu (admin sửa), key "sampleKey_indicatorMethodKey"
+  customIndicatorNames: Record<string, CustomIndicatorName>;
+  getMasterIndicator: (
+    indicatorId: string,
+  ) => { name: string; formattedName?: string } | undefined;
+  canEditIndicatorName: boolean;
+  onIndicatorNameChange: (key: string, value: CustomIndicatorName) => void;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -251,8 +263,30 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   testRequestId,
   contractNumber,
   onQuickIndicatorCreated,
+  customIndicatorNames,
+  getMasterIndicator,
+  canEditIndicatorName,
+  onIndicatorNameChange,
 }) => {
   const [quickCreateVisible, setQuickCreateVisible] = useState(false);
+  // Dòng chỉ tiêu đang sửa tên (IndicatorMethodKey)
+  const [editingNameKey, setEditingNameKey] = useState<IndicatorMethodKey | null>(null);
+  const editingMasterName = useMemo(() => {
+    if (!editingNameKey) return undefined;
+    const { indicatorId } = parseIndicatorMethodKey(editingNameKey);
+    return getMasterIndicator(indicatorId) ?? getIndicatorMethodInfo(editingNameKey).indicator;
+  }, [editingNameKey, getMasterIndicator, getIndicatorMethodInfo]);
+
+  // Props tên chỉ tiêu cho từng dòng: tên trên phiếu + nút sửa (admin)
+  const getRowNameProps = (key: IndicatorMethodKey) => {
+    const customName = customIndicatorNames[`${currentSampleKey}_${key}`];
+    const master = getMasterIndicator(parseIndicatorMethodKey(key).indicatorId);
+    return {
+      customName,
+      isNameEdited: !!customName && !!master && !isSameIndicatorName(customName, master),
+      onEditName: canEditIndicatorName ? setEditingNameKey : undefined,
+    };
+  };
   // Get effective price for a method key (custom price or master data price)
   const getEffectivePrice = (
     key: IndicatorMethodKey,
@@ -2029,6 +2063,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               {/* Parent row */}
                               <IndicatorRow
                                 id={parentKey}
+                                {...getRowNameProps(parentKey)}
                                 isInGroup={false}
                                 indicator={indicator}
                                 methodName={method?.testMethodName || ""}
@@ -2072,6 +2107,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                   <IndicatorRow
                                     key={subKey}
                                     id={subKey}
+                                    {...getRowNameProps(subKey)}
                                     isInGroup={false}
                                     indicator={subInd}
                                     methodName={subMethod?.testMethodName || ""}
@@ -2104,6 +2140,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                             <IndicatorRow
                               key={key}
                               id={key}
+                              {...getRowNameProps(key)}
                               isInGroup={false}
                               indicator={indicator}
                               methodName={method?.testMethodName || ""}
@@ -2190,6 +2227,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     <IndicatorRow
                                       key={key}
                                       id={key}
+                                      {...getRowNameProps(key)}
                                       isInGroup={true}
                                       indicator={indicator}
                                       methodName={method?.testMethodName || ""}
@@ -2275,6 +2313,22 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         </div>
         )) : modalBodyRef.current}
       </Modal>
+      <IndicatorNameEditModal
+        open={!!editingNameKey}
+        value={
+          editingNameKey
+            ? customIndicatorNames[`${currentSampleKey}_${editingNameKey}`]
+            : undefined
+        }
+        masterName={editingMasterName}
+        onOk={(value) => {
+          if (editingNameKey) {
+            onIndicatorNameChange(`${currentSampleKey}_${editingNameKey}`, value);
+          }
+          setEditingNameKey(null);
+        }}
+        onCancel={() => setEditingNameKey(null)}
+      />
       <QuickCreateIndicatorModal
         open={quickCreateVisible}
         onCancel={() => setQuickCreateVisible(false)}

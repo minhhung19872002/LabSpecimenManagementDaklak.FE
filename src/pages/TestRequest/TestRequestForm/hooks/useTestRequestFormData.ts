@@ -64,6 +64,8 @@ import { PATH_ROUTES } from "../../../../constants";
 import { quotationService } from "../../../../services/quotationService";
 import { offlineQuotationService } from "../../../../services/offline/offlineServices";
 import { checkActionPermission } from "../../../../hooks/useActionPermission";
+import { authService } from "../../../../services/authService";
+import { CustomIndicatorName, pickCustomIndicatorName } from "../../../../utils/indicatorName";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
@@ -250,6 +252,10 @@ export const useTestRequestFormData = () => {
   // Custom prices per indicator method (overrides master data price, only for this test request)
   // Key format: "sampleKey_indicatorMethodKey" -> custom price
   const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
+
+  // Tên chỉ tiêu trên phiếu (snapshot đã lưu / admin sửa / lấy từ báo giá) — không đổi danh mục
+  // Key format: "sampleKey_indicatorMethodKey". Không có key → hiển thị tên danh mục.
+  const [customIndicatorNames, setCustomIndicatorNames] = useState<Record<string, CustomIndicatorName>>({});
 
   // Store TestRequestSampleIndicator.id for each indicator
   // Key format: "sampleKey_indicatorMethodKey" -> TestRequestSampleIndicator.id
@@ -728,6 +734,7 @@ export const useTestRequestFormData = () => {
         const expandedLabs: string[] = [];
         const restoredIndicatorIds: Record<string, string> = {}; // Store TestRequestSampleIndicator.id
         const restoredCustomPrices: Record<string, number> = {}; // Store saved unitPrice as custom price
+        const restoredIndicatorNames: Record<string, CustomIndicatorName> = {}; // Tên chỉ tiêu đã lưu trên phiếu
         const restoredIndicatorSnapshots: Record<string, IndicatorDto> = {};
         const restoredMethodSnapshots: Record<string, IndicatorMethodInfo> = {};
 
@@ -760,6 +767,14 @@ export const useTestRequestFormData = () => {
             // Restore saved unitPrice as custom price
             if (ind.unitPrice !== undefined && ind.unitPrice !== null) {
               restoredCustomPrices[`${sampleKey}_${methodKey}`] = ind.unitPrice;
+            }
+
+            // Giữ tên đã lưu trên phiếu (snapshot / admin đã sửa) — hiển thị thay tên danh mục
+            if (ind.indicatorName?.trim()) {
+              restoredIndicatorNames[`${sampleKey}_${methodKey}`] = {
+                name: ind.indicatorName.trim(),
+                formattedName: ind.indicatorFormattedName?.trim() || ind.indicatorName.trim(),
+              };
             }
 
             if (ind.indicatorId && !restoredIndicatorSnapshots[ind.indicatorId]) {
@@ -819,6 +834,7 @@ export const useTestRequestFormData = () => {
         setExpandedLabGroups(expandedLabs);
         setSampleIndicatorIdMap(restoredIndicatorIds);
         setCustomPrices(restoredCustomPrices);
+        setCustomIndicatorNames(restoredIndicatorNames);
         setSavedIndicatorSnapshots(restoredIndicatorSnapshots);
         setSavedMethodSnapshots(restoredMethodSnapshots);
       }
@@ -876,6 +892,7 @@ export const useTestRequestFormData = () => {
       const generatedSamples: SampleFormData[] = [];
       const generatedDates: Record<string, IndicatorDateInfo> = {};
       const generatedCustomPrices: Record<string, number> = {};
+      const generatedIndicatorNames: Record<string, CustomIndicatorName> = {};
 
       let globalIndex = 0;
       const removedIndicatorNames = new Set<string>();
@@ -885,6 +902,7 @@ export const useTestRequestFormData = () => {
         // Build indicator methods list + quotation prices once per quotation sample
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         const quotationPricesByMethodKey: Record<string, number> = {};
+        const quotationNamesByMethodKey: Record<string, CustomIndicatorName> = {};
         quotationSample.indicators.forEach((indicator) => {
           // Chỉ tiêu đã bị xóa khỏi danh mục → không đưa vào phiếu mới (báo giá cũ vẫn giữ tên snapshot)
           if (!knownIndicatorIds.has(indicator.indicatorId)) {
@@ -903,6 +921,15 @@ export const useTestRequestFormData = () => {
 
           if (indicator.unitPrice !== undefined && indicator.unitPrice !== null) {
             quotationPricesByMethodKey[methodKey] = indicator.unitPrice;
+          }
+
+          // Tên chỉ tiêu đã sửa trên báo giá (khác danh mục) → phiếu mới lấy tên này
+          const quotationName = pickCustomIndicatorName(
+            { name: indicator.indicatorName, formattedName: indicator.indicatorFormattedName },
+            getMasterIndicator(indicator.indicatorId),
+          );
+          if (quotationName) {
+            quotationNamesByMethodKey[methodKey] = quotationName;
           }
 
           if (!generatedDates[methodKey]) {
@@ -940,6 +967,9 @@ export const useTestRequestFormData = () => {
             if (quotationPricesByMethodKey[methodKey] !== undefined) {
               generatedCustomPrices[`${sampleKey}_${methodKey}`] = quotationPricesByMethodKey[methodKey];
             }
+            if (quotationNamesByMethodKey[methodKey]) {
+              generatedIndicatorNames[`${sampleKey}_${methodKey}`] = quotationNamesByMethodKey[methodKey];
+            }
           });
 
           globalIndex++;
@@ -948,6 +978,7 @@ export const useTestRequestFormData = () => {
 
       setSamples(generatedSamples);
       setCustomPrices(generatedCustomPrices);
+      setCustomIndicatorNames(generatedIndicatorNames);
       setSelectedIndicatorDates(generatedDates);
       setSourceQuotationId(quotationIdToLoad);
 
@@ -1043,6 +1074,9 @@ export const useTestRequestFormData = () => {
       const generatedSamples: SampleFormData[] = [];
       const generatedDates: Record<string, IndicatorDateInfo> = {};
       const generatedCustomPrices: Record<string, number> = {};
+      // Tên chỉ tiêu đã sửa trên hợp đồng gốc — chỉ admin mới lưu được tên sửa (BE bỏ qua với user khác)
+      const generatedIndicatorNames: Record<string, CustomIndicatorName> = {};
+      const keepCustomNames = authService.isAdmin();
 
       activeSamples.forEach(({ sample, indicators: activeIndicators }, sampleIndex) => {
         const sampleKey = `tr-sample-${Date.now()}-${sampleIndex}`;
@@ -1057,6 +1091,16 @@ export const useTestRequestFormData = () => {
           // Giữ đơn giá đã chỉnh trong hợp đồng gốc thay vì giá danh mục
           if (ind.unitPrice !== undefined && ind.unitPrice !== null) {
             generatedCustomPrices[`${sampleKey}_${methodKey}`] = ind.unitPrice;
+          }
+
+          const customName = keepCustomNames
+            ? pickCustomIndicatorName(
+                { name: ind.indicatorName, formattedName: ind.indicatorFormattedName },
+                getMasterIndicator(ind.indicatorId),
+              )
+            : undefined;
+          if (customName) {
+            generatedIndicatorNames[`${sampleKey}_${methodKey}`] = customName;
           }
 
           if (!generatedDates[methodKey]) {
@@ -1090,6 +1134,7 @@ export const useTestRequestFormData = () => {
 
       setSamples(generatedSamples);
       setCustomPrices(generatedCustomPrices);
+      setCustomIndicatorNames(generatedIndicatorNames);
       setSelectedIndicatorDates(generatedDates);
 
       message.success(`Đã tải dữ liệu từ hợp đồng ${data.contractNumber || data.requestNumber}`);
@@ -1119,6 +1164,17 @@ export const useTestRequestFormData = () => {
   const indicatorById = useMemo(
     () => new Map(indicators.map((ind) => [ind.id, ind])),
     [indicators],
+  );
+  // Tên danh mục của chỉ tiêu (cả chỉ tiêu con) — so với tên trên phiếu để biết dòng nào đã sửa tên
+  const subIndicatorById = useMemo(() => {
+    const map = new Map<string, { name: string; formattedName?: string }>();
+    indicators.forEach((ind) => ind.subIndicators?.forEach((sub) => map.set(sub.id, sub)));
+    return map;
+  }, [indicators]);
+  const getMasterIndicator = useCallback(
+    (indicatorId: string): { name: string; formattedName?: string } | undefined =>
+      indicatorById.get(indicatorId) ?? subIndicatorById.get(indicatorId),
+    [indicatorById, subIndicatorById],
   );
   const specimenTypeById = useMemo(
     () => new Map(specimenTypes.map((st) => [st.id, st])),
@@ -1805,6 +1861,11 @@ export const useTestRequestFormData = () => {
     // Custom prices (per-indicator override, only for this test request)
     customPrices,
     setCustomPrices,
+
+    // Tên chỉ tiêu trên phiếu (admin sửa / từ báo giá / snapshot đã lưu)
+    customIndicatorNames,
+    setCustomIndicatorNames,
+    getMasterIndicator,
 
     // Sample indicator IDs for update
     sampleIndicatorIdMap,
