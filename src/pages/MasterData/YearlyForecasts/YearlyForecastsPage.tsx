@@ -70,6 +70,7 @@ const YearlyForecastsPage = forwardRef<YearlyForecastActions, YearlyForecastsPag
         return;
       }
       Modal.confirm({
+        centered: true,
         title: "Bỏ thay đổi chưa lưu?",
         content: `Có ${dirtyCount} dòng dự toán chưa lưu sẽ bị mất.`,
         okText: "Bỏ thay đổi",
@@ -140,6 +141,7 @@ const YearlyForecastsPage = forwardRef<YearlyForecastActions, YearlyForecastsPag
   const handleClone = useCallback(() => {
     confirmDiscard(() => {
       Modal.confirm({
+        centered: true,
         title: `Clone dự toán từ năm ${year - 1}?`,
         content: `Chỉ điền các dòng năm ${year} còn trống, không ghi đè số đã nhập.`,
         okText: "Clone",
