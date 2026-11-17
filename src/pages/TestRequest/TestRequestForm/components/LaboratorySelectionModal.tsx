@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import { LaboratoryDto, IndicatorDto } from "../../../../services/masterDataService";
 import { IndicatorMethodKey, IndicatorMethodInfo } from "../types";
 import { IndicatorName } from "../../../../components/common";
+import type { CustomIndicatorName } from "../../../../utils/indicatorName";
 
 const { Text } = Typography;
 
@@ -25,6 +26,9 @@ interface LaboratorySelectionModalProps {
     testMethodId: string;
   };
   handleConfirmSendToLaboratory: () => void;
+  /** Tên chỉ tiêu trên phiếu, key "sampleKey_indicatorMethodKey" */
+  customIndicatorNames?: Record<string, CustomIndicatorName>;
+  currentSampleKey?: string | null;
 }
 
 const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
@@ -38,21 +42,24 @@ const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
   indicatorsToSend,
   getIndicatorMethodInfo,
   handleConfirmSendToLaboratory,
+  customIndicatorNames,
+  currentSampleKey,
 }) => {
   // Transform indicatorsToSend (IndicatorMethodKey[]) to table data
   const tableData = useMemo(() => {
     return indicatorsToSend.map((key) => {
       const { indicator, method } = getIndicatorMethodInfo(key as IndicatorMethodKey);
+      const customName = customIndicatorNames?.[`${currentSampleKey}_${key}`];
       return {
         key,
-        indicatorName: indicator?.name || "",
-        indicatorFormattedName: indicator?.formattedName,
+        indicatorName: customName?.name || indicator?.name || "",
+        indicatorFormattedName: customName?.formattedName || indicator?.formattedName,
         methodName: method?.testMethodName || "",
         methodFormattedName: method?.testMethodFormattedName,
         unitPrice: method?.unitPrice || 0,
       };
     });
-  }, [indicatorsToSend, getIndicatorMethodInfo]);
+  }, [indicatorsToSend, getIndicatorMethodInfo, customIndicatorNames, currentSampleKey]);
 
   return (
     <Modal

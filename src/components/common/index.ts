@@ -11,6 +11,7 @@ export { default as RichTextEditor } from './RichTextEditor';
 export { default as LimitInput, extractPlainTextFromLimit } from './LimitInput';
 export type { LimitInputRef } from './LimitInput';
 export { default as IndicatorName } from './IndicatorName';
+export { default as IndicatorNameEditModal } from './IndicatorNameEditModal';
 export { default as ColumnVisibilitySelector } from './ColumnVisibilitySelector';
 export type { ColumnOption } from './ColumnVisibilitySelector';
 export { default as EllipsisTooltip } from './EllipsisTooltip';

@@ -3,8 +3,10 @@ import React, { useState, useRef, useCallback } from "react";
 import { Button, Checkbox, DatePicker, InputNumber, Tag, Tooltip } from "antd";
 import {
   CloseOutlined,
+  EditOutlined,
   LockOutlined,
 } from "../../../../components/common/Icon";
+import type { CustomIndicatorName } from "../../../../utils/indicatorName";
 import dayjs from "dayjs";
 import { IndicatorDto } from "../../../../services/masterDataService";
 import {
@@ -86,6 +88,12 @@ interface IndicatorRowProps {
   hideDates?: boolean;
   onRemoveSub?: (id: string) => void;
   isRequestCompleted?: boolean;
+  /** Tên chỉ tiêu trên phiếu (thay tên danh mục khi hiển thị) */
+  customName?: CustomIndicatorName;
+  /** Tên trên phiếu khác tên danh mục */
+  isNameEdited?: boolean;
+  /** Có → hiện nút sửa tên (chỉ admin) */
+  onEditName?: (id: string) => void;
 }
 
 const IndicatorRow: React.FC<IndicatorRowProps> = ({
@@ -115,8 +123,14 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   hideDates = false,
   onRemoveSub,
   isRequestCompleted = false,
+  customName,
+  isNameEdited = false,
+  onEditName,
 }) => {
   if (!indicator) return null;
+
+  const displayName = customName?.name ?? indicator.name;
+  const displayFormattedName = customName?.formattedName ?? indicator.formattedName;
 
   // Kiểm tra xem có thể xóa/sửa indicator không
   // Lock nếu đã gửi tới khoa phòng (có approvalStatus hoặc isSentToQLKT)
@@ -173,7 +187,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         }}
       >
         <TruncateTooltip
-          title={indicator.name}
+          title={displayName}
           style={{
             fontSize: 13,
             overflow: "hidden",
@@ -183,10 +197,32 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           }}
         >
           <IndicatorName
-            name={indicator.name}
-            formattedName={indicator.formattedName}
+            name={displayName}
+            formattedName={displayFormattedName}
           />
         </TruncateTooltip>
+        {onEditName && (
+          <Tooltip
+            title={
+              isNameEdited
+                ? `Đã sửa tên trên phiếu (danh mục: ${indicator.name})`
+                : "Sửa tên chỉ tiêu trên phiếu"
+            }
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              style={{
+                flexShrink: 0,
+                width: 22,
+                height: 22,
+                color: isNameEdited ? "#fa8c16" : "#8c8c8c",
+              }}
+              onClick={() => onEditName(id)}
+            />
+          </Tooltip>
+        )}
         {isSubcontract && (
           <Tag color="orange" style={{ fontSize: 12, lineHeight: "20px", padding: "0 6px", margin: 0, flexShrink: 0 }}>
             HĐ phụ

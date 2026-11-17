@@ -89,6 +89,8 @@ export interface CreateUpdateQuotationSampleIndicatorDto {
   indicatorId: string;
   testMethodId: string;
   indicatorName: string;
+  /** Chỉ gửi khi admin sửa tên chỉ tiêu trên báo giá (BE ghi snapshot + lịch sử) */
+  indicatorFormattedName?: string | null;
   testMethodName: string;
   unitPrice: number;
   sortOrder: number;
@@ -149,6 +151,8 @@ export interface QuotationSampleIndicatorFormData {
   specimenTypeId?: string;
   specimenTypeName?: string;
   note?: string;
+  /** Admin đã sửa tên chỉ tiêu (hoặc khôi phục tên danh mục) → gửi tên lên BE khi lưu */
+  isCustomName?: boolean;
 }
 
 export interface QuotationSampleFormData {
