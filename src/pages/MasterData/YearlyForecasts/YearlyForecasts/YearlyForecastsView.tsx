@@ -1,94 +1,51 @@
 import React from "react";
-import { Alert, Collapse, Empty, Space, Spin, Tag, Typography } from "antd";
+import ForecastHeader, { type ForecastHeaderProps } from "./ForecastHeader";
 import ForecastToolbar, { type ForecastToolbarProps } from "./ForecastToolbar";
-import ForecastTable from "./ForecastTable";
-import type { ForecastMethodGroup } from "./utils";
+import ForecastTable, { type ForecastTableProps } from "./ForecastTable";
+import ForecastCalculationModal, { type ForecastCalculationModalProps } from "./ForecastCalculationModal";
 
-export interface YearlyForecastsViewProps extends ForecastToolbarProps {
-  groups: ForecastMethodGroup[];
-  missingCount: number;
-  totalCount: number;
-  drafts: Record<string, number | null>;
-  activeGroupKeys: string[];
-  onActiveGroupKeysChange: (keys: string[]) => void;
-  onValueChange: (testMethodIndicatorId: string, value: number | null) => void;
+export interface YearlyForecastsViewProps {
+  header: ForecastHeaderProps;
+  toolbar: ForecastToolbarProps;
+  table: ForecastTableProps;
+  calculation: ForecastCalculationModalProps;
 }
 
+const hintStyle = (locked: boolean): React.CSSProperties => ({
+  marginBottom: 10,
+  padding: "6px 12px",
+  borderRadius: 6,
+  fontSize: 13,
+  border: `1px solid ${locked ? "#d9d9d9" : "#b7eb8f"}`,
+  background: locked ? "#fafafa" : "#f6ffed",
+  color: locked ? "#595959" : "#389e0d",
+});
+
 /** L4 — Dự toán mẫu hàng năm */
-const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({
-  groups,
-  missingCount,
-  totalCount,
-  drafts,
-  activeGroupKeys,
-  onActiveGroupKeysChange,
-  onValueChange,
-  ...toolbarProps
-}) => {
-  const { year, isLocked, canEdit, loading } = toolbarProps;
+const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({ header, toolbar, table, calculation }) => {
+  const { year, isLocked, canEdit } = toolbar;
   return (
-    <div style={{ padding: 16 }}>
-      <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-        Tổng số mẫu dự kiến trong năm cho từng dịch vụ — mẫu số để chia chi phí 1 Mẻ thành 1 Phép thử. Danh sách tự
-        sinh từ các phương pháp đã có định mức theo mẻ.
-      </Typography.Paragraph>
-      <ForecastToolbar {...toolbarProps} />
+    <div style={{ padding: "4px 16px 16px" }}>
+      <ForecastHeader {...header} />
+      <ForecastToolbar {...toolbar} />
 
-      {isLocked ? (
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 12 }}
-          message={`Năm ${year} đã khóa — chỉ xem (sau 31/12, bản ghi năm cũ chuyển Read-Only).`}
-        />
-      ) : (
-        missingCount > 0 && (
-          <Alert
-            type="warning"
-            showIcon
-            style={{ marginBottom: 12 }}
-            message={`Còn ${missingCount}/${totalCount} dịch vụ chưa có dự toán năm ${year}`}
-            description="Dịch vụ thiếu dự toán sẽ hiện popup “cần thiết lập tiêu hao” khi chấp nhận thử nghiệm và không trừ kho khi trả kết quả."
-          />
-        )
-      )}
-
-      <Spin spinning={loading}>
-        {groups.length === 0 ? (
-          <Empty description="Không có dịch vụ nào (cần khai báo định mức theo mẻ cho phương pháp trước)" />
+      <div style={hintStyle(isLocked || !canEdit)}>
+        {isLocked ? (
+          <>
+            <b>Đã khóa:</b> Năm {year} chỉ xem — sau 31/12, bản ghi năm cũ chuyển Read-Only (BR-07).
+          </>
+        ) : canEdit ? (
+          <>
+            <b>Đang mở:</b> Nhập số mẫu trực tiếp vào bảng rồi bấm “Lưu dự toán”. Không ảnh hưởng Định mức Level 3
+            (BR-05).
+          </>
         ) : (
-          <Collapse
-            activeKey={activeGroupKeys}
-            onChange={(keys) => onActiveGroupKeysChange(keys as string[])}
-            items={groups.map((g) => ({
-              key: g.testMethodId,
-              label: (
-                <Space>
-                  <b>{g.testMethodCode}</b>
-                  <span>{g.testMethodName}</span>
-                  <Tag>{g.rows.length} dịch vụ</Tag>
-                  {g.missingCount > 0 && <Tag color="red">Thiếu {g.missingCount}</Tag>}
-                </Space>
-              ),
-              children: (
-                <ForecastTable
-                  rows={g.rows}
-                  year={year}
-                  readOnly={isLocked || !canEdit}
-                  drafts={drafts}
-                  onValueChange={onValueChange}
-                />
-              ),
-            }))}
-          />
+          <>Bạn chỉ có quyền xem dự toán.</>
         )}
-      </Spin>
+      </div>
 
-      <Typography.Paragraph type="secondary" style={{ marginTop: 16, fontSize: 12 }}>
-        • Sau 31/12, bản ghi năm cũ chuyển Read-Only. • Đầu năm: Clone dữ liệu năm cũ sang năm mới (chỉ điền dòng còn
-        trống) → sửa lại số mẫu dự toán. • [Mã DV + Năm] — 1 dịch vụ / 1 năm chỉ có 1 dự toán. • Tiêu hao / mẫu lấy
-        theo năm của ngày trả kết quả.
-      </Typography.Paragraph>
+      <ForecastTable {...table} />
+      <ForecastCalculationModal {...calculation} />
     </div>
   );
 };

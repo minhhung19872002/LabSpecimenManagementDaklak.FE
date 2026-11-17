@@ -21,6 +21,8 @@ const YearlyForecastsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [calcRowId, setCalcRowId] = useState<string | null>(null);
 
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
 
@@ -149,35 +151,59 @@ const YearlyForecastsPage: React.FC = () => {
   }, [confirmDiscard, year, load]);
 
   const allExpanded = groups.length > 0 && groups.every((g) => activeGroupKeys.includes(g.testMethodId));
+  const isLocked = data?.isLocked ?? year < CURRENT_YEAR;
+  const visibleServiceCount = groups.reduce((sum, g) => sum + g.rows.length, 0);
+  const calcRow = calcRowId ? data?.items.find((r) => r.testMethodIndicatorId === calcRowId) ?? null : null;
 
   return (
     <YearlyForecastsView
-      years={YEARS}
-      year={year}
-      isLocked={data?.isLocked ?? year < CURRENT_YEAR}
-      canClone={data?.canClone ?? false}
-      canEdit={canEdit}
-      keyword={keyword}
-      onlyMissing={onlyMissing}
-      dirtyCount={dirtyCount}
-      loading={loading}
-      saving={saving}
-      cloning={cloning}
-      allExpanded={allExpanded}
-      groups={groups}
-      missingCount={missingCount}
-      totalCount={data?.items.length ?? 0}
-      drafts={drafts}
-      activeGroupKeys={activeGroupKeys}
-      onActiveGroupKeysChange={setActiveGroupKeys}
-      onValueChange={handleValueChange}
-      onYearChange={(y) => y !== year && confirmDiscard(() => setYear(y))}
-      onKeywordChange={setKeyword}
-      onOnlyMissingChange={setOnlyMissing}
-      onToggleExpandAll={() => setActiveGroupKeys(allExpanded ? [] : groups.map((g) => g.testMethodId))}
-      onClone={handleClone}
-      onSave={handleSave}
-      onReload={() => confirmDiscard(() => load(year))}
+      header={{
+        year,
+        showRules,
+        showClone: canEdit && !isLocked && (data?.canClone ?? false),
+        cloning,
+        onToggleRules: () => setShowRules((v) => !v),
+        onClone: handleClone,
+      }}
+      toolbar={{
+        years: YEARS,
+        currentYear: CURRENT_YEAR,
+        year,
+        isLocked,
+        canEdit,
+        keyword,
+        onlyMissing,
+        dirtyCount,
+        loading,
+        saving,
+        allExpanded,
+        missingCount,
+        totalCount: data?.items.length ?? 0,
+        countText: `${groups.length} phương pháp · ${visibleServiceCount} dịch vụ`,
+        onYearChange: (y) => y !== year && confirmDiscard(() => setYear(y)),
+        onKeywordChange: setKeyword,
+        onOnlyMissingChange: setOnlyMissing,
+        onToggleExpandAll: () => setActiveGroupKeys(allExpanded ? [] : groups.map((g) => g.testMethodId)),
+        onSave: handleSave,
+        onReload: () => confirmDiscard(() => load(year)),
+      }}
+      table={{
+        groups,
+        year,
+        readOnly: isLocked || !canEdit,
+        loading,
+        drafts,
+        expandedKeys: activeGroupKeys,
+        onExpandedKeysChange: setActiveGroupKeys,
+        onValueChange: handleValueChange,
+        onViewCalculation: setCalcRowId,
+      }}
+      calculation={{
+        row: calcRow,
+        year,
+        estimatedSamples: calcRow ? valueOf(calcRow.testMethodIndicatorId, calcRow.estimatedSamples) : null,
+        onClose: () => setCalcRowId(null),
+      }}
     />
   );
 };
