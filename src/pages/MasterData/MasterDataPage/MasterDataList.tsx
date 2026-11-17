@@ -36,6 +36,9 @@ import SampleConditionsTab, {
 } from "../SampleStatuses";
 import UnitsTab, { type UnitActions } from "../Units";
 import ProductCatalogTab, { type ProductCatalogActions } from "../ProductCatalog";
+import ServiceCatalogPage from "../ServiceCatalog/ServiceCatalogPage";
+import BatchNormsPage from "../BatchNorms/BatchNormsPage";
+import YearlyForecastsPage from "../YearlyForecasts/YearlyForecastsPage";
 import ImportProductMasterDataModal from "./components/ImportProductMasterDataModal";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
@@ -59,6 +62,9 @@ import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import "../../../styles/ListCard.css";
 import "../MasterData.css";
+
+// Tab tự quản dữ liệu + nút thao tác, không có số đếm thống kê
+const SELF_MANAGED_TABS = ["services", "batchNorms", "yearlyForecasts"];
 
 const MasterDataList: React.FC = () => {
   const visibleCategories = useMemo(
@@ -603,13 +609,6 @@ const MasterDataList: React.FC = () => {
                             onClick: () =>
                               indicatorsRef.current?.handleDownloadAdminTemplate(),
                           },
-                          {
-                            key: "consumption",
-                            label: "Tải template tiêu hao",
-                            icon: <DownloadOutlined />,
-                            onClick: () =>
-                              indicatorsRef.current?.handleDownloadAdminConsumptionTemplate(),
-                          },
                         ]}
                       />
                       <AsyncDropdownButton
@@ -622,13 +621,6 @@ const MasterDataList: React.FC = () => {
                             label: "Nhập template chỉ tiêu",
                             icon: <UploadOutlined />,
                             onClick: () => indicatorsRef.current?.handleAdminImport(),
-                          },
-                          {
-                            key: "consumption",
-                            label: "Nhập template tiêu hao",
-                            icon: <UploadOutlined />,
-                            onClick: () =>
-                              indicatorsRef.current?.handleAdminConsumptionImport(),
                           },
                         ]}
                       />
@@ -811,6 +803,7 @@ const MasterDataList: React.FC = () => {
                 activeCategory !== "sampleConditions" &&
                 activeCategory !== "units" &&
                 activeCategory !== "products" &&
+                !SELF_MANAGED_TABS.includes(activeCategory) &&
                 activeCategory !== "warehouses" &&
                 activeCategory !== "manufacturers" && (
                   <Button
@@ -867,7 +860,7 @@ const MasterDataList: React.FC = () => {
               label: (
                 <Space>
                   {label}
-                  <Tag>{getStatCount(key, statistics)}</Tag>
+                  {!SELF_MANAGED_TABS.includes(key) && <Tag>{getStatCount(key, statistics)}</Tag>}
                 </Space>
               ),
               children:
@@ -932,6 +925,12 @@ const MasterDataList: React.FC = () => {
                     onDataChange={() => fetchStatistics()}
                     refreshKey={productsRefreshKey}
                   />
+                ) : key === "services" ? (
+                  activeCategory === "services" && <ServiceCatalogPage />
+                ) : key === "batchNorms" ? (
+                  activeCategory === "batchNorms" && <BatchNormsPage />
+                ) : key === "yearlyForecasts" ? (
+                  activeCategory === "yearlyForecasts" && <YearlyForecastsPage />
                 ) : (
                   <MasterDataTable
                     activeCategory={activeCategory}

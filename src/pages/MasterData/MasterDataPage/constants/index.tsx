@@ -45,6 +45,9 @@ export const categoryPermissionMap: Record<string, string> = {
   sampleConditions: PERMISSIONS.SampleConditions.Default,
   storageLocations: PERMISSIONS.StorageLocations.Default,
   products: PERMISSIONS.Products.Default,
+  services: PERMISSIONS.MasterData.Default,
+  batchNorms: PERMISSIONS.MasterData.Default,
+  yearlyForecasts: PERMISSIONS.MasterData.Default,
 };
 
 // Sorted alphabetically by Vietnamese label (A-Z). Keep this order when adding new entries.
@@ -53,6 +56,9 @@ export const categoryLabels: Record<string, string> = {
   manufacturers: "Danh mục hãng sản xuất",
   sampleTypeCategories: "Danh mục loại mẫu",
   products: "Danh mục vật tư thiết bị",
+  services: "Dịch vụ & Bảng giá",
+  yearlyForecasts: "Dự toán mẫu năm",
+  batchNorms: "Định mức theo mẻ",
   units: "Đơn vị hàng hóa",
   formTemplates: "Form mẫu",
   laboratories: "Khoa phòng",

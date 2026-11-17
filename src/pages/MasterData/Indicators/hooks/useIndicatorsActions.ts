@@ -15,7 +15,6 @@ import { importService } from "../../../../services/importService";
 import type {
   IndicatorGroupImportPreviewDto,
   AdminIndicatorNamePreviewDto,
-  AdminConsumptionPreviewDto,
 } from "../../../../services/importService";
 import {
   IndicatorGroupDto,
@@ -77,12 +76,6 @@ export const useIndicatorsActions = ({
   const [adminImportFileList, setAdminImportFileList] = useState<UploadFile[]>([]);
   const [adminImportPreview, setAdminImportPreview] =
     useState<AdminIndicatorNamePreviewDto | null>(null);
-
-  // State cho admin import tiêu hao (theo cặp chỉ tiêu + phương pháp)
-  const [adminConsumptionModalOpen, setAdminConsumptionModalOpen] = useState(false);
-  const [adminConsumptionFileList, setAdminConsumptionFileList] = useState<UploadFile[]>([]);
-  const [adminConsumptionPreview, setAdminConsumptionPreview] =
-    useState<AdminConsumptionPreviewDto | null>(null);
 
   // Handle Group CRUD
   const handleCreateGroup = (groupForm: UseFormReturn<IndicatorGroupFormData>) => {
@@ -635,83 +628,6 @@ export const useIndicatorsActions = ({
     setAdminImportPreview(null);
   };
 
-  // Admin consumption import handlers
-  const handleDownloadAdminConsumptionTemplate = async () => {
-    try {
-      const blob = await importService.downloadAdminConsumptionTemplate();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "AdminTemplate_TieuHao.xlsx";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error: unknown) {
-      message.error(getApiErrorMessage(error, "Không thể tải template tiêu hao"));
-    }
-  };
-
-  const getAdminConsumptionFile = (): File | null => {
-    if (adminConsumptionFileList.length === 0) {
-      message.error("Vui lòng chọn file Excel");
-      return null;
-    }
-    const file = adminConsumptionFileList[0].originFileObj;
-    if (!file) {
-      message.error("File không hợp lệ");
-      return null;
-    }
-    return file;
-  };
-
-  const handlePreviewAdminConsumption = async () => {
-    const file = getAdminConsumptionFile();
-    if (!file) return;
-
-    try {
-      setModalLoading(true);
-      const result = await importService.previewAdminConsumption(file);
-      setAdminConsumptionPreview(result);
-    } catch (error: unknown) {
-      message.error(getApiErrorMessage(error, "Không thể đọc file Excel"));
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const handleConfirmAdminConsumption = async () => {
-    const file = getAdminConsumptionFile();
-    if (!file) return;
-
-    try {
-      setModalLoading(true);
-      const result = await importService.importAdminConsumption(file);
-
-      if (result.success) {
-        message.success(
-          result.message || `[Admin] Nhập tiêu hao thành công ${result.importedRows} dòng!`
-        );
-        setAdminConsumptionModalOpen(false);
-        setAdminConsumptionFileList([]);
-        setAdminConsumptionPreview(null);
-        fetchData();
-        onDataChange?.();
-      } else {
-        message.error(result.message || "Nhập tiêu hao không thành công");
-      }
-    } catch (error: unknown) {
-      message.error(getApiErrorMessage(error, "Không thể nhập tiêu hao"));
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const handleResetAdminConsumption = () => {
-    setAdminConsumptionFileList([]);
-    setAdminConsumptionPreview(null);
-  };
-
   return {
     // Modal states
     groupModalOpen,
@@ -778,15 +694,5 @@ export const useIndicatorsActions = ({
     handlePreviewAdminImport,
     handleConfirmAdminImport,
     handleResetAdminImport,
-    // Admin consumption import (tiêu hao theo chỉ tiêu + phương pháp)
-    adminConsumptionModalOpen,
-    setAdminConsumptionModalOpen,
-    adminConsumptionFileList,
-    setAdminConsumptionFileList,
-    adminConsumptionPreview,
-    handleDownloadAdminConsumptionTemplate,
-    handlePreviewAdminConsumption,
-    handleConfirmAdminConsumption,
-    handleResetAdminConsumption,
   };
 };

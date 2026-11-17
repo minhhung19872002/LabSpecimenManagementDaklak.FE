@@ -790,7 +790,13 @@ export interface ConsumptionStatusDto {
   indicatorId: string;
   specimenTypeId?: string;
   testMethodIndicatorId?: string;
+  /** Đủ định mức L3 + dự toán L4 năm hiện tại */
   hasConsumption: boolean;
+  /** Phương pháp có định mức theo mẻ (vật tư + tổng tiêu hao) */
+  hasNorm: boolean;
+  /** Dịch vụ có dự toán mẫu năm forecastYear */
+  hasForecast: boolean;
+  forecastYear: number;
 }
 
 export const standardService = {

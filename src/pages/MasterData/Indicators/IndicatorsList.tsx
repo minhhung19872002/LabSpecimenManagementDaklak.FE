@@ -1,8 +1,8 @@
-import { useMemo, useRef, forwardRef, useImperativeHandle } from "react";
+import { useMemo, forwardRef, useImperativeHandle } from "react";
 import { Form } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useIndicatorsData, useIndicatorsActions, useIndicatorMethodsActions } from "./hooks";
+import { useIndicatorsData, useIndicatorsActions } from "./hooks";
 import { getIndicatorColumns, getGroupColumns } from "./constants";
 import {
   IndicatorsTable,
@@ -13,12 +13,7 @@ import {
   ImportGroupModal,
   ImportIndicatorGroupModal,
   AdminImportNameModal,
-  AdminImportConsumptionModal,
-  AddMethodToIndicatorModal,
-  EditMethodModal,
-  MaterialConsumptionModal,
 } from "./components";
-import type { IndicatorsTableRef } from "./components/IndicatorsTable";
 import { IndicatorsTabProps, IndicatorsActions } from "./types";
 import {
   indicatorSchema,
@@ -28,7 +23,6 @@ import {
 } from "./schemas/indicatorSchema";
 
 const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDataChange }, ref) => {
-  const tableRef = useRef<IndicatorsTableRef>(null);
 
   const {
     indicators,
@@ -43,16 +37,10 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     totalCount,
     currentPage,
     pageSize,
-    filterSpecimenTypeIds,
-    filterTestMethodIds,
-    specimenTypeFilterOptions,
-    testMethodFilterOptions,
     setSearchText,
     setExpandedRowKeys,
     setSelectedRowKeys,
     setBatchLoading,
-    setFilterSpecimenTypeIds,
-    setFilterTestMethodIds,
     handlePageChange,
     fetchData,
   } = useIndicatorsData();
@@ -121,16 +109,6 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handlePreviewAdminImport,
     handleConfirmAdminImport,
     handleResetAdminImport,
-    // Admin consumption import
-    adminConsumptionModalOpen,
-    setAdminConsumptionModalOpen,
-    adminConsumptionFileList,
-    setAdminConsumptionFileList,
-    adminConsumptionPreview,
-    handleDownloadAdminConsumptionTemplate,
-    handlePreviewAdminConsumption,
-    handleConfirmAdminConsumption,
-    handleResetAdminConsumption,
   } = useIndicatorsActions({
     indicators,
     selectedRowKeys,
@@ -139,39 +117,6 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     fetchData,
     onDataChange,
   });
-
-  const {
-    specimenTypes,
-    testMethods,
-    addMethodModalOpen,
-    addMethodLoading,
-    addMethodTarget,
-    handleOpenAddMethod,
-    handleAddMethodOk,
-    handleAddMethodCancel,
-    editMethodModalOpen,
-    editMethodLoading,
-    editingMethod,
-    editMethodIndicatorName,
-    editMethodIndicatorFormattedName,
-    editMethodExistingKeys,
-    handleOpenEditMethod,
-    handleEditMethodOk,
-    handleEditMethodCancel,
-    handleToggleMethodActive,
-    handleDeleteMethod,
-    consumptionModalOpen,
-    consumptionContext,
-    pendingConsumptionMap,
-    handleOpenSetupConsumption,
-    handleOpenPendingConsumption,
-    handleConsumptionSave,
-    handleConsumptionCancel,
-  } = useIndicatorMethodsActions({
-    invalidateMethodsMap: () => tableRef.current?.invalidateMethodsCache(),
-    fetchData,
-  });
-
   const groupForm = useForm<IndicatorGroupFormData>({
     resolver: yupResolver(indicatorGroupSchema) as any,
     defaultValues: { name: "", isActive: true },
@@ -215,15 +160,12 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handleImport: () => setImportIndicatorGroupModalOpen(true),
     handleDownloadAdminTemplate,
     handleAdminImport: () => setAdminImportModalOpen(true),
-    handleDownloadAdminConsumptionTemplate,
-    handleAdminConsumptionImport: () => setAdminConsumptionModalOpen(true),
   }));
 
   return (
     <>
 
       <IndicatorsTable
-        ref={tableRef}
         loading={loading}
         batchLoading={batchLoading}
         groupedData={groupedData}
@@ -237,19 +179,8 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         onBatchDelete={handleBatchDelete}
         onBatchDeactivate={handleBatchDeactivate}
         onBatchActivate={handleBatchActivate}
-        onAddMethod={handleOpenAddMethod}
-        onEditMethod={handleOpenEditMethod}
-        onDeleteMethod={handleDeleteMethod}
-        onToggleMethodActive={handleToggleMethodActive}
-        onSetupConsumption={handleOpenSetupConsumption}
         searchText={searchText}
-        filterSpecimenTypeIds={filterSpecimenTypeIds}
-        filterTestMethodIds={filterTestMethodIds}
-        specimenTypeOptions={specimenTypeFilterOptions}
-        testMethodOptions={testMethodFilterOptions}
         onSearchChange={setSearchText}
-        onFilterSpecimenTypeChange={setFilterSpecimenTypeIds}
-        onFilterTestMethodChange={setFilterTestMethodIds}
         totalCount={totalCount}
         currentPage={currentPage}
         pageSize={pageSize}
@@ -360,77 +291,6 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         }}
         onReset={handleResetAdminImport}
       />
-
-      {/* Admin Import tiêu hao theo chỉ tiêu + phương pháp */}
-      <AdminImportConsumptionModal
-        open={adminConsumptionModalOpen}
-        loading={modalLoading}
-        fileList={adminConsumptionFileList}
-        previewData={adminConsumptionPreview}
-        onFileListChange={setAdminConsumptionFileList}
-        onPreview={handlePreviewAdminConsumption}
-        onConfirm={handleConfirmAdminConsumption}
-        onCancel={() => {
-          setAdminConsumptionModalOpen(false);
-          handleResetAdminConsumption();
-        }}
-        onReset={handleResetAdminConsumption}
-      />
-
-      {/* Add Method to Indicator Modal */}
-      {addMethodTarget && (
-        <AddMethodToIndicatorModal
-          open={addMethodModalOpen}
-          loading={addMethodLoading}
-          indicatorId={addMethodTarget.id}
-          indicatorName={addMethodTarget.name}
-          indicatorFormattedName={addMethodTarget.formattedName}
-          indicatorGroupName={
-            groupedData.find((g) =>
-              g.indicators.some((ind: { id: string }) => ind.id === addMethodTarget.id)
-            )?.name || ""
-          }
-          specimenTypes={specimenTypes}
-          testMethods={testMethods}
-          existingMethodKeys={addMethodTarget.existingKeys}
-          pendingConsumptionMap={pendingConsumptionMap}
-          onOk={handleAddMethodOk}
-          onCancel={handleAddMethodCancel}
-          onOpenConsumption={handleOpenPendingConsumption}
-        />
-      )}
-
-      {/* Edit Method Modal */}
-      <EditMethodModal
-        open={editMethodModalOpen}
-        loading={editMethodLoading}
-        indicatorName={editMethodIndicatorName}
-        indicatorFormattedName={editMethodIndicatorFormattedName}
-        record={editingMethod}
-        specimenTypes={specimenTypes}
-        testMethods={testMethods}
-        existingMethodKeys={editMethodExistingKeys}
-        onOk={handleEditMethodOk}
-        onCancel={handleEditMethodCancel}
-      />
-
-      {/* Material Consumption Modal */}
-      {consumptionContext && (
-        <MaterialConsumptionModal
-          open={consumptionModalOpen}
-          indicatorGroupName={consumptionContext.indicatorGroupName}
-          indicatorName={consumptionContext.indicatorName}
-          indicatorFormattedName={consumptionContext.indicatorFormattedName}
-          testMethodName={consumptionContext.testMethodName}
-          testMethodFormattedName={consumptionContext.testMethodFormattedName}
-          unit={consumptionContext.unit}
-          formattedUnit={consumptionContext.formattedUnit}
-          testMethodIndicatorId={consumptionContext.testMethodIndicatorId}
-          pendingItems={consumptionContext.pendingItems}
-          onSave={handleConsumptionSave}
-          onCancel={handleConsumptionCancel}
-        />
-      )}
     </>
   );
 });

@@ -3,13 +3,8 @@ import { message } from "antd";
 import {
   indicatorGroupService,
   indicatorService,
-  specimenTypeService,
-  testMethodService,
   laboratoryService,
   LaboratoryDto,
-  SpecimenTypeDto,
-  TestMethodDto,
-  IndicatorWithMethodsDto,
 } from "../../../../services/masterDataService";
 import { IndicatorGroupDto, IndicatorDto, GroupedIndicatorData } from "../types";
 
@@ -27,16 +22,6 @@ export const useIndicatorsData = () => {
   const [batchLoading, setBatchLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  // Filter state (multi-select)
-  const [filterSpecimenTypeIds, setFilterSpecimenTypeIds] = useState<string[]>([]);
-  const [filterTestMethodIds, setFilterTestMethodIds] = useState<string[]>([]);
-  const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
-  const [allTestMethods, setAllTestMethods] = useState<TestMethodDto[]>([]);
-
-  // Linked IDs (only specimenTypes/testMethods that are linked to indicators)
-  const [linkedSpecimenTypeIds, setLinkedSpecimenTypeIds] = useState<Set<string>>(new Set());
-  const [linkedTestMethodIds, setLinkedTestMethodIds] = useState<Set<string>>(new Set());
 
   // Ref data (loaded once)
   const refDataLoaded = useRef(false);
@@ -68,53 +53,16 @@ export const useIndicatorsData = () => {
       }));
   }, [laboratories]);
 
-  // Filter options: only show specimenTypes/testMethods linked to indicators
-  const specimenTypeFilterOptions = useMemo(() => {
-    return specimenTypes
-      .filter((st) => linkedSpecimenTypeIds.has(st.id))
-      .map((st) => ({
-        value: st.id,
-        label: `${st.code} - ${st.name}`,
-      }));
-  }, [specimenTypes, linkedSpecimenTypeIds]);
-
-  const testMethodFilterOptions = useMemo(() => {
-    return allTestMethods
-      .filter((tm) => linkedTestMethodIds.has(tm.id))
-      .map((tm) => ({
-        value: tm.id,
-        label: `${tm.code} - ${tm.name}`,
-      }));
-  }, [allTestMethods, linkedTestMethodIds]);
-
-  // Fetch reference data (groups, labs, specimenTypes, testMethods, linked IDs) - once
+  // Fetch reference data (groups, labs) - once
   const fetchRefData = useCallback(async () => {
     if (refDataLoaded.current) return;
     try {
-      const [groupsData, laboratoriesData, stResult, tmResult, methodsData] = await Promise.all([
+      const [groupsData, laboratoriesData] = await Promise.all([
         indicatorGroupService.getWithCount(),
         laboratoryService.getActive(),
-        specimenTypeService.getActive(),
-        testMethodService.getActive(),
-        indicatorService.getWithMethods(),
       ]);
       setGroups(groupsData || []);
       setLaboratories(laboratoriesData || []);
-      setSpecimenTypes(stResult.items || []);
-      setAllTestMethods(tmResult.items || []);
-
-      // Build linked sets for filter options
-      const stIds = new Set<string>();
-      const tmIds = new Set<string>();
-      (methodsData || []).forEach((ind: IndicatorWithMethodsDto) => {
-        ind.methods.forEach((m) => {
-          if (m.specimenTypeId) stIds.add(m.specimenTypeId);
-          tmIds.add(m.testMethodId);
-        });
-      });
-      setLinkedSpecimenTypeIds(stIds);
-      setLinkedTestMethodIds(tmIds);
-
       refDataLoaded.current = true;
       setExpandedRowKeys((groupsData || []).map((g: IndicatorGroupDto) => g.id));
     } catch (error) {
@@ -123,11 +71,7 @@ export const useIndicatorsData = () => {
   }, []);
 
   // Fetch all matching indicators in batches (pagination is at group level)
-  const fetchIndicators = useCallback(async (
-    search: string,
-    specimenTypeIds: string[],
-    testMethodIds: string[],
-  ) => {
+  const fetchIndicators = useCallback(async (search: string) => {
     setLoading(true);
     try {
       const batchSize = 1000;
@@ -140,8 +84,6 @@ export const useIndicatorsData = () => {
           skipCount: skip,
           maxResultCount: batchSize,
           search: search || undefined,
-          specimenTypeIds: specimenTypeIds.length ? specimenTypeIds : undefined,
-          testMethodIds: testMethodIds.length ? testMethodIds : undefined,
         });
         allItems.push(...(result.items || []));
         skip += batchSize;
@@ -162,29 +104,18 @@ export const useIndicatorsData = () => {
   const fetchData = useCallback(async () => {
     refDataLoaded.current = false;
     await fetchRefData();
-    await fetchIndicators(debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds);
-  }, [fetchRefData, fetchIndicators, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds]);
+    await fetchIndicators(debouncedSearch);
+  }, [fetchRefData, fetchIndicators, debouncedSearch]);
 
   // Initial load
   useEffect(() => {
     fetchRefData();
   }, [fetchRefData]);
 
-  // Fetch indicators when filters change (uses debounced search)
+  // Fetch indicators when search changes (debounced)
   useEffect(() => {
-    fetchIndicators(debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds);
-  }, [fetchIndicators, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds]);
-
-  // Filter change handlers (reset to page 1)
-  const handleFilterSpecimenTypeChange = useCallback((values: string[]) => {
-    setFilterSpecimenTypeIds(values);
-    setCurrentPage(1);
-  }, []);
-
-  const handleFilterTestMethodChange = useCallback((values: string[]) => {
-    setFilterTestMethodIds(values);
-    setCurrentPage(1);
-  }, []);
+    fetchIndicators(debouncedSearch);
+  }, [fetchIndicators, debouncedSearch]);
 
   const handlePageChange = useCallback((page: number, size: number) => {
     setCurrentPage(page);
@@ -229,10 +160,6 @@ export const useIndicatorsData = () => {
     totalCount: groupTotalCount,
     currentPage,
     pageSize,
-    filterSpecimenTypeIds,
-    filterTestMethodIds,
-    specimenTypeFilterOptions,
-    testMethodFilterOptions,
     setGroups,
     setIndicators,
     setLaboratories,
@@ -241,8 +168,6 @@ export const useIndicatorsData = () => {
     setExpandedRowKeys,
     setSelectedRowKeys,
     setBatchLoading,
-    setFilterSpecimenTypeIds: handleFilterSpecimenTypeChange,
-    setFilterTestMethodIds: handleFilterTestMethodChange,
     handlePageChange,
     fetchData,
   };

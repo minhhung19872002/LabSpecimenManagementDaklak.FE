@@ -230,9 +230,20 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
           methodFormattedName: ind.methodFormattedName,
           unit: ind.unit,
           testMethodIndicatorId: status?.testMethodIndicatorId,
+          testMethodId: ind.methodId!,
+          hasNorm: status?.hasNorm ?? false,
+          hasForecast: status?.hasForecast ?? false,
+          forecastYear: status?.forecastYear ?? new Date().getFullYear(),
           hasConsumption: status?.hasConsumption ?? false,
         };
       });
+
+      // Đủ định mức + dự toán cho mọi chỉ tiêu → chấp nhận luôn, không hiện popup
+      if (setupIndicators.every((i) => i.hasConsumption)) {
+        setActionLoading(false);
+        await performAccept(indicatorIds);
+        return;
+      }
 
       setConsumptionSetupModal({
         visible: true,
@@ -253,6 +264,10 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
           methodFormattedName: ind.methodFormattedName,
           unit: ind.unit,
           testMethodIndicatorId: undefined,
+          testMethodId: ind.methodId!,
+          hasNorm: false,
+          hasForecast: false,
+          forecastYear: new Date().getFullYear(),
           hasConsumption: false,
         })),
         pendingAcceptIds: indicatorIds,
