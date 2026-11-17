@@ -135,12 +135,16 @@ export interface ImportServicePricesResultDto {
   applied: boolean;
 }
 
+/** BE ApiResponseWrapperFilter làm phẳng ListResultDto thành mảng trần — chấp nhận cả 2 dạng */
+const toList = <T,>(data: T[] | { items?: T[] } | null | undefined): T[] =>
+  Array.isArray(data) ? data : data?.items ?? [];
+
 const SERVICE_URL = "/api/v1/service-catalog";
 
 export const serviceCatalogService = {
   getList: async (params: GetServiceCatalogParams = {}): Promise<ServiceCatalogItemDto[]> => {
-    const response = await api.get<{ items: ServiceCatalogItemDto[] }>(SERVICE_URL, { params });
-    return response.data?.items || [];
+    const response = await api.get<ServiceCatalogItemDto[] | { items: ServiceCatalogItemDto[] }>(SERVICE_URL, { params });
+    return toList(response.data);
   },
   bulkCreate: async (input: BulkCreateServicesInput): Promise<BulkCreateServicesResultDto> => {
     const response = await api.post<BulkCreateServicesResultDto>(`${SERVICE_URL}/bulk-create`, input);
@@ -154,8 +158,8 @@ export const serviceCatalogService = {
     return response.data;
   },
   getPriceVersions: async (id: string): Promise<ServicePriceVersionDto[]> => {
-    const response = await api.get<{ items: ServicePriceVersionDto[] }>(`${SERVICE_URL}/${id}/price-versions`);
-    return response.data?.items || [];
+    const response = await api.get<ServicePriceVersionDto[] | { items: ServicePriceVersionDto[] }>(`${SERVICE_URL}/${id}/price-versions`);
+    return toList(response.data);
   },
   setPrice: async (id: string, input: SetServicePriceInput): Promise<ServiceCatalogItemDto> => {
     const response = await api.post<ServiceCatalogItemDto>(`${SERVICE_URL}/${id}/prices`, input);
@@ -228,12 +232,12 @@ const NORM_URL = "/api/v1/batch-norms";
 
 export const batchNormService = {
   getMethods: async (params: { keyword?: string; hasNorm?: boolean } = {}): Promise<BatchNormMethodDto[]> => {
-    const response = await api.get<{ items: BatchNormMethodDto[] }>(`${NORM_URL}/methods`, { params });
-    return response.data?.items || [];
+    const response = await api.get<BatchNormMethodDto[] | { items: BatchNormMethodDto[] }>(`${NORM_URL}/methods`, { params });
+    return toList(response.data);
   },
   getByMethod: async (testMethodId: string): Promise<MethodBatchNormDto[]> => {
-    const response = await api.get<{ items: MethodBatchNormDto[] }>(`${NORM_URL}/by-method/${testMethodId}`);
-    return response.data?.items || [];
+    const response = await api.get<MethodBatchNormDto[] | { items: MethodBatchNormDto[] }>(`${NORM_URL}/by-method/${testMethodId}`);
+    return toList(response.data);
   },
   create: async (input: CreateUpdateMethodBatchNormInput): Promise<MethodBatchNormDto> => {
     const response = await api.post<MethodBatchNormDto>(NORM_URL, input);
