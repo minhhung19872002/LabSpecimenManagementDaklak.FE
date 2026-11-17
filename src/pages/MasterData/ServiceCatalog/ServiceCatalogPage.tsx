@@ -16,10 +16,12 @@ import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 import ServiceCatalogView from "./ServiceCatalog/ServiceCatalogView";
-import type { ServiceCellAction, ServiceEditingCell } from "./ServiceCatalog/ServiceMatrixTable";
+import type { ServiceCellAction } from "./ServiceCatalog/ServiceMatrixTable";
 import {
   ALL_CATEGORY,
+  buildMatrixPageRows,
   buildServiceMatrix,
+  DEFAULT_MATRIX_PAGE_SIZE,
   collectSpecimenCategories,
   collectSpecimenColumns,
   exportServicesToExcel,
@@ -70,7 +72,9 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   const [specimenCategory, setSpecimenCategory] = useState(ALL_CATEGORY);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
-  const [editing, setEditing] = useState<ServiceEditingCell | null>(null);
+  // Chỉ giữ id ô đang sửa; giá đang gõ nằm trong ô (local state) để gõ phím không render lại cả ma trận
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [matrixPageSize, setMatrixPageSize] = useState(DEFAULT_MATRIX_PAGE_SIZE);
 
   const [bulkCreate, setBulkCreate] = useState<{ open: boolean; prefill: BulkCreatePrefill | null }>({
     open: false,
@@ -137,6 +141,17 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     setExpandedRowKeys(groupKeys);
   }, [groupKeys]);
 
+  // Phân trang theo dòng chỉ tiêu (không theo nhóm) — tránh vẽ cả trăm dòng × hàng chục cột một lúc
+  const matrixPageRows = useMemo(
+    () => buildMatrixPageRows(matrixRows, new Set(expandedRowKeys), matrixPageSize),
+    [matrixRows, expandedRowKeys, matrixPageSize]
+  );
+  const toggleGroup = useCallback(
+    (groupKey: string) =>
+      setExpandedRowKeys((prev) => (prev.includes(groupKey) ? prev.filter((k) => k !== groupKey) : [...prev, groupKey])),
+    []
+  );
+
   const categoryBySpecimenId = useMemo(
     () => new Map(specimenTypes.map((s) => [s.id, s.sampleTypeCategoryName ?? ""])),
     [specimenTypes]
@@ -187,12 +202,16 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     [openBuilder, testMethodId, filteredServices]
   );
 
-  const handleEditCommit = useCallback(async () => {
-    if (!editing) return;
-    const service = services.find((s) => s.id === editing.serviceId);
-    const value = editing.value;
-    setEditing(null);
-    if (!service || value == null || value === service.priceAtDate) return;
+  const handleCellDoubleClick = useCallback(
+    (service: ServiceCatalogItemDto) => setEditingServiceId(service.id),
+    []
+  );
+  const handleEditCancel = useCallback(() => setEditingServiceId(null), []);
+
+  // Callback ổn định (không phụ thuộc state đang sửa) để các ô React.memo không render lại
+  const handleEditCommit = useCallback(async (service: ServiceCatalogItemDto, value: number | null) => {
+    setEditingServiceId(null);
+    if (value == null || value === service.priceAtDate) return;
     try {
       const updated = await serviceCatalogService.setPrice(service.id, {
         unitPrice: value,
@@ -204,7 +223,7 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     } catch (error) {
       message.error(getApiErrorMessage(error, "Không đổi được giá"));
     }
-  }, [editing, services, replaceService]);
+  }, [replaceService]);
 
   const handleCellAction = useCallback(
     async (action: ServiceCellAction, service: ServiceCatalogItemDto) => {
@@ -297,23 +316,23 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           onReload: reload,
         }}
         matrix={{
-          rows: matrixRows,
+          rows: matrixPageRows,
           specimenColumns: visibleSpecimenColumns,
           loading,
           viewDate,
           selectedRowKeys,
-          expandedRowKeys,
-          editing,
+          pageSize: matrixPageSize,
+          editingServiceId,
           canCreate,
           canEdit,
           canDelete,
           onSelectionChange: setSelectedRowKeys,
-          onExpandedChange: setExpandedRowKeys,
-          onCellDoubleClick: (s) => setEditing({ serviceId: s.id, value: s.priceAtDate ?? s.unitPrice }),
+          onToggleGroup: toggleGroup,
+          onPageSizeChange: setMatrixPageSize,
+          onCellDoubleClick: handleCellDoubleClick,
           onEmptyCellDoubleClick: handleEmptyCellDoubleClick,
-          onEditValueChange: (value) => setEditing((prev) => (prev ? { ...prev, value } : prev)),
           onEditCommit: handleEditCommit,
-          onEditCancel: () => setEditing(null),
+          onEditCancel: handleEditCancel,
           onCellAction: handleCellAction,
         }}
         list={{

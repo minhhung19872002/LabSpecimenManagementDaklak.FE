@@ -1,43 +1,35 @@
-import React from "react";
-import { Dropdown, Input, Table, Tag, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import type { MenuProps } from "antd";
-import { NumericFormat } from "react-number-format";
+import React, { useMemo } from "react";
+import { Button, Table, Tag, Typography } from "antd";
+import type { ColumnsType, TableProps } from "antd/es/table";
+import { DownOutlined, RightOutlined } from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
 import type { ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
-import {
-  formatPrice,
-  formatShortDate,
-  hasUpcomingAfter,
-  type ServiceMatrixRow,
-  type SpecimenColumn,
-} from "./utils";
+import ServiceMatrixCell from "./ServiceMatrixCell";
+import ServiceCellContextMenu, { type ServiceCellAction } from "./ServiceCellContextMenu";
+import { isMatrixRowKey, MATRIX_PAGE_SIZE_OPTIONS, type ServiceMatrixRow, type SpecimenColumn } from "./utils";
 
-export type ServiceCellAction = "history" | "toggle" | "delete";
-
-export interface ServiceEditingCell {
-  serviceId: string;
-  value: number | null;
-}
+export type { ServiceCellAction };
 
 export interface ServiceMatrixTableProps {
+  /** Danh sách PHẲNG đã chia trang (buildMatrixPageRows): dòng nhóm + dòng chỉ tiêu */
   rows: ServiceMatrixRow[];
   specimenColumns: SpecimenColumn[];
   loading: boolean;
   /** YYYY-MM-DD — ngày đang xem giá */
   viewDate: string;
+  /** Chỉ chứa key dòng chỉ tiêu ("r:...") */
   selectedRowKeys: string[];
-  expandedRowKeys: string[];
-  editing: ServiceEditingCell | null;
+  pageSize: number;
+  editingServiceId: string | null;
   canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
   onSelectionChange: (keys: string[]) => void;
-  onExpandedChange: (keys: string[]) => void;
+  onToggleGroup: (groupKey: string) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onCellDoubleClick: (service: ServiceCatalogItemDto) => void;
   onEmptyCellDoubleClick: (row: ServiceMatrixRow, column: SpecimenColumn) => void;
-  onEditValueChange: (value: number | null) => void;
-  onEditCommit: () => void;
+  onEditCommit: (service: ServiceCatalogItemDto, value: number | null) => void;
   onEditCancel: () => void;
   onCellAction: (action: ServiceCellAction, service: ServiceCatalogItemDto) => void;
 }
@@ -45,20 +37,9 @@ export interface ServiceMatrixTableProps {
 const CELL_WIDTH = 160;
 const NAME_WIDTH = 300;
 
-const cellBoxStyle: React.CSSProperties = {
-  width: "100%",
-  minHeight: 44,
-  boxSizing: "border-box",
-  padding: "4px 10px",
-  border: "1px solid #F0F0F0",
-  borderRadius: 8,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-end",
-  justifyContent: "center",
-  cursor: "cell",
-  userSelect: "none",
-};
+const groupCellProps = (span: number) => ({ colSpan: span, style: { background: "#FAFAFA" } });
+const priceCellProps = { style: { padding: "6px 4px" } };
+const hiddenCellProps = { colSpan: 0 };
 
 /** Ma trận giá: nhóm chỉ tiêu ▸ dòng Chỉ tiêu + Phương pháp, cột = Nền mẫu, ô = Giá */
 const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
@@ -67,178 +48,186 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
   loading,
   viewDate,
   selectedRowKeys,
-  expandedRowKeys,
-  editing,
+  pageSize,
+  editingServiceId,
   canCreate,
   canEdit,
   canDelete,
   onSelectionChange,
-  onExpandedChange,
+  onToggleGroup,
+  onPageSizeChange,
   onCellDoubleClick,
   onEmptyCellDoubleClick,
-  onEditValueChange,
   onEditCommit,
   onEditCancel,
   onCellAction,
 }) => {
-  const buildMenu = (service: ServiceCatalogItemDto): MenuProps["items"] => {
-    const items: MenuProps["items"] = [{ key: "history", label: "Lịch sử giá / đổi giá" }];
-    if (canEdit) items.push({ key: "toggle", label: service.isActive ? "Ngừng sử dụng" : "Kích hoạt lại" });
-    if (canDelete) items.push({ type: "divider" }, { key: "delete", label: "Xóa dịch vụ", danger: true });
-    return items;
+  const groupHeaders = useMemo(() => rows.filter((r) => r.kind === "group"), [rows]);
+  const groupCount = useMemo(() => groupHeaders.filter((g) => !g.continued).length, [groupHeaders]);
+
+  const serviceById = useMemo(() => {
+    const map = new Map<string, ServiceCatalogItemDto>();
+    for (const r of rows) {
+      if (r.kind !== "row") continue;
+      for (const s of Object.values(r.cells)) map.set(s.id, s);
+    }
+    return map;
+  }, [rows]);
+
+  // Checkbox nhóm = chọn/bỏ cả nhóm (kể cả dòng ở trang khác / nhóm đang thu gọn), như bảng cây trước đây
+  const { checkedKeys, checkedGroupKeys, halfGroupKeys } = useMemo(() => {
+    const selected = new Set(selectedRowKeys);
+    const checkedGroup = new Set<string>();
+    const half = new Set<string>();
+    for (const g of groupHeaders) {
+      const keys = g.rowKeys ?? [];
+      const count = keys.reduce((n, k) => (selected.has(k) ? n + 1 : n), 0);
+      if (keys.length > 0 && count === keys.length) checkedGroup.add(g.key);
+      else if (count > 0) half.add(g.key);
+    }
+    return { checkedKeys: [...selectedRowKeys, ...checkedGroup], checkedGroupKeys: checkedGroup, halfGroupKeys: half };
+  }, [selectedRowKeys, groupHeaders]);
+
+  const handleSelectionChange = (keys: React.Key[]) => {
+    const nextKeys = new Set(keys.map(String));
+    const result = new Set([...nextKeys].filter(isMatrixRowKey));
+    for (const g of groupHeaders) {
+      const was = checkedGroupKeys.has(g.key);
+      const now = nextKeys.has(g.key);
+      if (was === now) continue;
+      for (const k of g.rowKeys ?? []) {
+        if (now) result.add(k);
+        else result.delete(k);
+      }
+    }
+    onSelectionChange([...result]);
   };
 
-  const renderCell = (row: ServiceMatrixRow, column: SpecimenColumn) => {
-    const service = row.cells[column.key];
-    if (!service) {
-      return (
-        <div
-          style={{ ...cellBoxStyle, background: "#FAFAFA", color: "#8c8c8c", cursor: canCreate ? "cell" : "default" }}
-          title={canCreate ? "Chưa có dịch vụ — nhấp đúp để tạo" : "Chưa có dịch vụ"}
-          onDoubleClick={() => canCreate && onEmptyCellDoubleClick(row, column)}
-        >
-          —
-        </div>
-      );
-    }
-
-    if (editing?.serviceId === service.id) {
-      return (
-        <NumericFormat
-          autoFocus
-          value={editing.value ?? ""}
-          onValueChange={(values) => onEditValueChange(values.floatValue ?? null)}
-          allowNegative={false}
-          decimalScale={0}
-          thousandSeparator="."
-          decimalSeparator=","
-          customInput={Input}
-          style={{ width: "100%", height: 44, borderRadius: 8, textAlign: "right", fontWeight: 500 }}
-          onKeyDown={(e: React.KeyboardEvent) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              onEditCommit();
-            }
-            if (e.key === "Escape") {
-              e.preventDefault();
-              onEditCancel();
-            }
-          }}
-          onBlur={onEditCommit}
-        />
-      );
-    }
-
-    const tat = service.turnaroundDaysAtDate ?? service.turnaroundDays;
-    const upcoming = hasUpcomingAfter(service, viewDate);
-    const sub = !service.isActive
-      ? `Đã ngừng · ${service.serviceCode ?? ""}`
-      : upcoming
-        ? `▲ ${formatPrice(service.upcomingPrice)} từ ${formatShortDate(service.upcomingEffectiveDate)}`
-        : `${service.serviceCode ?? ""}${tat != null ? ` · ${tat} ngày` : ""}`;
-
-    return (
-      <Dropdown
-        trigger={["contextMenu"]}
-        menu={{ items: buildMenu(service), onClick: ({ key }) => onCellAction(key as ServiceCellAction, service) }}
-      >
-        <div
-          style={{ ...cellBoxStyle, background: service.isActive ? "#FFFFFF" : "#F5F5F5" }}
-          title={`${service.serviceCode ?? ""} · hiệu lực từ ${formatShortDate(service.effectiveDateAtDate)}${
-            canEdit ? " · nhấp đúp để sửa, chuột phải để xem thêm" : ""
-          }`}
-          onDoubleClick={() => canEdit && service.isActive && onCellDoubleClick(service)}
-        >
-          <span
-            style={{
-              fontWeight: 500,
-              color: service.isActive ? "#262626" : "#8c8c8c",
-              textDecoration: service.isActive ? undefined : "line-through",
-            }}
-          >
-            {formatPrice(service.priceAtDate)}
-          </span>
-          <span
-            style={{ fontSize: 11, whiteSpace: "nowrap", color: upcoming && service.isActive ? "#AD4E00" : "#8c8c8c" }}
-          >
-            {sub}
-          </span>
-        </div>
-      </Dropdown>
-    );
-  };
-
-  const columns: ColumnsType<ServiceMatrixRow> = [
-    {
-      title: "Chỉ tiêu · Phương pháp",
-      key: "name",
-      width: NAME_WIDTH,
-      fixed: "left",
-      onCell: (r) =>
-        r.kind === "group" ? { colSpan: specimenColumns.length + 1, style: { background: "#FAFAFA" } } : {},
-      render: (_, r) =>
-        r.kind === "group" ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontWeight: 600 }}>{r.groupName}</span>
-            <Tag style={{ borderRadius: 999, margin: 0 }}>{r.rowCount} dòng</Tag>
-          </span>
-        ) : (
-          <span style={{ display: "inline-flex", flexDirection: "column", paddingLeft: r.isSubIndicator ? 16 : 0 }}>
-            <span style={{ fontWeight: 500 }}>
-              {r.isSubIndicator && <span style={{ color: "#8c8c8c" }}>↳ </span>}
-              <IndicatorName name={r.indicatorName ?? ""} formattedName={r.indicatorFormattedName ?? undefined} />
+  // Cột chỉ tạo lại khi đổi cột / quyền / ô đang sửa — chọn dòng, đổi trang không tạo lại
+  const columns = useMemo<ColumnsType<ServiceMatrixRow>>(
+    () => [
+      {
+        title: "Chỉ tiêu · Phương pháp",
+        key: "name",
+        width: NAME_WIDTH,
+        fixed: "left",
+        onCell: (r) => (r.kind === "group" ? groupCellProps(specimenColumns.length + 1) : {}),
+        render: (_, r) =>
+          r.kind === "group" ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <Button
+                type="text"
+                size="small"
+                aria-label={r.expanded ? "Thu gọn nhóm" : "Mở nhóm"}
+                icon={r.expanded ? <DownOutlined /> : <RightOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleGroup(r.groupKey ?? r.key);
+                }}
+              />
+              <span style={{ fontWeight: 600 }}>
+                {r.groupName}
+                {r.continued && <span style={{ fontWeight: 400, color: "#8c8c8c" }}> (tiếp)</span>}
+              </span>
+              <Tag style={{ borderRadius: 999, margin: 0 }}>{r.rowCount} dòng</Tag>
             </span>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {r.testMethodName}
-              {r.testMethodCode ? ` · ${r.testMethodCode}` : ""}
-            </Typography.Text>
-          </span>
-        ),
-    },
-    ...specimenColumns.map(
-      (col): ColumnsType<ServiceMatrixRow>[number] => ({
-        title: col.name,
-        key: col.key,
-        width: CELL_WIDTH,
-        align: "right",
-        onCell: (r) => (r.kind === "group" ? { colSpan: 0 } : { style: { padding: "6px 4px" } }),
-        render: (_, r) => (r.kind === "group" ? null : renderCell(r, col)),
-      })
-    ),
-  ];
+          ) : (
+            <span style={{ display: "inline-flex", flexDirection: "column", paddingLeft: r.isSubIndicator ? 16 : 0 }}>
+              <span style={{ fontWeight: 500 }}>
+                {r.isSubIndicator && <span style={{ color: "#8c8c8c" }}>↳ </span>}
+                <IndicatorName name={r.indicatorName ?? ""} formattedName={r.indicatorFormattedName ?? undefined} />
+              </span>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {r.testMethodName}
+                {r.testMethodCode ? ` · ${r.testMethodCode}` : ""}
+              </Typography.Text>
+            </span>
+          ),
+      },
+      ...specimenColumns.map(
+        (col): ColumnsType<ServiceMatrixRow>[number] => ({
+          title: col.name,
+          key: col.key,
+          width: CELL_WIDTH,
+          align: "right",
+          onCell: (r) => (r.kind === "group" ? hiddenCellProps : priceCellProps),
+          render: (_, r) => {
+            if (r.kind === "group") return null;
+            const service = r.cells[col.key];
+            return (
+              <ServiceMatrixCell
+                row={r}
+                column={col}
+                service={service}
+                viewDate={viewDate}
+                isEditing={!!service && service.id === editingServiceId}
+                canCreate={canCreate}
+                canEdit={canEdit}
+                onCellDoubleClick={onCellDoubleClick}
+                onEmptyCellDoubleClick={onEmptyCellDoubleClick}
+                onEditCommit={onEditCommit}
+                onEditCancel={onEditCancel}
+              />
+            );
+          },
+        })
+      ),
+    ],
+    [
+      specimenColumns,
+      viewDate,
+      editingServiceId,
+      canCreate,
+      canEdit,
+      onToggleGroup,
+      onCellDoubleClick,
+      onEmptyCellDoubleClick,
+      onEditCommit,
+      onEditCancel,
+    ]
+  );
+
+  const rowSelection: TableProps<ServiceMatrixRow>["rowSelection"] = {
+    selectedRowKeys: checkedKeys,
+    columnWidth: 48,
+    fixed: true,
+    // Giữ lựa chọn của dòng trong nhóm đang thu gọn (không có trong dataSource)
+    preserveSelectedRowKeys: true,
+    getCheckboxProps: (r) => (r.kind === "group" ? { indeterminate: halfGroupKeys.has(r.key) } : {}),
+    onChange: handleSelectionChange,
+  };
 
   return (
-    <Table
-      columns={columns}
-      dataSource={rows}
-      rowKey="key"
-      size="small"
-      loading={loading}
-      scroll={{ x: NAME_WIDTH + 48 + specimenColumns.length * CELL_WIDTH }}
-      expandable={{
-        expandedRowKeys,
-        onExpandedRowsChange: (keys) => onExpandedChange(keys as string[]),
-        indentSize: 0,
-      }}
-      rowSelection={{
-        selectedRowKeys,
-        checkStrictly: false,
-        columnWidth: 48,
-        fixed: true,
-        onChange: (keys) => onSelectionChange(keys as string[]),
-      }}
-      pagination={{
-        defaultPageSize: 20,
-        showSizeChanger: true,
-        pageSizeOptions: [10, 20, 50],
-        showTotal: (total) => (
-          <>
-            Tổng <b>{total}</b> nhóm
-          </>
-        ),
-      }}
-      locale={{ emptyText: "Không có dịch vụ phù hợp bộ lọc." }}
-    />
+    <ServiceCellContextMenu
+      serviceById={serviceById}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      onCellAction={onCellAction}
+    >
+      <Table
+        columns={columns}
+        dataSource={rows}
+        rowKey="key"
+        size="small"
+        loading={loading}
+        scroll={{ x: NAME_WIDTH + 48 + specimenColumns.length * CELL_WIDTH }}
+        rowSelection={rowSelection}
+        pagination={{
+          pageSize,
+          showSizeChanger: true,
+          pageSizeOptions: MATRIX_PAGE_SIZE_OPTIONS,
+          onChange: (_, size) => {
+            if (size !== pageSize) onPageSizeChange(size);
+          },
+          showTotal: () => (
+            <>
+              Tổng <b>{groupCount}</b> nhóm
+            </>
+          ),
+        }}
+        locale={{ emptyText: "Không có dịch vụ phù hợp bộ lọc." }}
+      />
+    </ServiceCellContextMenu>
   );
 };
 

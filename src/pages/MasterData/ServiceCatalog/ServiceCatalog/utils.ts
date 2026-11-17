@@ -72,7 +72,53 @@ export interface ServiceMatrixRow {
   /** Toàn bộ dịch vụ của dòng (dòng nhóm = mọi dịch vụ con) */
   serviceIds: string[];
   children?: ServiceMatrixRow[];
+  // ---- Chỉ có ở dòng nhóm của danh sách phẳng (buildMatrixPageRows) ----
+  /** Key gốc của nhóm (dòng "tiếp" ở trang sau có key riêng nhưng cùng groupKey) */
+  groupKey?: string;
+  /** Key mọi dòng chỉ tiêu trong nhóm (kể cả khi nhóm đang thu gọn) */
+  rowKeys?: string[];
+  expanded?: boolean;
+  /** Dòng tiêu đề lặp lại khi nhóm bị cắt sang trang sau */
+  continued?: boolean;
 }
+
+/** Ma trận phân trang theo DÒNG (không theo nhóm) để máy yếu không phải vẽ hết một lúc */
+export const MATRIX_PAGE_SIZE_OPTIONS = [20, 30, 50, 100];
+export const DEFAULT_MATRIX_PAGE_SIZE = 30;
+
+/**
+ * Trải cây Nhóm ▸ Dòng thành danh sách phẳng để Table phân trang theo số dòng.
+ * Trang bắt đầu giữa nhóm → chèn dòng tiêu đề "(tiếp)" để mỗi trang đều thấy tên nhóm;
+ * mỗi trang đúng `pageSize` phần tử nên phân trang của Table khớp với cách chia ở đây.
+ */
+export const buildMatrixPageRows = (
+  groups: ServiceMatrixRow[],
+  expandedKeys: ReadonlySet<string>,
+  pageSize: number
+): ServiceMatrixRow[] => {
+  const out: ServiceMatrixRow[] = [];
+  for (const g of groups) {
+    const children = g.children ?? [];
+    const expanded = expandedKeys.has(g.key);
+    const rowKeys = children.map((c) => c.key);
+    const header = (key: string, continued: boolean): ServiceMatrixRow => ({
+      ...g,
+      key,
+      children: undefined,
+      groupKey: g.key,
+      rowKeys,
+      expanded,
+      continued,
+    });
+    out.push(header(g.key, false));
+    if (!expanded) continue;
+    for (const child of children) {
+      if (out.length % pageSize === 0) out.push(header(`${g.key}#${out.length / pageSize}`, true));
+      out.push(child);
+    }
+  }
+  return out;
+};
 
 export const isMatrixRowKey = (key: string | number | bigint): boolean => String(key).startsWith("r:");
 
