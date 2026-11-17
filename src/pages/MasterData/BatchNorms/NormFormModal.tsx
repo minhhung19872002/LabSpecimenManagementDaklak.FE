@@ -95,6 +95,7 @@ const NormFormModal: React.FC<NormFormModalProps> = ({
       onOk={onSubmit}
       onCancel={onCancel}
       destroyOnHidden
+      centered
       width={560}
     >
       <Form layout="vertical">
