@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, Button, Space, Tag, Alert, Tabs, Form, Empty, message } from "antd";
+import { Card, Button, Space, Alert, Tabs, Form, Empty, message } from "antd";
 import {
   PlusOutlined,
   DatabaseOutlined,
@@ -43,13 +43,14 @@ import ForecastCardActions, {
   type YearlyForecastActionState,
 } from "../YearlyForecasts/YearlyForecasts/ForecastCardActions";
 import ImportProductMasterDataModal from "./components/ImportProductMasterDataModal";
-import { useMasterDataState } from "./hooks";
+import { useMasterDataState, useMasterDataSidebar } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
   MasterDataTable,
   MasterDataModal,
   StatisticsCards,
   AsyncDropdownButton,
+  MasterDataSidebar,
 } from "./components";
 import {
   categoryLabels,
@@ -137,6 +138,8 @@ const MasterDataList: React.FC = () => {
     fetchCategoryData,
     fetchStatistics,
   });
+
+  const sidebar = useMasterDataSidebar();
 
   const [form] = Form.useForm();
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
@@ -421,6 +424,34 @@ const MasterDataList: React.FC = () => {
     [activeCategory, users, handleEdit, handleDelete, handleToggleActive, form],
   );
 
+  const sidebarCategories = useMemo(
+    () =>
+      visibleCategories.map(([key, label]) => ({
+        key,
+        label,
+        count: SELF_MANAGED_TABS.includes(key) ? undefined : getStatCount(key, statistics),
+      })),
+    [visibleCategories, statistics],
+  );
+
+  const handleSelectCategory = useCallback(
+    (key: string) => {
+      setActiveCategory(key);
+      setSearchText("");
+      // Trigger refresh when switching to testMethods, standards, or specimenTypes tab
+      if (key === "testMethods") setTestMethodsRefreshKey((prev) => prev + 1);
+      if (key === "standards") setStandardsRefreshKey((prev) => prev + 1);
+      if (key === "specimenTypes") setSpecimenTypesRefreshKey((prev) => prev + 1);
+      if (key === "sampleTypeCategories") setSampleTypeCategoriesRefreshKey((prev) => prev + 1);
+      if (key === "sampleConditions") setSampleConditionsRefreshKey((prev) => prev + 1);
+      if (key === "testResultValues") setTestResultValuesRefreshKey((prev) => prev + 1);
+      if (key === "notes") setNotesRefreshKey((prev) => prev + 1);
+      if (key === "units") setUnitsRefreshKey((prev) => prev + 1);
+      if (key === "products") setProductsRefreshKey((prev) => prev + 1);
+    },
+    [setActiveCategory, setSearchText],
+  );
+
   return (
     <div className="master-data-page">
       {error && (
@@ -438,14 +469,29 @@ const MasterDataList: React.FC = () => {
       <StatisticsCards
         statistics={statistics}
         statisticsLoading={statisticsLoading}
+        open={sidebar.statsOpen}
+        onToggle={sidebar.toggleStats}
       />
 
+      <div className="master-data-layout">
+      {hasVisibleCategories && (
+        <MasterDataSidebar
+          categories={sidebarCategories}
+          activeKey={activeCategory}
+          pinnedKeys={sidebar.pinnedKeys}
+          filterText={sidebar.filterText}
+          onFilterChange={sidebar.setFilterText}
+          onSelect={handleSelectCategory}
+          onTogglePin={sidebar.togglePin}
+        />
+      )}
+
       <Card
-        className="list-card"
+        className="list-card master-data-content"
         title={
           <Space>
             <DatabaseOutlined />
-            Ngân hàng dữ liệu
+            {categoryLabels[activeCategory] ?? "Ngân hàng dữ liệu"}
           </Space>
         }
         extra={
@@ -862,48 +908,12 @@ const MasterDataList: React.FC = () => {
         {hasVisibleCategories ? (
           <Tabs
             activeKey={activeCategory}
-            onChange={(key) => {
-              setActiveCategory(key);
-              setSearchText("");
-              // Trigger refresh when switching to testMethods, standards, or specimenTypes tab
-              if (key === "testMethods") {
-                setTestMethodsRefreshKey((prev) => prev + 1);
-              }
-              if (key === "standards") {
-                setStandardsRefreshKey((prev) => prev + 1);
-              }
-              if (key === "specimenTypes") {
-                setSpecimenTypesRefreshKey((prev) => prev + 1);
-              }
-              if (key === "sampleTypeCategories") {
-                setSampleTypeCategoriesRefreshKey((prev) => prev + 1);
-              }
-              if (key === "sampleConditions") {
-                setSampleConditionsRefreshKey((prev) => prev + 1);
-              }
-              if (key === "testResultValues") {
-                setTestResultValuesRefreshKey((prev) => prev + 1);
-              }
-              if (key === "notes") {
-                setNotesRefreshKey((prev) => prev + 1);
-              }
-              if (key === "units") {
-                setUnitsRefreshKey((prev) => prev + 1);
-              }
-              if (key === "products") {
-                setProductsRefreshKey((prev) => prev + 1);
-              }
-            }}
-            tabPosition="left"
-            style={{ minHeight: 400 }}
+            onChange={handleSelectCategory}
+            // Thanh tab cũ thay bằng MasterDataSidebar; Tabs chỉ còn giữ nội dung từng danh mục
+            renderTabBar={() => <></>}
             items={visibleCategories.map(([key, label]) => ({
               key,
-              label: (
-                <Space>
-                  {label}
-                  {!SELF_MANAGED_TABS.includes(key) && <Tag>{getStatCount(key, statistics)}</Tag>}
-                </Space>
-              ),
+              label,
               children:
                 key === "indicators" ? (
                   <IndicatorsTab
@@ -996,6 +1006,7 @@ const MasterDataList: React.FC = () => {
           </div>
         )}
       </Card>
+      </div>
 
       {/* Create/Edit Modal */}
       {hasVisibleCategories && (
