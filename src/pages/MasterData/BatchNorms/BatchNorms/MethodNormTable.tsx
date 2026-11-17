@@ -56,7 +56,7 @@ const MethodNormTable: React.FC<MethodNormTableProps> = ({
     },
     { title: "Mã vật tư", dataIndex: "productCode", key: "productCode", width: 120, render: (v) => v || "—" },
     {
-      title: "Tiêu hao / 1 mẻ",
+      title: "Tiêu hao / mẫu",
       key: "batchQuantity",
       width: 130,
       align: "right",

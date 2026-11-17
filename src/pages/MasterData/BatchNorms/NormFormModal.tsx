@@ -123,7 +123,7 @@ const NormFormModal: React.FC<NormFormModalProps> = ({
           control={control}
           render={({ field, fieldState }) => (
             <Form.Item
-              label="Tổng tiêu hao cho 1 MẺ chuẩn"
+              label="Tổng tiêu hao cho 1 mẫu"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
             >
@@ -137,7 +137,7 @@ const NormFormModal: React.FC<NormFormModalProps> = ({
                 customInput={Input}
                 addonAfter={unitName || "ĐVT"}
                 style={{ width: "100%" }}
-                placeholder="Lượng dùng để chạy trọn 1 mẻ (rửa máy, đường chuẩn…)"
+                placeholder="Lượng vật tư tiêu hao cho 1 mẫu"
               />
             </Form.Item>
           )}

@@ -22,8 +22,8 @@ const BatchNormsView: React.FC<BatchNormsViewProps> = ({
 }) => (
   <div style={{ padding: 16 }}>
     <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-      Lượng vật tư tiêu hao cố định để chạy trọn 1 MẺ (rửa máy, đường chuẩn…), không đổi theo số mẫu. Tiêu hao / mẫu
-      khi trả kết quả = Tổng tiêu hao 1 mẻ ÷ Dự toán mẫu năm của dịch vụ.
+      Thiết lập định mức tiêu hao thực tế cho 1 mẫu theo từng phương pháp (tương đương “Tiêu hao / mẫu” trong danh mục
+      cũ). Lượng ghi nhận tiêu hao khi trả kết quả = Tiêu hao / mẫu ÷ Dự toán mẫu năm của dịch vụ.
     </Typography.Paragraph>
     <BatchNormsToolbar {...toolbarProps} />
     <BatchNormMethodTable

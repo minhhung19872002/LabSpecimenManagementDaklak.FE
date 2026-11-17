@@ -14,7 +14,7 @@ export interface ForecastCalculationProps {
 const ForecastCalculation: React.FC<ForecastCalculationProps> = ({ row, year, estimatedSamples }) => (
   <div style={{ padding: "4px 8px" }}>
     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-      BR-01 · Tiêu hao 1 mẻ ({row.testMethodName}) ÷ Số mẫu dự toán năm {year} · BR-03 làm tròn 4 chữ số
+      BR-01 · Tiêu hao / mẫu ({row.testMethodName}) ÷ Số mẫu dự toán năm {year} · BR-03 làm tròn 4 chữ số
     </Typography.Text>
     {row.normLines.length === 0 ? (
       <div>
@@ -30,7 +30,7 @@ const ForecastCalculation: React.FC<ForecastCalculationProps> = ({ row, year, es
           <li key={line.methodBatchNormId}>
             <b>{line.productName}</b>
             {line.productCode ? ` (${line.productCode})` : ""}: {formatNormQuantity(line.batchQuantity)}{" "}
-            {line.unitName} / mẻ ÷ {formatSamples(estimatedSamples)} ={" "}
+            {line.unitName} ÷ {formatSamples(estimatedSamples)} ={" "}
             <b>
               {formatPerSample(computePerSample(line.batchQuantity, estimatedSamples))} {line.unitName}
             </b>{" "}

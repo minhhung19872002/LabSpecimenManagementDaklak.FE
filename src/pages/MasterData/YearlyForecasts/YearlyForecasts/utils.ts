@@ -1,6 +1,6 @@
 import type { YearlyForecastRowDto } from "../../../../services/serviceCatalogService";
 
-/** BR-01 + BR-03: tiêu hao / mẫu = tổng tiêu hao 1 mẻ ÷ số mẫu dự toán, làm tròn 4 chữ số */
+/** BR-01 + BR-03: lượng ghi nhận / mẫu = Tiêu hao / mẫu (L3) ÷ số mẫu dự toán, làm tròn 4 chữ số */
 export const computePerSample = (batchQuantity: number, estimatedSamples?: number | null): number | null => {
   if (!estimatedSamples || estimatedSamples <= 0) return null;
   return Math.round((batchQuantity / estimatedSamples) * 10000) / 10000;
