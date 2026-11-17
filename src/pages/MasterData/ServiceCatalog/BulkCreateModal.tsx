@@ -68,8 +68,9 @@ const SECTION_HEAD: React.CSSProperties = { background: "#E6F7FF" };
 const NO_CATEGORY = "Khác";
 const PREVIEW_LIMIT = 16;
 
-/** Nội dung 3 bước: 1 phương pháp × nhiều chỉ tiêu × nhiều nền mẫu, cùng giá / TAT */
-const BulkCreateForm: React.FC<Omit<BulkCreateModalProps, "open">> = ({
+/** Modal 3 bước: 1 phương pháp × nhiều chỉ tiêu × nhiều nền mẫu, cùng giá / TAT */
+const BulkCreateDialog: React.FC<BulkCreateModalProps> = ({
+  open,
   prefill,
   testMethods,
   specimenTypes,
@@ -329,486 +330,505 @@ const BulkCreateForm: React.FC<Omit<BulkCreateModalProps, "open">> = ({
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <Steps
-        size="small"
-        current={step}
-        items={[{ title: "Chọn phương pháp" }, { title: "Chọn chỉ tiêu & nền mẫu" }, { title: "Nhập giá & lưu" }]}
-        style={{ maxWidth: 900 }}
-      />
-
-      {/* Bước 1 */}
-      <Card
-        size="small"
-        title="Bước 1 · Chọn 1 phương pháp làm gốc"
-        extra={pickingMethod && <Typography.Text type="secondary">{filteredMethods.length} phương pháp</Typography.Text>}
-        styles={{ header: SECTION_HEAD }}
-      >
-        {!pickingMethod && selectedMethod ? (
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <Space size={10}>
-              <CheckCircleFilled style={{ color: "#52c41a", fontSize: 22 }} />
-              <span style={{ display: "inline-flex", flexDirection: "column" }}>
-                <span style={{ fontWeight: 500, fontSize: 15 }}>{selectedMethod.name}</span>
-                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                  {selectedMethod.code} · {serviceCountByMethod.get(selectedMethod.id) ?? 0} dịch vụ hiện có
-                </Typography.Text>
+    <Modal
+      open={open}
+      title="Tạo dịch vụ hàng loạt"
+      width="90vw"
+      style={{ maxWidth: 1400 }}
+      centered
+      destroyOnHidden
+      maskClosable={false}
+      onCancel={onCancel}
+      styles={{ body: { height: "calc(100vh - 220px)", overflowY: "auto", paddingRight: 4 } }}
+      footer={
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+            {error ? (
+              <Alert type="error" showIcon message={error} style={{ padding: "4px 12px" }} />
+            ) : testMethodId && !pickingMethod ? (
+              <span style={{ fontWeight: 500 }}>
+                {selectedMethod?.name} · {rows.length} chỉ tiêu →{" "}
+                <span style={{ color: "#096DD9" }}>{combos.length} dịch vụ mới</span>
+                {skippedCount > 0 && (
+                  <Typography.Text type="secondary" style={{ fontWeight: 400 }}>
+                    {" "}
+                    (bỏ qua {skippedCount} đã có)
+                  </Typography.Text>
+                )}
               </span>
-            </Space>
-            <Button onClick={() => setPickingMethod(true)}>Đổi phương pháp</Button>
+            ) : null}
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <Input
-              autoFocus
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="Gõ tên hoặc mã phương pháp..."
-              value={methodQuery}
-              onChange={(e) => setMethodQuery(e.target.value)}
-              style={{ maxWidth: 520 }}
-            />
-            <div style={{ maxHeight: "calc(100vh - 420px)", minHeight: 240, overflowY: "auto", border: "1px solid #F0F0F0", borderRadius: 8 }}>
-              {filteredMethods.map((m) => {
-                const current = m.id === testMethodId;
-                return (
-                  <div
-                    key={m.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      setTestMethodId(m.id);
-                      setPickingMethod(false);
-                      setError(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+          <Space>
+            <Button onClick={onCancel}>Hủy</Button>
+            <Button type="primary" loading={saving} disabled={combos.length === 0} onClick={handleSubmit}>
+              Tạo {combos.length} dịch vụ
+            </Button>
+          </Space>
+        </div>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Steps
+          size="small"
+          current={step}
+          items={[{ title: "Chọn phương pháp" }, { title: "Chọn chỉ tiêu & nền mẫu" }, { title: "Nhập giá & lưu" }]}
+          style={{ maxWidth: 900 }}
+        />
+
+        {/* Bước 1 */}
+        <Card
+          size="small"
+          title="Bước 1 · Chọn 1 phương pháp làm gốc"
+          extra={pickingMethod && <Typography.Text type="secondary">{filteredMethods.length} phương pháp</Typography.Text>}
+          styles={{ header: SECTION_HEAD }}
+        >
+          {!pickingMethod && selectedMethod ? (
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <Space size={10}>
+                <CheckCircleFilled style={{ color: "#52c41a", fontSize: 22 }} />
+                <span style={{ display: "inline-flex", flexDirection: "column" }}>
+                  <span style={{ fontWeight: 500, fontSize: 15 }}>{selectedMethod.name}</span>
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                    {selectedMethod.code} · {serviceCountByMethod.get(selectedMethod.id) ?? 0} dịch vụ hiện có
+                  </Typography.Text>
+                </span>
+              </Space>
+              <Button onClick={() => setPickingMethod(true)}>Đổi phương pháp</Button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Input
+                autoFocus
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="Gõ tên hoặc mã phương pháp..."
+                value={methodQuery}
+                onChange={(e) => setMethodQuery(e.target.value)}
+                style={{ maxWidth: 520 }}
+              />
+              <div style={{ maxHeight: "calc(100vh - 420px)", minHeight: 240, overflowY: "auto", border: "1px solid #F0F0F0", borderRadius: 8 }}>
+                {filteredMethods.map((m) => {
+                  const current = m.id === testMethodId;
+                  return (
+                    <div
+                      key={m.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
                         setTestMethodId(m.id);
                         setPickingMethod(false);
-                      }
-                    }}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "18px minmax(200px, 1fr) 140px 90px",
-                      gap: 10,
-                      alignItems: "center",
-                      minHeight: 40,
-                      padding: "4px 12px",
-                      borderBottom: "1px solid #F0F0F0",
-                      background: current ? "#E6F7FF" : "#fff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <span
+                        setError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          setTestMethodId(m.id);
+                          setPickingMethod(false);
+                        }
+                      }}
                       style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: "50%",
-                        border: `1px solid ${current ? "#1890FF" : "#D9D9D9"}`,
-                        boxShadow: "inset 0 0 0 3px #fff",
-                        background: current ? "#1890FF" : "#fff",
+                        display: "grid",
+                        gridTemplateColumns: "18px minmax(200px, 1fr) 140px 90px",
+                        gap: 10,
+                        alignItems: "center",
+                        minHeight: 40,
+                        padding: "4px 12px",
+                        borderBottom: "1px solid #F0F0F0",
+                        background: current ? "#E6F7FF" : "#fff",
+                        cursor: "pointer",
                       }}
-                    />
-                    <span style={{ fontWeight: 500 }}>{m.name}</span>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      {m.code}
-                    </Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: 12, textAlign: "right" }}>
-                      {serviceCountByMethod.get(m.id) ?? 0} DV
-                    </Typography.Text>
+                    >
+                      <span
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: "50%",
+                          border: `1px solid ${current ? "#1890FF" : "#D9D9D9"}`,
+                          boxShadow: "inset 0 0 0 3px #fff",
+                          background: current ? "#1890FF" : "#fff",
+                        }}
+                      />
+                      <span style={{ fontWeight: 500 }}>{m.name}</span>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        {m.code}
+                      </Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 12, textAlign: "right" }}>
+                        {serviceCountByMethod.get(m.id) ?? 0} DV
+                      </Typography.Text>
+                    </div>
+                  );
+                })}
+                {filteredMethods.length === 0 && (
+                  <div style={{ padding: 16, textAlign: "center", color: "#8c8c8c" }}>
+                    Không tìm thấy phương pháp phù hợp
                   </div>
-                );
-              })}
-              {filteredMethods.length === 0 && (
-                <div style={{ padding: 16, textAlign: "center", color: "#8c8c8c" }}>
-                  Không tìm thấy phương pháp phù hợp
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </Card>
+          )}
+        </Card>
 
-      {!testMethodId ? (
-        <div
-          style={{
-            padding: "28px 12px",
-            border: "1px dashed #D9D9D9",
-            borderRadius: 8,
-            textAlign: "center",
-            color: "#8c8c8c",
-          }}
-        >
-          Chọn một phương pháp ở Bước 1 để bắt đầu thêm chỉ tiêu và nền mẫu.
-        </div>
-      ) : (
-        <>
-          {/* Bước 2 */}
-          <Card
-            size="small"
-            title={
-              <span style={{ display: "inline-flex", flexDirection: "column", padding: "4px 0" }}>
-                <span>Bước 2 · Chọn chỉ tiêu và nền mẫu</span>
-                <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
-                  Mỗi dòng là 1 chỉ tiêu · mỗi nền mẫu gắn trên dòng = 1 dịch vụ sẽ được tạo.
-                </Typography.Text>
-              </span>
-            }
-            extra={
-              <Typography.Text strong style={{ color: "#096DD9" }}>
-                Sẽ tạo {combos.length} dịch vụ
-              </Typography.Text>
-            }
-            styles={{ header: SECTION_HEAD }}
+        {!testMethodId ? (
+          <div
+            style={{
+              padding: "28px 12px",
+              border: "1px dashed #D9D9D9",
+              borderRadius: 8,
+              textAlign: "center",
+              color: "#8c8c8c",
+            }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 8,
-                  border: "1px dashed #91D5FF",
-                  background: "#F0F9FF",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8 }}>
-                  <span style={{ display: "inline-flex", flexDirection: "column" }}>
-                    <span style={{ fontWeight: 500 }}>① Nền mẫu dùng chung (nên chọn trước)</span>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      Chọn 1 lần — mọi chỉ tiêu thêm sau sẽ tự nhận các nền mẫu này, sau đó chỉnh riêng từng dòng nếu
-                      cần. Bỏ trống = Mọi nền mẫu.
-                    </Typography.Text>
-                  </span>
-                  <Space wrap>
-                    <Button onClick={() => openPicker("common")}>Chọn nền mẫu chung</Button>
-                    <Button
-                      disabled={rows.length === 0}
-                      onClick={() => setRows((prev) => prev.map((r) => ({ ...r, specimenTypeIds: commonSpecimenIds })))}
-                    >
-                      Áp dụng cho tất cả dòng
-                    </Button>
-                  </Space>
+            Chọn một phương pháp ở Bước 1 để bắt đầu thêm chỉ tiêu và nền mẫu.
+          </div>
+        ) : (
+          <>
+            {/* Bước 2 */}
+            <Card
+              size="small"
+              title={
+                <span style={{ display: "inline-flex", flexDirection: "column", padding: "4px 0" }}>
+                  <span>Bước 2 · Chọn chỉ tiêu và nền mẫu</span>
+                  <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
+                    Mỗi dòng là 1 chỉ tiêu · mỗi nền mẫu gắn trên dòng = 1 dịch vụ sẽ được tạo.
+                  </Typography.Text>
+                </span>
+              }
+              extra={
+                <Typography.Text strong style={{ color: "#096DD9" }}>
+                  Sẽ tạo {combos.length} dịch vụ
+                </Typography.Text>
+              }
+              styles={{ header: SECTION_HEAD }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 8,
+                    border: "1px dashed #91D5FF",
+                    background: "#F0F9FF",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ display: "inline-flex", flexDirection: "column" }}>
+                      <span style={{ fontWeight: 500 }}>① Nền mẫu dùng chung (nên chọn trước)</span>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        Chọn 1 lần — mọi chỉ tiêu thêm sau sẽ tự nhận các nền mẫu này, sau đó chỉnh riêng từng dòng nếu
+                        cần. Bỏ trống = Mọi nền mẫu.
+                      </Typography.Text>
+                    </span>
+                    <Space wrap>
+                      <Button onClick={() => openPicker("common")}>Chọn nền mẫu chung</Button>
+                      <Button
+                        disabled={rows.length === 0}
+                        onClick={() => setRows((prev) => prev.map((r) => ({ ...r, specimenTypeIds: commonSpecimenIds })))}
+                      >
+                        Áp dụng cho tất cả dòng
+                      </Button>
+                    </Space>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {commonSpecimenIds.map((sid) => (
+                      <Tag
+                        key={sid}
+                        color="blue"
+                        closable
+                        onClose={(e) => {
+                          e.preventDefault();
+                          setCommonSpecimenIds((prev) => prev.filter((x) => x !== sid));
+                        }}
+                        style={{ margin: 0, background: "#fff" }}
+                      >
+                        {specimenName(sid)}
+                      </Tag>
+                    ))}
+                    {commonSpecimenIds.length === 0 && (
+                      <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                        Chưa chọn nền mẫu chung.
+                      </Typography.Text>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {commonSpecimenIds.map((sid) => (
-                    <Tag
-                      key={sid}
-                      color="blue"
-                      closable
-                      onClose={(e) => {
-                        e.preventDefault();
-                        setCommonSpecimenIds((prev) => prev.filter((x) => x !== sid));
-                      }}
-                      style={{ margin: 0, background: "#fff" }}
-                    >
-                      {specimenName(sid)}
-                    </Tag>
-                  ))}
-                  {commonSpecimenIds.length === 0 && (
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <span style={{ fontWeight: 500 }}>② Thêm chỉ tiêu</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {groupChips.map((g) => (
+                      <Button
+                        key={g.id}
+                        type="dashed"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        disabled={g.remaining.length === 0}
+                        onClick={() => addIndicators(g.remaining)}
+                        style={{ color: g.remaining.length ? "#096DD9" : undefined, borderColor: g.remaining.length ? "#1890FF" : undefined }}
+                      >
+                        Cả nhóm {g.name} ({g.total})
+                      </Button>
+                    ))}
+                  </div>
+                  <Select
+                    showSearch
+                    allowClear
+                    optionFilterProp="label"
+                    placeholder="Hoặc gõ tên / mã chỉ tiêu để thêm từng cái..."
+                    value={null}
+                    options={indicatorOptions}
+                    onSelect={(id: string | null) => id && addIndicators([id])}
+                    style={{ maxWidth: 520 }}
+                    suffixIcon={<SearchOutlined />}
+                  />
+                </div>
+
+                <Table
+                  columns={rowColumns}
+                  dataSource={rows}
+                  rowKey="indicatorId"
+                  size="small"
+                  bordered={false}
+                  pagination={rows.length > 20 ? { pageSize: 20, size: "small" } : false}
+                  locale={{ emptyText: "Chưa có chỉ tiêu — thêm cả nhóm hoặc tìm từng chỉ tiêu ở trên." }}
+                  footer={
+                    rows.length > 0
+                      ? () => (
+                          <div style={{ textAlign: "right" }}>
+                            <Button size="small" onClick={() => setRows([])}>
+                              Bỏ tất cả chỉ tiêu
+                            </Button>
+                          </div>
+                        )
+                      : undefined
+                  }
+                />
+              </div>
+            </Card>
+
+            {/* Bước 3 */}
+            <Card
+              size="small"
+              title="Bước 3 · Giá & TAT dùng chung cho tất cả dịch vụ ở Bước 2"
+              styles={{ header: SECTION_HEAD }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span>
+                      <span style={{ color: "#ff4d4f" }}>* </span>Giá (VNĐ)
+                    </span>
+                    <NumericFormat
+                      value={unitPrice ?? ""}
+                      onValueChange={(v) => setUnitPrice(v.floatValue ?? null)}
+                      allowNegative={false}
+                      decimalScale={0}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      customInput={Input}
+                      addonAfter="đ"
+                      placeholder="VD: 250.000"
+                      style={{ width: "100%" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span>
+                      <span style={{ color: "#ff4d4f" }}>* </span>TAT (ngày)
+                    </span>
+                    <NumericFormat
+                      value={tat ?? ""}
+                      onValueChange={(v) => setTat(v.floatValue ?? null)}
+                      allowNegative={false}
+                      decimalScale={0}
+                      customInput={Input}
+                      addonAfter="ngày"
+                      placeholder="VD: 5"
+                      style={{ width: "100%" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span>
+                      <span style={{ color: "#ff4d4f" }}>* </span>Ngày áp dụng
+                    </span>
+                    <DatePicker
+                      value={effectiveDate}
+                      format="DD/MM/YYYY"
+                      allowClear={false}
+                      onChange={(v) => v && setEffectiveDate(v)}
+                      style={{ width: "100%" }}
+                    />
+                  </label>
+                  <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 6 }}>
+                    <Checkbox checked={isSubcontract} onChange={(e) => setIsSubcontract(e.target.checked)}>
+                      Dịch vụ thầu phụ
+                    </Checkbox>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    borderRadius: 8,
+                    background: "#FAFAFA",
+                    border: "1px solid #F0F0F0",
+                    padding: 12,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  <span style={{ fontWeight: 500 }}>Xem trước dịch vụ sẽ tạo</span>
+                  {combos.length === 0 && (
                     <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                      Chưa chọn nền mẫu chung.
+                      Chưa có tổ hợp mới nào.
                     </Typography.Text>
+                  )}
+                  {combos.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {combos.slice(0, PREVIEW_LIMIT).map((c) => (
+                        <Tag key={c} color="blue" style={{ margin: 0 }}>
+                          {c}
+                        </Tag>
+                      ))}
+                      {combos.length > PREVIEW_LIMIT && (
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                          + {combos.length - PREVIEW_LIMIT} dịch vụ nữa
+                        </Typography.Text>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span style={{ fontWeight: 500 }}>② Thêm chỉ tiêu</span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {groupChips.map((g) => (
-                    <Button
-                      key={g.id}
-                      type="dashed"
-                      size="small"
-                      icon={<PlusOutlined />}
-                      disabled={g.remaining.length === 0}
-                      onClick={() => addIndicators(g.remaining)}
-                      style={{ color: g.remaining.length ? "#096DD9" : undefined, borderColor: g.remaining.length ? "#1890FF" : undefined }}
-                    >
-                      Cả nhóm {g.name} ({g.total})
-                    </Button>
-                  ))}
-                </div>
-                <Select
-                  showSearch
-                  allowClear
-                  optionFilterProp="label"
-                  placeholder="Hoặc gõ tên / mã chỉ tiêu để thêm từng cái..."
-                  value={null}
-                  options={indicatorOptions}
-                  onSelect={(id: string | null) => id && addIndicators([id])}
-                  style={{ maxWidth: 520 }}
-                  suffixIcon={<SearchOutlined />}
-                />
-              </div>
-
-              <Table
-                columns={rowColumns}
-                dataSource={rows}
-                rowKey="indicatorId"
-                size="small"
-                bordered={false}
-                pagination={rows.length > 20 ? { pageSize: 20, size: "small" } : false}
-                locale={{ emptyText: "Chưa có chỉ tiêu — thêm cả nhóm hoặc tìm từng chỉ tiêu ở trên." }}
-                footer={
-                  rows.length > 0
-                    ? () => (
-                        <div style={{ textAlign: "right" }}>
-                          <Button size="small" onClick={() => setRows([])}>
-                            Bỏ tất cả chỉ tiêu
-                          </Button>
-                        </div>
-                      )
-                    : undefined
-                }
-              />
-            </div>
-          </Card>
-
-          {/* Bước 3 */}
-          <Card
-            size="small"
-            title="Bước 3 · Giá & TAT dùng chung cho tất cả dịch vụ ở Bước 2"
-            styles={{ header: SECTION_HEAD }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span>
-                    <span style={{ color: "#ff4d4f" }}>* </span>Giá (VNĐ)
-                  </span>
-                  <NumericFormat
-                    value={unitPrice ?? ""}
-                    onValueChange={(v) => setUnitPrice(v.floatValue ?? null)}
-                    allowNegative={false}
-                    decimalScale={0}
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    customInput={Input}
-                    addonAfter="đ"
-                    placeholder="VD: 250.000"
-                    style={{ width: "100%" }}
-                  />
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span>
-                    <span style={{ color: "#ff4d4f" }}>* </span>TAT (ngày)
-                  </span>
-                  <NumericFormat
-                    value={tat ?? ""}
-                    onValueChange={(v) => setTat(v.floatValue ?? null)}
-                    allowNegative={false}
-                    decimalScale={0}
-                    customInput={Input}
-                    addonAfter="ngày"
-                    placeholder="VD: 5"
-                    style={{ width: "100%" }}
-                  />
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span>
-                    <span style={{ color: "#ff4d4f" }}>* </span>Ngày áp dụng
-                  </span>
-                  <DatePicker
-                    value={effectiveDate}
-                    format="DD/MM/YYYY"
-                    allowClear={false}
-                    onChange={(v) => v && setEffectiveDate(v)}
-                    style={{ width: "100%" }}
-                  />
-                </label>
-                <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 6 }}>
-                  <Checkbox checked={isSubcontract} onChange={(e) => setIsSubcontract(e.target.checked)}>
-                    Dịch vụ thầu phụ
-                  </Checkbox>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 8,
-                  background: "#FAFAFA",
-                  border: "1px solid #F0F0F0",
-                  padding: 12,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                  <span style={{ fontWeight: 500 }}>
-                    {selectedMethod?.name} · {rows.length} chỉ tiêu → {combos.length} dịch vụ mới
-                    {skippedCount > 0 && (
-                      <Typography.Text type="secondary" style={{ fontWeight: 400 }}>
-                        {" "}
-                        (bỏ qua {skippedCount} đã có)
-                      </Typography.Text>
-                    )}
-                  </span>
-                  <Space>
-                    <Button onClick={onCancel}>Hủy</Button>
-                    <Button type="primary" size="large" loading={saving} onClick={handleSubmit}>
-                      Tạo {combos.length} dịch vụ
-                    </Button>
-                  </Space>
-                </div>
-                {error && <Alert type="error" showIcon message={error} />}
-                {combos.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {combos.slice(0, PREVIEW_LIMIT).map((c) => (
-                      <Tag key={c} color="blue" style={{ margin: 0 }}>
-                        {c}
-                      </Tag>
-                    ))}
-                    {combos.length > PREVIEW_LIMIT && (
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        + {combos.length - PREVIEW_LIMIT} dịch vụ nữa
-                      </Typography.Text>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        </>
-      )}
-
-      <Drawer
-        open={!!picker}
-        width={540}
-        destroyOnHidden
-        onClose={() => setPicker(null)}
-        title={
-          <span style={{ display: "inline-flex", flexDirection: "column" }}>
-            <span>
-              {picker?.target === "common"
-                ? "Chọn nền mẫu dùng chung"
-                : `Nền mẫu cho ${indicatorMap.get(picker?.target ?? "")?.name ?? ""}`}
-            </span>
-            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
-              Tick nền mẫu hoặc cả nhóm · bỏ trống = Mọi nền mẫu
-            </Typography.Text>
-          </span>
-        }
-        footer={
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography.Text strong style={{ color: "#096DD9" }}>
-              Đã chọn {picker?.selected.length ?? 0} nền mẫu
-            </Typography.Text>
-            <Space>
-              <Button onClick={() => setPickerSelected(() => [])}>Bỏ chọn hết</Button>
-              <Button type="primary" onClick={applyPicker}>
-                Xong
-              </Button>
-            </Space>
-          </div>
-        }
-      >
-        <Input
-          autoFocus
-          allowClear
-          prefix={<SearchOutlined />}
-          placeholder="Tìm nền mẫu hoặc nhóm (VD: nước, thủy sản)..."
-          value={pickerQuery}
-          onChange={(e) => setPickerQuery(e.target.value)}
-          style={{ marginBottom: 4 }}
-        />
-        {pickerGroups.map(([cat, items]) => {
-          const free = items.filter((s) => !pickerExisting.has(s.id)).map((s) => s.id);
-          const checkedCount = free.filter((id) => picker?.selected.includes(id)).length;
-          return (
-            <div key={cat} style={{ marginTop: 12, border: "1px solid #F0F0F0", borderRadius: 8, overflow: "hidden" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  minHeight: 40,
-                  padding: "0 12px",
-                  background: "#FAFAFA",
-                  fontWeight: 500,
-                }}
-              >
-                <Checkbox
-                  disabled={free.length === 0}
-                  checked={free.length > 0 && checkedCount === free.length}
-                  indeterminate={checkedCount > 0 && checkedCount < free.length}
-                  onChange={(e) =>
-                    setPickerSelected((prev) =>
-                      e.target.checked ? [...new Set([...prev, ...free])] : prev.filter((id) => !free.includes(id))
-                    )
-                  }
-                >
-                  {cat}
-                </Checkbox>
-                <Typography.Text type="secondary" style={{ marginLeft: "auto", fontSize: 12, fontWeight: 400 }}>
-                  {checkedCount}/{items.length}
-                </Typography.Text>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-                {items.map((s) =>
-                  pickerExisting.has(s.id) ? (
-                    <span
-                      key={s.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        minHeight: 40,
-                        padding: "0 12px",
-                        borderTop: "1px solid #F0F0F0",
-                        background: "#F5F5F5",
-                        color: "#8c8c8c",
-                      }}
-                    >
-                      {s.name}
-                      <span style={{ marginLeft: "auto", fontSize: 11 }}>đã có DV</span>
-                    </span>
-                  ) : (
-                    <Checkbox
-                      key={s.id}
-                      checked={picker?.selected.includes(s.id)}
-                      onChange={(e) =>
-                        setPickerSelected((prev) =>
-                          e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
-                        )
-                      }
-                      style={{ minHeight: 40, padding: "0 12px", borderTop: "1px solid #F0F0F0", alignItems: "center", margin: 0 }}
-                    >
-                      {s.name}
-                    </Checkbox>
-                  )
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {pickerGroups.length === 0 && (
-          <div style={{ padding: 24, textAlign: "center", color: "#8c8c8c" }}>Không tìm thấy nền mẫu</div>
+            </Card>
+          </>
         )}
-      </Drawer>
-    </div>
+
+        <Drawer
+          open={!!picker}
+          width={540}
+          destroyOnHidden
+          onClose={() => setPicker(null)}
+          title={
+            <span style={{ display: "inline-flex", flexDirection: "column" }}>
+              <span>
+                {picker?.target === "common"
+                  ? "Chọn nền mẫu dùng chung"
+                  : `Nền mẫu cho ${indicatorMap.get(picker?.target ?? "")?.name ?? ""}`}
+              </span>
+              <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
+                Tick nền mẫu hoặc cả nhóm · bỏ trống = Mọi nền mẫu
+              </Typography.Text>
+            </span>
+          }
+          footer={
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Typography.Text strong style={{ color: "#096DD9" }}>
+                Đã chọn {picker?.selected.length ?? 0} nền mẫu
+              </Typography.Text>
+              <Space>
+                <Button onClick={() => setPickerSelected(() => [])}>Bỏ chọn hết</Button>
+                <Button type="primary" onClick={applyPicker}>
+                  Xong
+                </Button>
+              </Space>
+            </div>
+          }
+        >
+          <Input
+            autoFocus
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder="Tìm nền mẫu hoặc nhóm (VD: nước, thủy sản)..."
+            value={pickerQuery}
+            onChange={(e) => setPickerQuery(e.target.value)}
+            style={{ marginBottom: 4 }}
+          />
+          {pickerGroups.map(([cat, items]) => {
+            const free = items.filter((s) => !pickerExisting.has(s.id)).map((s) => s.id);
+            const checkedCount = free.filter((id) => picker?.selected.includes(id)).length;
+            return (
+              <div key={cat} style={{ marginTop: 12, border: "1px solid #F0F0F0", borderRadius: 8, overflow: "hidden" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    minHeight: 40,
+                    padding: "0 12px",
+                    background: "#FAFAFA",
+                    fontWeight: 500,
+                  }}
+                >
+                  <Checkbox
+                    disabled={free.length === 0}
+                    checked={free.length > 0 && checkedCount === free.length}
+                    indeterminate={checkedCount > 0 && checkedCount < free.length}
+                    onChange={(e) =>
+                      setPickerSelected((prev) =>
+                        e.target.checked ? [...new Set([...prev, ...free])] : prev.filter((id) => !free.includes(id))
+                      )
+                    }
+                  >
+                    {cat}
+                  </Checkbox>
+                  <Typography.Text type="secondary" style={{ marginLeft: "auto", fontSize: 12, fontWeight: 400 }}>
+                    {checkedCount}/{items.length}
+                  </Typography.Text>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+                  {items.map((s) =>
+                    pickerExisting.has(s.id) ? (
+                      <span
+                        key={s.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          minHeight: 40,
+                          padding: "0 12px",
+                          borderTop: "1px solid #F0F0F0",
+                          background: "#F5F5F5",
+                          color: "#8c8c8c",
+                        }}
+                      >
+                        {s.name}
+                        <span style={{ marginLeft: "auto", fontSize: 11 }}>đã có DV</span>
+                      </span>
+                    ) : (
+                      <Checkbox
+                        key={s.id}
+                        checked={picker?.selected.includes(s.id)}
+                        onChange={(e) =>
+                          setPickerSelected((prev) =>
+                            e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
+                          )
+                        }
+                        style={{ minHeight: 40, padding: "0 12px", borderTop: "1px solid #F0F0F0", alignItems: "center", margin: 0 }}
+                      >
+                        {s.name}
+                      </Checkbox>
+                    )
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {pickerGroups.length === 0 && (
+            <div style={{ padding: 24, textAlign: "center", color: "#8c8c8c" }}>Không tìm thấy nền mẫu</div>
+          )}
+        </Drawer>
+      </div>
+    </Modal>
   );
 };
 
-/** Modal "Tạo dịch vụ hàng loạt" — đóng là hủy toàn bộ nháp, mở lại nhận prefill mới */
-const BulkCreateModal: React.FC<BulkCreateModalProps> = ({ open, onCancel, ...rest }) => (
-  <Modal
-    open={open}
-    title="Tạo dịch vụ hàng loạt"
-    width="90vw"
-    style={{ maxWidth: 1400 }}
-    centered
-    footer={null}
-    destroyOnHidden
-    maskClosable={false}
-    onCancel={onCancel}
-    styles={{ body: { height: "calc(100vh - 160px)", overflowY: "auto", paddingRight: 4 } }}
-  >
-    <BulkCreateForm {...rest} onCancel={onCancel} />
-  </Modal>
-);
+/** Modal "Tạo dịch vụ hàng loạt" — mỗi lần mở là 1 phiên mới (remount) để nhận prefill mới, bỏ nháp cũ */
+const BulkCreateModal: React.FC<BulkCreateModalProps> = (props) => {
+  const [session, setSession] = useState(0);
+  const [prevOpen, setPrevOpen] = useState(props.open);
+  if (props.open !== prevOpen) {
+    setPrevOpen(props.open);
+    if (props.open) setSession((s) => s + 1);
+  }
+  return <BulkCreateDialog key={session} {...props} />;
+};
 
 export default BulkCreateModal;
