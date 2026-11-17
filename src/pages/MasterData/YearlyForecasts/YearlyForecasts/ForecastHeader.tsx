@@ -1,27 +1,15 @@
 import React from "react";
-import { Button, Space, Tag, Typography } from "antd";
-import { CopyOutlined, InfoCircleOutlined } from "../../../../components/common/Icon";
+import { Button, Tag, Typography } from "antd";
+import { InfoCircleOutlined } from "../../../../components/common/Icon";
 import { FORECAST_RULES } from "./utils";
 
 export interface ForecastHeaderProps {
-  year: number;
   showRules: boolean;
-  /** Hiện nút Clone: có quyền sửa + năm chưa khóa + năm trước có số liệu */
-  showClone: boolean;
-  cloning: boolean;
   onToggleRules: () => void;
-  onClone: () => void;
 }
 
-/** Tiêu đề L4 + quy tắc áp dụng + nút Clone (cùng style L2) */
-const ForecastHeader: React.FC<ForecastHeaderProps> = ({
-  year,
-  showRules,
-  showClone,
-  cloning,
-  onToggleRules,
-  onClone,
-}) => (
+/** Tiêu đề L4 + quy tắc áp dụng (cùng style L2) */
+const ForecastHeader: React.FC<ForecastHeaderProps> = ({ showRules, onToggleRules }) => (
   <>
     <div
       style={{
@@ -44,20 +32,13 @@ const ForecastHeader: React.FC<ForecastHeaderProps> = ({
           Tổng số mẫu dự kiến trong năm cho từng dịch vụ — mẫu số để chia chi phí 1 Mẻ thành 1 Phép thử.
         </Typography.Text>
       </div>
-      <Space wrap>
-        <Button
-          icon={<InfoCircleOutlined />}
-          onClick={onToggleRules}
-          style={{ borderColor: "#91D5FF", background: "#E6F7FF", color: "#0050B3" }}
-        >
-          {showRules ? "Ẩn quy tắc" : "Quy tắc áp dụng"} ({FORECAST_RULES.length})
-        </Button>
-        {showClone && (
-          <Button type="primary" icon={<CopyOutlined />} loading={cloning} onClick={onClone}>
-            Clone từ năm {year - 1}
-          </Button>
-        )}
-      </Space>
+      <Button
+        icon={<InfoCircleOutlined />}
+        onClick={onToggleRules}
+        style={{ borderColor: "#91D5FF", background: "#E6F7FF", color: "#0050B3" }}
+      >
+        {showRules ? "Ẩn quy tắc" : "Quy tắc áp dụng"} ({FORECAST_RULES.length})
+      </Button>
     </div>
 
     {showRules && (

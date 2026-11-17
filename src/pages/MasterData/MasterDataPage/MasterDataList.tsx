@@ -38,7 +38,10 @@ import UnitsTab, { type UnitActions } from "../Units";
 import ProductCatalogTab, { type ProductCatalogActions } from "../ProductCatalog";
 import ServiceCatalogPage, { type ServiceCatalogActions } from "../ServiceCatalog/ServiceCatalogPage";
 import BatchNormsPage from "../BatchNorms/BatchNormsPage";
-import YearlyForecastsPage from "../YearlyForecasts/YearlyForecastsPage";
+import YearlyForecastsPage, { type YearlyForecastActions } from "../YearlyForecasts/YearlyForecastsPage";
+import ForecastCardActions, {
+  type YearlyForecastActionState,
+} from "../YearlyForecasts/YearlyForecasts/ForecastCardActions";
 import ImportProductMasterDataModal from "./components/ImportProductMasterDataModal";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
@@ -371,6 +374,12 @@ const MasterDataList: React.FC = () => {
   const unitsRef = useRef<UnitActions>(null);
   const productCatalogRef = useRef<ProductCatalogActions>(null);
   const servicesRef = useRef<ServiceCatalogActions>(null);
+  const forecastsRef = useRef<YearlyForecastActions>(null);
+  const [forecastActionState, setForecastActionState] = useState<YearlyForecastActionState | null>(null);
+  const handleForecastClone = useCallback(() => forecastsRef.current?.clone(), []);
+  const handleForecastSave = useCallback(async () => {
+    await forecastsRef.current?.save();
+  }, []);
   const [productMasterImportOpen, setProductMasterImportOpen] = useState(false);
   const [exportingProductMaster, setExportingProductMaster] = useState(false);
 
@@ -440,7 +449,8 @@ const MasterDataList: React.FC = () => {
           </Space>
         }
         extra={
-          canCreate &&
+          // L4 chỉ cần quyền Sửa (nút tự ẩn khi không có quyền / năm đã khóa)
+          (canCreate || activeCategory === "yearlyForecasts") &&
           hasVisibleCategories && (
             <Space>
               {/* Sample Conditions Tab */}
@@ -736,6 +746,15 @@ const MasterDataList: React.FC = () => {
                 </>
               )}
 
+              {/* Yearly Forecasts Tab (L4) */}
+              {activeCategory === "yearlyForecasts" && (
+                <ForecastCardActions
+                  state={forecastActionState}
+                  onClone={handleForecastClone}
+                  onSave={handleForecastSave}
+                />
+              )}
+
               {/* Notes Tab */}
               {activeCategory === "notes" && (
                 <>
@@ -952,7 +971,9 @@ const MasterDataList: React.FC = () => {
                 ) : key === "batchNorms" ? (
                   activeCategory === "batchNorms" && <BatchNormsPage />
                 ) : key === "yearlyForecasts" ? (
-                  activeCategory === "yearlyForecasts" && <YearlyForecastsPage />
+                  activeCategory === "yearlyForecasts" && (
+                    <YearlyForecastsPage ref={forecastsRef} onActionStateChange={setForecastActionState} />
+                  )
                 ) : (
                   <MasterDataTable
                     activeCategory={activeCategory}

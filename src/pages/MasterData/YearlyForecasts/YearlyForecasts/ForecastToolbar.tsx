@@ -1,19 +1,15 @@
 import React from "react";
-import { Button, Checkbox, Input, Segmented, Space, Tag, Typography } from "antd";
-import { LockOutlined, ReloadOutlined, SaveOutlined, SearchOutlined } from "../../../../components/common/Icon";
+import { Button, Checkbox, Input, Segmented, Tag, Typography } from "antd";
+import { LockOutlined, ReloadOutlined, SearchOutlined } from "../../../../components/common/Icon";
 import { getYearLabel } from "./utils";
 
 export interface ForecastToolbarProps {
   years: number[];
   currentYear: number;
   year: number;
-  isLocked: boolean;
-  canEdit: boolean;
   keyword: string;
   onlyMissing: boolean;
-  dirtyCount: number;
   loading: boolean;
-  saving: boolean;
   allExpanded: boolean;
   missingCount: number;
   totalCount: number;
@@ -23,7 +19,6 @@ export interface ForecastToolbarProps {
   onKeywordChange: (value: string) => void;
   onOnlyMissingChange: (value: boolean) => void;
   onToggleExpandAll: () => void;
-  onSave: () => void;
   onReload: () => void;
 }
 
@@ -31,13 +26,9 @@ const ForecastToolbar: React.FC<ForecastToolbarProps> = ({
   years,
   currentYear,
   year,
-  isLocked,
-  canEdit,
   keyword,
   onlyMissing,
-  dirtyCount,
   loading,
-  saving,
   allExpanded,
   missingCount,
   totalCount,
@@ -46,7 +37,6 @@ const ForecastToolbar: React.FC<ForecastToolbarProps> = ({
   onKeywordChange,
   onOnlyMissingChange,
   onToggleExpandAll,
-  onSave,
   onReload,
 }) => (
   <>
@@ -101,16 +91,9 @@ const ForecastToolbar: React.FC<ForecastToolbarProps> = ({
       <Typography.Text type="secondary" style={{ fontSize: 13 }}>
         {countText}
       </Typography.Text>
-      <Space wrap style={{ marginLeft: "auto" }}>
-        <Button icon={<ReloadOutlined />} loading={loading} onClick={onReload}>
-          Tải lại
-        </Button>
-        {canEdit && !isLocked && (
-          <Button type="primary" icon={<SaveOutlined />} loading={saving} disabled={dirtyCount === 0} onClick={onSave}>
-            Lưu dự toán{dirtyCount > 0 ? ` (${dirtyCount})` : ""}
-          </Button>
-        )}
-      </Space>
+      <Button icon={<ReloadOutlined />} loading={loading} onClick={onReload} style={{ marginLeft: "auto" }}>
+        Tải lại
+      </Button>
     </div>
   </>
 );

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { Modal, message } from "antd";
 import { yearlyForecastService, type YearlyForecastListDto } from "../../../services/serviceCatalogService";
 import { authService } from "../../../services/authService";
@@ -6,12 +6,27 @@ import { PERMISSIONS } from "../../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 import YearlyForecastsView from "./YearlyForecasts/YearlyForecastsView";
 import { getForecastYears, groupByMethod } from "./YearlyForecasts/utils";
+import type { YearlyForecastActionState } from "./YearlyForecasts/ForecastCardActions";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = getForecastYears(CURRENT_YEAR);
 
+/** Thanh "Ngân hàng dữ liệu" gọi vào (giống ServiceCatalogActions của L2) */
+export interface YearlyForecastActions {
+  save: () => Promise<void>;
+  clone: () => void;
+}
+
+export interface YearlyForecastsPageProps {
+  /** Báo trạng thái để vẽ nút Clone / Lưu trên thanh "Ngân hàng dữ liệu" */
+  onActionStateChange?: (state: YearlyForecastActionState) => void;
+}
+
 /** Container L4 — Dự toán mẫu năm */
-const YearlyForecastsPage: React.FC = () => {
+const YearlyForecastsPage = forwardRef<YearlyForecastActions, YearlyForecastsPageProps>(function YearlyForecastsPage(
+  { onActionStateChange },
+  ref
+) {
   const [year, setYear] = useState(CURRENT_YEAR);
   const [data, setData] = useState<YearlyForecastListDto | null>(null);
   const [drafts, setDrafts] = useState<Record<string, number | null>>({});
@@ -19,8 +34,6 @@ const YearlyForecastsPage: React.FC = () => {
   const [onlyMissing, setOnlyMissing] = useState(false);
   const [activeGroupKeys, setActiveGroupKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [cloning, setCloning] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [calcRowId, setCalcRowId] = useState<string | null>(null);
 
@@ -111,7 +124,6 @@ const YearlyForecastsPage: React.FC = () => {
 
   const handleSave = useCallback(async () => {
     if (dirtyCount === 0) return;
-    setSaving(true);
     try {
       const items = Object.entries(drafts).map(([testMethodIndicatorId, estimatedSamples]) => ({
         testMethodIndicatorId,
@@ -122,8 +134,6 @@ const YearlyForecastsPage: React.FC = () => {
       await load(year);
     } catch (error) {
       message.error(getApiErrorMessage(error, "Không lưu được dự toán"));
-    } finally {
-      setSaving(false);
     }
   }, [dirtyCount, drafts, year, load]);
 
@@ -135,47 +145,48 @@ const YearlyForecastsPage: React.FC = () => {
         okText: "Clone",
         cancelText: "Hủy",
         onOk: async () => {
-          setCloning(true);
           try {
             const result = await yearlyForecastService.clone(year);
             message.success(`Đã clone ${result.clonedCount} dòng từ năm ${year - 1}`);
             await load(year);
           } catch (error) {
             message.error(getApiErrorMessage(error, "Không clone được dự toán"));
-          } finally {
-            setCloning(false);
           }
         },
       });
     });
   }, [confirmDiscard, year, load]);
 
-  const allExpanded = groups.length > 0 && groups.every((g) => activeGroupKeys.includes(g.testMethodId));
   const isLocked = data?.isLocked ?? year < CURRENT_YEAR;
+  const editable = canEdit && !isLocked;
+  const canClone = data?.canClone ?? false;
+
+  useImperativeHandle(ref, () => ({ save: handleSave, clone: handleClone }), [handleSave, handleClone]);
+
+  // Chỉ báo lên khi giá trị nguyên thủy đổi → MasterDataList không render lại theo từng phím gõ
+  useEffect(() => {
+    onActionStateChange?.({ year, editable, canClone, dirtyCount });
+  }, [onActionStateChange, year, editable, canClone, dirtyCount]);
+
+  const allExpanded = groups.length > 0 && groups.every((g) => activeGroupKeys.includes(g.testMethodId));
   const visibleServiceCount = groups.reduce((sum, g) => sum + g.rows.length, 0);
   const calcRow = calcRowId ? data?.items.find((r) => r.testMethodIndicatorId === calcRowId) ?? null : null;
 
   return (
     <YearlyForecastsView
+      isLocked={isLocked}
+      canEdit={canEdit}
       header={{
-        year,
         showRules,
-        showClone: canEdit && !isLocked && (data?.canClone ?? false),
-        cloning,
         onToggleRules: () => setShowRules((v) => !v),
-        onClone: handleClone,
       }}
       toolbar={{
         years: YEARS,
         currentYear: CURRENT_YEAR,
         year,
-        isLocked,
-        canEdit,
         keyword,
         onlyMissing,
-        dirtyCount,
         loading,
-        saving,
         allExpanded,
         missingCount,
         totalCount: data?.items.length ?? 0,
@@ -184,7 +195,6 @@ const YearlyForecastsPage: React.FC = () => {
         onKeywordChange: setKeyword,
         onOnlyMissingChange: setOnlyMissing,
         onToggleExpandAll: () => setActiveGroupKeys(allExpanded ? [] : groups.map((g) => g.testMethodId)),
-        onSave: handleSave,
         onReload: () => confirmDiscard(() => load(year)),
       }}
       table={{
@@ -206,6 +216,6 @@ const YearlyForecastsPage: React.FC = () => {
       }}
     />
   );
-};
+});
 
 export default YearlyForecastsPage;

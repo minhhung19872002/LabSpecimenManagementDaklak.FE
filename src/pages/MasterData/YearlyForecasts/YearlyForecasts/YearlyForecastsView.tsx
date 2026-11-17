@@ -5,6 +5,8 @@ import ForecastTable, { type ForecastTableProps } from "./ForecastTable";
 import ForecastCalculationModal, { type ForecastCalculationModalProps } from "./ForecastCalculationModal";
 
 export interface YearlyForecastsViewProps {
+  isLocked: boolean;
+  canEdit: boolean;
   header: ForecastHeaderProps;
   toolbar: ForecastToolbarProps;
   table: ForecastTableProps;
@@ -22,8 +24,15 @@ const hintStyle = (locked: boolean): React.CSSProperties => ({
 });
 
 /** L4 — Dự toán mẫu hàng năm */
-const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({ header, toolbar, table, calculation }) => {
-  const { year, isLocked, canEdit } = toolbar;
+const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({
+  isLocked,
+  canEdit,
+  header,
+  toolbar,
+  table,
+  calculation,
+}) => {
+  const { year } = toolbar;
   return (
     <div style={{ padding: "4px 16px 16px" }}>
       <ForecastHeader {...header} />
@@ -36,8 +45,8 @@ const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({ header, toolb
           </>
         ) : canEdit ? (
           <>
-            <b>Đang mở:</b> Nhập số mẫu trực tiếp vào bảng rồi bấm “Lưu dự toán”. Không ảnh hưởng Định mức Level 3
-            (BR-05).
+            <b>Đang mở:</b> Nhập số mẫu trực tiếp vào bảng rồi bấm “Lưu dự toán” phía trên. Không ảnh hưởng Định mức
+            Level 3 (BR-05).
           </>
         ) : (
           <>Bạn chỉ có quyền xem dự toán.</>
