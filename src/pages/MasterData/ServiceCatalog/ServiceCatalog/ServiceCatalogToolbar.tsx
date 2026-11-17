@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Button, Checkbox, DatePicker, Input, Popconfirm, Radio, Select, Space, Typography } from "antd";
+import { Button, Checkbox, DatePicker, Input, Popconfirm, Select, Space, Typography } from "antd";
 import type { Dayjs } from "dayjs";
 import { DeleteOutlined, ReloadOutlined, SearchOutlined } from "../../../../components/common/Icon";
-import { ALL_CATEGORY } from "./utils";
+import SpecimenCategoryChips from "./SpecimenCategoryChips";
 
 export interface ServiceCatalogToolbarProps {
   /** grid = Ma trận giá, list = Danh sách & lịch sử version */
@@ -62,6 +62,15 @@ const DeleteSelectedButton = React.memo<{ count: number; onDelete: () => Promise
     );
   }
 );
+
+// Hàng hướng dẫn ngay trên bảng: hướng dẫn bên trái, số dòng + mở/thu gọn bên phải
+const hintRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 16,
+};
+const hintTextStyle: React.CSSProperties = { fontSize: 12.5 };
 
 /** Thanh lọc của Ma trận giá / Danh sách dịch vụ */
 const ServiceCatalogToolbar: React.FC<ServiceCatalogToolbarProps> = ({
@@ -155,29 +164,27 @@ const ServiceCatalogToolbar: React.FC<ServiceCatalogToolbarProps> = ({
       </div>
 
       {isGrid && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
-          <Space wrap size={8}>
-            {specimenCategories.length > 0 && (
-              <>
-                <Typography.Text type="secondary">Cột nền mẫu:</Typography.Text>
-                <Radio.Group
-                  optionType="button"
-                  buttonStyle="solid"
-                  value={specimenCategory}
-                  onChange={(e) => onSpecimenCategoryChange(e.target.value)}
-                  options={[
-                    { value: ALL_CATEGORY, label: "Tất cả" },
-                    ...specimenCategories.map((c) => ({ value: c, label: c })),
-                  ]}
-                />
-              </>
-            )}
-          </Space>
-          <Space size={10}>
-            <Button onClick={onToggleExpandAll}>{allExpanded ? "Thu gọn" : "Mở tất cả"}</Button>
-            <Typography.Text type="secondary">{countText}</Typography.Text>
-          </Space>
-        </div>
+        <>
+          {specimenCategories.length > 0 && (
+            <SpecimenCategoryChips
+              categories={specimenCategories}
+              value={specimenCategory}
+              onChange={onSpecimenCategoryChange}
+            />
+          )}
+          <div style={hintRowStyle}>
+            <Typography.Text type="secondary" style={hintTextStyle}>
+              Nhấp đúp vào ô để sửa giá · Enter lưu · Esc hủy · Ô trống: nhấp đúp để tạo dịch vụ cho tổ hợp đó · Chuột
+              phải vào ô: lịch sử giá / ngừng / xóa
+            </Typography.Text>
+            <Space size={10} style={{ flexShrink: 0 }}>
+              <Typography.Text type="secondary">{countText}</Typography.Text>
+              <Button size="small" onClick={onToggleExpandAll}>
+                {allExpanded ? "Thu gọn tất cả" : "Mở tất cả"}
+              </Button>
+            </Space>
+          </div>
+        </>
       )}
       {!isGrid && (
         <div style={{ textAlign: "right" }}>

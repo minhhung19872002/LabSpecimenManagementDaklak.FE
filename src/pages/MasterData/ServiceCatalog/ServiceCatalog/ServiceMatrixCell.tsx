@@ -37,7 +37,6 @@ const cellBoxStyle: React.CSSProperties = {
   flexDirection: "column",
   alignItems: "flex-end",
   justifyContent: "center",
-  cursor: "cell",
   userSelect: "none",
 };
 
@@ -46,7 +45,6 @@ const ACTION_CLASS = "svc-matrix-cell--action";
 
 // Style tĩnh — tạo 1 lần, không cấp phát lại cho từng ô mỗi lần render
 const emptyCreatableStyle: React.CSSProperties = { ...cellBoxStyle, background: "#FAFAFA", color: "#8c8c8c" };
-const emptyReadonlyStyle: React.CSSProperties = { ...emptyCreatableStyle, cursor: "default" };
 const activeBoxStyle: React.CSSProperties = { ...cellBoxStyle, background: "#FFFFFF" };
 const inactiveBoxStyle: React.CSSProperties = { ...cellBoxStyle, background: "#F5F5F5" };
 const activePriceStyle: React.CSSProperties = { fontWeight: 500, color: "#262626" };
@@ -128,7 +126,7 @@ const ServiceMatrixCell = React.memo<ServiceMatrixCellProps>(function ServiceMat
     return (
       <div
         className={canCreate ? ACTION_CLASS : undefined}
-        style={canCreate ? emptyCreatableStyle : emptyReadonlyStyle}
+        style={emptyCreatableStyle}
         title={canCreate ? "Chưa có dịch vụ — nhấp đúp để tạo" : "Chưa có dịch vụ"}
         onDoubleClick={canCreate ? () => onEmptyCellDoubleClick(row, column) : undefined}
       >

@@ -20,6 +20,8 @@ export interface ServiceMatrixTableProps {
   /** Chỉ chứa key dòng chỉ tiêu ("r:...") */
   selectedRowKeys: string[];
   pageSize: number;
+  /** Chiều cao header app: tiêu đề cột dính ngay dưới, thanh cuộn ngang dính đáy màn hình */
+  stickyOffset: number;
   editingServiceId: string | null;
   canCreate: boolean;
   canEdit: boolean;
@@ -37,9 +39,28 @@ export interface ServiceMatrixTableProps {
 const CELL_WIDTH = 160;
 const NAME_WIDTH = 300;
 
-const groupCellProps = (span: number) => ({ colSpan: span, style: { background: "#FAFAFA" } });
+// Ô nhóm trải hết các cột: bỏ sticky (position static) để không đè lên checkbox nhóm ở cột chọn cố định
+const groupCellProps = (span: number) => ({ colSpan: span, style: { background: "#FAFAFA", position: "static" as const } });
 const priceCellProps = { style: { padding: "6px 4px" } };
 const hiddenCellProps = { colSpan: 0 };
+// Tên nền mẫu dài (VD "Nhuyễn thể hai mảnh vỏ…") làm hàng tiêu đề cao ~250px → tối đa 3 dòng, hover xem đủ
+const columnTitleStyle: React.CSSProperties = {
+  display: "-webkit-box",
+  WebkitLineClamp: 3,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+  lineHeight: "18px",
+  fontSize: 13,
+};
+// Ô nhóm trải hết các cột (rất rộng) → tên nhóm dính bên trái khi cuộn ngang, không bị trôi mất
+const groupLabelStyle: React.CSSProperties = {
+  position: "sticky",
+  left: 56,
+  display: "flex",
+  width: "max-content",
+  alignItems: "center",
+  gap: 8,
+};
 
 /** Ma trận giá: nhóm chỉ tiêu ▸ dòng Chỉ tiêu + Phương pháp, cột = Nền mẫu, ô = Giá */
 const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
@@ -49,6 +70,7 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
   viewDate,
   selectedRowKeys,
   pageSize,
+  stickyOffset,
   editingServiceId,
   canCreate,
   canEdit,
@@ -114,7 +136,7 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
         onCell: (r) => (r.kind === "group" ? groupCellProps(specimenColumns.length + 1) : {}),
         render: (_, r) =>
           r.kind === "group" ? (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span style={groupLabelStyle}>
               <Button
                 type="text"
                 size="small"
@@ -146,7 +168,11 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
       },
       ...specimenColumns.map(
         (col): ColumnsType<ServiceMatrixRow>[number] => ({
-          title: col.name,
+          title: (
+            <span style={columnTitleStyle} title={col.name}>
+              {col.name}
+            </span>
+          ),
           key: col.key,
           width: CELL_WIDTH,
           align: "right",
@@ -187,6 +213,9 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
     ]
   );
 
+  // Ma trận rất rộng: thanh cuộn ngang mặc định nằm cuối bảng (khuất dưới màn hình) → cho dính đáy màn hình
+  const sticky = useMemo(() => ({ offsetHeader: stickyOffset }), [stickyOffset]);
+
   const rowSelection: TableProps<ServiceMatrixRow>["rowSelection"] = {
     selectedRowKeys: checkedKeys,
     columnWidth: 48,
@@ -212,6 +241,7 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
         loading={loading}
         scroll={{ x: NAME_WIDTH + 48 + specimenColumns.length * CELL_WIDTH }}
         rowSelection={rowSelection}
+        sticky={sticky}
         pagination={{
           pageSize,
           showSizeChanger: true,

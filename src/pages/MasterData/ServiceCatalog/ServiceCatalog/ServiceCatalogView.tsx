@@ -95,10 +95,6 @@ const ServiceCatalogView: React.FC<ServiceCatalogViewProps> = ({
           children: (
             <>
               <ServiceCatalogToolbar mode="grid" countText={gridCountText} {...toolbar} />
-              <Typography.Paragraph type="secondary" style={{ fontSize: 12.5, marginBottom: 10 }}>
-                Nhấp đúp vào ô để sửa giá · Enter lưu · Esc hủy · Ô trống: nhấp đúp để tạo dịch vụ cho tổ hợp đó ·
-                Chuột phải vào ô: lịch sử giá / ngừng / xóa
-              </Typography.Paragraph>
               <ServiceMatrixTable {...matrix} />
             </>
           ),

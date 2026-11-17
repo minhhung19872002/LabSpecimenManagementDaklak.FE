@@ -15,6 +15,7 @@ import { serviceCatalogService, type ServiceCatalogItemDto } from "../../../serv
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
+import { useHeaderHeight } from "../../../hooks";
 import ServiceCatalogView from "./ServiceCatalog/ServiceCatalogView";
 import type { ServiceCellAction } from "./ServiceCatalog/ServiceMatrixTable";
 import {
@@ -75,6 +76,8 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   // Chỉ giữ id ô đang sửa; giá đang gõ nằm trong ô (local state) để gõ phím không render lại cả ma trận
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [matrixPageSize, setMatrixPageSize] = useState(DEFAULT_MATRIX_PAGE_SIZE);
+  // Tiêu đề cột + thanh cuộn ngang của ma trận dính theo màn hình (dưới header app)
+  const headerHeight = useHeaderHeight();
 
   const [bulkCreate, setBulkCreate] = useState<{ open: boolean; prefill: BulkCreatePrefill | null }>({
     open: false,
@@ -322,6 +325,7 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           viewDate,
           selectedRowKeys,
           pageSize: matrixPageSize,
+          stickyOffset: headerHeight,
           editingServiceId,
           canCreate,
           canEdit,

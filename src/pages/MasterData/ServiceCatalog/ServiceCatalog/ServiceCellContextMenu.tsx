@@ -22,9 +22,24 @@ const buildMenu = (service: ServiceCatalogItemDto, canEdit: boolean, canDelete: 
 };
 
 /**
+ * `isolation`: tạo stacking context riêng cho bảng — antd tính z-index cột cố định = số cột × 2 − vị trí,
+ * ma trận nhiều nền mẫu → z-index > 100 → cột tên đè lên header khi cuộn. Popup render ở body nên không ảnh hưởng.
+ * `position: relative`: làm gốc toạ độ cho điểm neo menu.
+ */
+const wrapperStyle: React.CSSProperties = { position: "relative", isolation: "isolate" };
+const anchorBaseStyle: React.CSSProperties = { position: "absolute", width: 0, height: 0, pointerEvents: "none" };
+
+interface MenuState {
+  service: ServiceCatalogItemDto;
+  x: number;
+  y: number;
+}
+
+/**
  * MỘT menu chuột phải dùng chung cho cả ma trận (thay vì mỗi ô 1 Dropdown → hàng nghìn Dropdown).
- * Tự giữ state ô đang chọn: mở menu chỉ render lại component này, `children` (bảng) giữ nguyên
- * reference nên React bỏ qua, không render lại bảng.
+ * Bảng KHÔNG nằm trong phần tử trigger của Dropdown (trigger có class `ant-dropdown-trigger` → hook
+ * kéo-để-cuộn toàn cục bỏ qua) — menu bám vào 1 điểm neo 0×0 đặt đúng vị trí chuột.
+ * Mở menu chỉ render lại component này, `children` (bảng) giữ nguyên reference nên React bỏ qua.
  * Chuột phải ngoài ô có dịch vụ → để trình duyệt hiện menu mặc định như trước.
  */
 const ServiceCellContextMenu = React.memo<ServiceCellContextMenuProps>(function ServiceCellContextMenu({
@@ -34,38 +49,45 @@ const ServiceCellContextMenu = React.memo<ServiceCellContextMenuProps>(function 
   onCellAction,
   children,
 }) {
-  const [target, setTarget] = useState<ServiceCatalogItemDto | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<MenuState | null>(null);
   const [open, setOpen] = useState(false);
-  const targetRef = useRef<ServiceCatalogItemDto | null>(null);
 
-  // Capture chạy trước handler contextMenu của Dropdown (bubble) → biết ô nào trước khi menu mở
-  const handleContextMenuCapture = (e: React.MouseEvent) => {
+  const handleContextMenu = (e: React.MouseEvent) => {
     const cell = (e.target as HTMLElement).closest?.("[data-service-id]") as HTMLElement | null;
     const service = cell?.dataset.serviceId ? serviceById.get(cell.dataset.serviceId) : undefined;
-    targetRef.current = service ?? null;
-    if (!service) {
-      // Không phải ô dịch vụ: chặn Dropdown nhận sự kiện → không preventDefault, menu trình duyệt hiện bình thường
-      e.stopPropagation();
+    const rect = wrapperRef.current?.getBoundingClientRect();
+    if (!service || !rect) {
+      setOpen(false);
       return;
     }
-    setTarget(service);
+    e.preventDefault();
+    setMenu({ service, x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setOpen(true);
   };
 
   return (
-    <Dropdown
-      trigger={["contextMenu"]}
-      open={open && !!target}
-      onOpenChange={(next) => setOpen(next && !!targetRef.current)}
-      menu={{
-        items: target ? buildMenu(target, canEdit, canDelete) : [],
-        onClick: ({ key }) => {
-          setOpen(false);
-          if (target) onCellAction(key as ServiceCellAction, target);
-        },
-      }}
-    >
-      <div onContextMenuCapture={handleContextMenuCapture}>{children}</div>
-    </Dropdown>
+    <div ref={wrapperRef} style={wrapperStyle} onContextMenu={handleContextMenu}>
+      {children}
+      {menu && (
+        <Dropdown
+          trigger={["click"]}
+          placement="bottomLeft"
+          open={open}
+          // Chỉ nhận yêu cầu đóng (nhấp ra ngoài, Esc); mở do onContextMenu ở trên
+          onOpenChange={(next) => !next && setOpen(false)}
+          menu={{
+            items: buildMenu(menu.service, canEdit, canDelete),
+            onClick: ({ key }) => {
+              setOpen(false);
+              onCellAction(key as ServiceCellAction, menu.service);
+            },
+          }}
+        >
+          <span style={{ ...anchorBaseStyle, left: menu.x, top: menu.y }} />
+        </Dropdown>
+      )}
+    </div>
   );
 });
 
