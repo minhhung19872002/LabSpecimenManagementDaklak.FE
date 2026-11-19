@@ -1,12 +1,9 @@
-import { useCallback, useState } from "react";
-import { authService } from "../../../../services/authService";
+import { useCallback, useEffect, useState } from "react";
 
-// Mặc định ghim: Nhóm chỉ tiêu, Phương pháp thử, Danh mục vật tư thiết bị (theo mockup Cấp 1)
-const DEFAULT_PINNED = ["indicators", "testMethods", "products"];
 const STATS_OPEN_KEY = "masterData.statsOpen";
-
-const pinnedStorageKey = () =>
-  `masterData.pinnedCategories.${authService.getUserInfo()?.id ?? "anonymous"}`;
+const SIDEBAR_PREF_KEY = "masterData.sidebarOpen";
+/** Từ độ rộng này sidebar mới đứng cố định bên trái; hẹp hơn → dải 48px + bật ra (theo mockup BA) */
+const WIDE_QUERY = "(min-width: 1360px)";
 
 const readJson = <T>(key: string, fallback: T): T => {
   try {
@@ -25,25 +22,53 @@ const writeJson = (key: string, value: unknown) => {
   }
 };
 
+const matchWide = () => typeof window !== "undefined" && !!window.matchMedia?.(WIDE_QUERY).matches;
+
 /** State UI của thanh danh mục bên trái + khối thống kê (ghi nhớ theo trình duyệt). */
 export const useMasterDataSidebar = () => {
   const [filterText, setFilterText] = useState("");
-  const [pinnedKeys, setPinnedKeys] = useState<string[]>(() =>
-    readJson<string[]>(pinnedStorageKey(), DEFAULT_PINNED),
-  );
-  const [statsOpen, setStatsOpen] = useState<boolean>(() =>
-    readJson<boolean>(STATS_OPEN_KEY, false),
-  );
+  const [statsOpen, setStatsOpen] = useState<boolean>(() => readJson<boolean>(STATS_OPEN_KEY, false));
+  // Người dùng muốn sidebar mở (chỉ có tác dụng khi màn rộng)
+  const [preferOpen, setPreferOpen] = useState<boolean>(() => readJson<boolean>(SIDEBAR_PREF_KEY, true));
+  const [isWide, setIsWide] = useState<boolean>(matchWide);
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
 
-  const togglePin = useCallback((key: string) => {
-    setPinnedKeys((prev) => {
-      const next = prev.includes(key)
-        ? prev.filter((k) => k !== key)
-        : [...prev, key];
-      writeJson(pinnedStorageKey(), next);
-      return next;
-    });
+  useEffect(() => {
+    const mql = window.matchMedia?.(WIDE_QUERY);
+    if (!mql) return;
+    const onChange = (e: MediaQueryListEvent) => setIsWide(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
+
+  const savePreferOpen = useCallback((open: boolean) => {
+    setPreferOpen(open);
+    writeJson(SIDEBAR_PREF_KEY, open);
+  }, []);
+
+  const inline = isWide && preferOpen;
+
+  const collapse = useCallback(() => {
+    savePreferOpen(false);
+    setFlyoutOpen(false);
+  }, [savePreferOpen]);
+
+  /** Bấm dải thu gọn: màn rộng → mở lại cố định; màn hẹp → bật/tắt danh mục nổi */
+  const openFromRail = useCallback(() => {
+    if (isWide) {
+      savePreferOpen(true);
+      setFlyoutOpen(false);
+    } else {
+      setFlyoutOpen((v) => !v);
+    }
+  }, [isWide, savePreferOpen]);
+
+  const closeFlyout = useCallback(() => setFlyoutOpen(false), []);
+
+  const pinOpen = useCallback(() => {
+    savePreferOpen(true);
+    setFlyoutOpen(false);
+  }, [savePreferOpen]);
 
   const toggleStats = useCallback(() => {
     setStatsOpen((prev) => {
@@ -55,9 +80,14 @@ export const useMasterDataSidebar = () => {
   return {
     filterText,
     setFilterText,
-    pinnedKeys,
-    togglePin,
     statsOpen,
     toggleStats,
+    isWide,
+    inline,
+    flyoutOpen: !inline && flyoutOpen,
+    collapse,
+    openFromRail,
+    closeFlyout,
+    pinOpen,
   };
 };

@@ -1,6 +1,11 @@
 import React from "react";
 import { Input } from "antd";
-import Icon, { FilterOutlined } from "../../../../components/common/Icon";
+import {
+  CloseOutlined,
+  DoubleLeftOutlined,
+  DoubleRightOutlined,
+  FilterOutlined,
+} from "../../../../components/common/Icon";
 
 export interface SidebarCategory {
   key: string;
@@ -12,11 +17,19 @@ export interface SidebarCategory {
 export interface MasterDataSidebarProps {
   categories: SidebarCategory[];
   activeKey: string;
-  pinnedKeys: string[];
   filterText: string;
+  /** true = sidebar đứng cố định bên trái; false = dải thu gọn 48px */
+  inline: boolean;
+  /** Danh mục nổi (bật ra từ dải thu gọn) đang mở */
+  flyoutOpen: boolean;
+  /** Màn đủ rộng → trong danh mục nổi có nút "Ghim mở" */
+  isWide: boolean;
   onFilterChange: (value: string) => void;
   onSelect: (key: string) => void;
-  onTogglePin: (key: string) => void;
+  onCollapse: () => void;
+  onOpenFromRail: () => void;
+  onCloseFlyout: () => void;
+  onPinOpen: () => void;
 }
 
 // So khớp không dấu: "vat tu" khớp "vật tư"
@@ -29,85 +42,37 @@ const fold = (s: string) =>
     .toLowerCase()
     .trim();
 
-interface ItemProps {
-  item: SidebarCategory;
-  active: boolean;
-  pinned: boolean;
+interface PanelProps {
+  categories: SidebarCategory[];
+  activeKey: string;
+  filterText: string;
+  onFilterChange: (value: string) => void;
   onSelect: (key: string) => void;
-  onTogglePin: (key: string) => void;
+  actions: React.ReactNode;
+  showTotal: boolean;
 }
 
-const SidebarItem: React.FC<ItemProps> = ({
-  item,
-  active,
-  pinned,
-  onSelect,
-  onTogglePin,
-}) => (
-  <div
-    className={`md-sidebar-item${active ? " is-active" : ""}${pinned ? " is-pinned" : ""}`}
-  >
-    <button
-      type="button"
-      className="md-sidebar-item-main"
-      aria-current={active ? "page" : undefined}
-      onClick={() => onSelect(item.key)}
-    >
-      <span className="md-sidebar-item-label">{item.label}</span>
-      {item.count !== undefined && (
-        <span className="md-sidebar-item-count">{item.count}</span>
-      )}
-    </button>
-    <button
-      type="button"
-      className="md-sidebar-pin"
-      title={pinned ? "Bỏ ghim" : "Ghim danh mục"}
-      aria-label={pinned ? `Bỏ ghim ${item.label}` : `Ghim ${item.label}`}
-      aria-pressed={pinned}
-      onClick={() => onTogglePin(item.key)}
-    >
-      <Icon name={pinned ? "pin-angle-fill" : "pin-angle"} />
-    </button>
-  </div>
-);
-
-const MasterDataSidebar: React.FC<MasterDataSidebarProps> = ({
+/** Nội dung danh mục dùng chung cho dạng cố định và dạng nổi */
+const SidebarPanel: React.FC<PanelProps> = ({
   categories,
   activeKey,
-  pinnedKeys,
   filterText,
   onFilterChange,
   onSelect,
-  onTogglePin,
+  actions,
+  showTotal,
 }) => {
   const q = fold(filterText);
-  const matched = q
-    ? categories.filter((c) => fold(c.label).includes(q))
-    : categories;
-  const pinned = pinnedKeys
-    .map((key) => matched.find((c) => c.key === key))
-    .filter((c): c is SidebarCategory => !!c);
-  const pinnedSet = new Set(pinnedKeys);
-
-  const renderItem = (item: SidebarCategory) => (
-    <SidebarItem
-      key={item.key}
-      item={item}
-      active={item.key === activeKey}
-      pinned={pinnedSet.has(item.key)}
-      onSelect={onSelect}
-      onTogglePin={onTogglePin}
-    />
-  );
-
+  const matched = q ? categories.filter((c) => fold(c.label).includes(q)) : categories;
   return (
-    <aside className="md-sidebar" aria-label="Danh mục dữ liệu">
+    <>
       <div className="md-sidebar-head">
         <h2 className="md-sidebar-title">Danh mục</h2>
-        <span className="md-sidebar-total">{categories.length} danh mục</span>
+        {showTotal && <span className="md-sidebar-total">{categories.length}</span>}
+        {actions}
       </div>
-
       <Input
+        className="md-sidebar-filter"
         prefix={<FilterOutlined style={{ color: "#8C8C8C" }} />}
         placeholder="Lọc danh mục"
         allowClear
@@ -115,28 +80,134 @@ const MasterDataSidebar: React.FC<MasterDataSidebarProps> = ({
         onChange={(e) => onFilterChange(e.target.value)}
         aria-label="Lọc danh mục"
       />
+      <nav className="md-sidebar-scroll" aria-label="Danh sách danh mục">
+        {matched.map((item) => {
+          const active = item.key === activeKey;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`md-sidebar-item${active ? " is-active" : ""}`}
+              aria-current={active ? "page" : undefined}
+              onClick={() => onSelect(item.key)}
+            >
+              <span className="md-sidebar-item-label" title={item.label}>
+                {item.label}
+              </span>
+              {item.count !== undefined && <span className="md-sidebar-item-count">{item.count}</span>}
+            </button>
+          );
+        })}
+        {matched.length === 0 && <div className="md-sidebar-empty">Không tìm thấy danh mục phù hợp.</div>}
+      </nav>
+    </>
+  );
+};
 
-      <div className="md-sidebar-scroll">
-        {pinned.length > 0 && (
-          <div className="md-sidebar-section">
-            <div className="md-sidebar-section-title">Đã ghim</div>
-            {pinned.map(renderItem)}
-          </div>
-        )}
+/**
+ * Sidebar danh mục theo mockup BA: mở cố định (≥1360px, ghi nhớ) hoặc dải thu gọn 48px;
+ * màn hẹp bấm dải → danh mục nổi, chọn 1 mục là tự đóng.
+ */
+const MasterDataSidebar: React.FC<MasterDataSidebarProps> = ({
+  categories,
+  activeKey,
+  filterText,
+  inline,
+  flyoutOpen,
+  isWide,
+  onFilterChange,
+  onSelect,
+  onCollapse,
+  onOpenFromRail,
+  onCloseFlyout,
+  onPinOpen,
+}) => {
+  const activeLabel = categories.find((c) => c.key === activeKey)?.label;
 
-        <div className="md-sidebar-section">
-          <div className="md-sidebar-section-title">
-            {q ? `Kết quả lọc (${matched.length})` : "Tất cả danh mục"}
-          </div>
-          {matched.map(renderItem)}
-          {matched.length === 0 && (
-            <div className="md-sidebar-empty">
-              Không tìm thấy danh mục phù hợp.
-            </div>
-          )}
-        </div>
-      </div>
-    </aside>
+  if (inline) {
+    return (
+      <aside className="md-sidebar" aria-label="Danh mục master data">
+        <SidebarPanel
+          categories={categories}
+          activeKey={activeKey}
+          filterText={filterText}
+          onFilterChange={onFilterChange}
+          onSelect={onSelect}
+          showTotal
+          actions={
+            <button
+              type="button"
+              className="md-sidebar-icon-btn"
+              aria-label="Thu gọn danh mục"
+              title="Thu gọn danh mục"
+              onClick={onCollapse}
+            >
+              <DoubleLeftOutlined />
+            </button>
+          }
+        />
+      </aside>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="md-sidebar-rail"
+        aria-label="Mở danh mục master data"
+        aria-expanded={flyoutOpen}
+        onClick={onOpenFromRail}
+      >
+        <span className="md-sidebar-rail-icon">
+          <DoubleRightOutlined />
+        </span>
+        <span className="md-sidebar-rail-text">
+          Danh mục{activeLabel ? ` · ${activeLabel}` : ""}
+        </span>
+        <span className="md-sidebar-total">{categories.length}</span>
+      </button>
+      {flyoutOpen && (
+        <>
+          <div className="md-sidebar-backdrop" aria-hidden="true" onClick={onCloseFlyout} />
+          <aside
+            className="md-sidebar md-sidebar-flyout"
+            aria-label="Danh mục master data"
+            onKeyDown={(e) => e.key === "Escape" && onCloseFlyout()}
+          >
+            <SidebarPanel
+              categories={categories}
+              activeKey={activeKey}
+              filterText={filterText}
+              onFilterChange={onFilterChange}
+              onSelect={(key) => {
+                onSelect(key);
+                onCloseFlyout();
+              }}
+              showTotal={false}
+              actions={
+                <>
+                  {isWide && (
+                    <button type="button" className="md-sidebar-text-btn" onClick={onPinOpen}>
+                      Ghim mở
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="md-sidebar-icon-btn"
+                    aria-label="Đóng danh mục"
+                    title="Đóng danh mục"
+                    onClick={onCloseFlyout}
+                  >
+                    <CloseOutlined />
+                  </button>
+                </>
+              }
+            />
+          </aside>
+        </>
+      )}
+    </>
   );
 };
 

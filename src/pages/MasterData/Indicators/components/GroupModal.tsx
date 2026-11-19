@@ -10,6 +10,8 @@ interface GroupModalProps {
   form: UseFormReturn<IndicatorGroupFormData>;
   onOk: (data: IndicatorGroupFormData) => void;
   onCancel: () => void;
+  /** Tiêu đề khi thêm mới (mặc định "Thêm nhóm chỉ tiêu mới") */
+  title?: string;
 }
 
 const GroupModal: React.FC<GroupModalProps> = ({
@@ -19,6 +21,7 @@ const GroupModal: React.FC<GroupModalProps> = ({
   form,
   onOk,
   onCancel,
+  title,
 }) => {
   const {
     control,
@@ -28,7 +31,7 @@ const GroupModal: React.FC<GroupModalProps> = ({
 
   return (
     <Modal
-      title={editingGroup ? "Sửa nhóm chỉ tiêu" : "Thêm nhóm chỉ tiêu mới"}
+      title={editingGroup ? "Sửa nhóm chỉ tiêu" : (title ?? "Thêm nhóm chỉ tiêu mới")}
       open={open}
       onOk={handleSubmit(onOk)}
       onCancel={onCancel}

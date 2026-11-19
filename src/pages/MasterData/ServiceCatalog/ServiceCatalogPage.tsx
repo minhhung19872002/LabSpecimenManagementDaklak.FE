@@ -1,30 +1,41 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 import { Modal, message } from "antd";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { useNavigate } from "react-router-dom";
-import { specimenTypeService, type SpecimenTypeDto } from "../../../services/masterDataService";
+import { indicatorGroupService, type CreateUpdateIndicatorGroupDto } from "../../../services/masterDataService";
 import { serviceCatalogService, type ServiceCatalogItemDto } from "../../../services/serviceCatalogService";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
-import { useHeaderHeight } from "../../../hooks";
+import { useLeaveConfirm } from "../../../hooks";
 import ServiceCatalogView from "./ServiceCatalog/ServiceCatalogView";
-import type { ServiceCellAction } from "./ServiceCatalog/ServiceMatrixTable";
+import type { ServiceCellAction } from "./ServiceCatalog/ServiceCellContextMenu";
 import {
-  ALL_CATEGORY,
-  buildMatrixPageRows,
-  buildServiceMatrix,
-  DEFAULT_MATRIX_PAGE_SIZE,
-  collectSpecimenCategories,
-  collectSpecimenColumns,
+  applyQuickFilter,
+  buildMethodOptions,
+  buildServiceGroups,
+  buildSpecimenOptions,
   exportServicesToExcel,
-  filterSpecimenColumns,
-  isMatrixRowKey,
-  type ServiceCatalogTab,
-  type ServiceMatrixRow,
-  type SpecimenColumn,
+  filterServices,
+  hasSubcontract,
+  isPendingPrice,
+  specimenKeyOf,
+  type FoldState,
+  type ServiceOpenLevel,
+  type ServiceQuickFilter,
 } from "./ServiceCatalog/utils";
-import { buildServiceDeclareUrl, type ServiceDeclarePrefill } from "../ServiceDeclare/ServiceDeclare/utils";
-import BulkPriceModal from "./BulkPriceModal";
+import { buildServiceDeclareUrl } from "../ServiceDeclare/ServiceDeclare/utils";
+import { GroupModal } from "../Indicators/components";
+import { indicatorGroupSchema, type IndicatorGroupFormData } from "../Indicators/schemas/indicatorSchema";
 import ImportPricesModal from "./ImportPricesModal";
 import PriceHistoryModal from "./PriceHistoryModal";
 
@@ -33,40 +44,52 @@ export interface ServiceCatalogActions {
   openBuilder: () => void;
   exportExcel: () => void;
   openImport: () => void;
+  openCreateGroup: () => void;
+  /** Còn đơn giá chưa lưu → hỏi xác nhận rồi mới chạy `proceed` (vd: đổi danh mục trên sidebar) */
+  confirmDiscard: (proceed: () => void) => void;
 }
 
-const rowKeyOf = (s: ServiceCatalogItemDto) => `r:${s.indicatorId}:${s.testMethodId}`;
+const discardConfirmText = (count: number) => ({
+  title: "Bỏ các đơn giá chưa lưu?",
+  content: `Có ${count} đơn giá đã sửa nhưng chưa lưu. Rời trang sẽ mất các thay đổi này.`,
+});
 
-/** Container L2 — Dịch vụ & Bảng giá */
+const EMPTY_EDITS: ReadonlyMap<string, number> = new Map();
+
+/** Container L2 — Dịch vụ & Bảng giá (Dịch vụ = nhóm chỉ tiêu ▸ Nền mẫu ▸ Chỉ tiêu & giá) */
 const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCatalogPage(_props, ref) {
   const [services, setServices] = useState<ServiceCatalogItemDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
 
-  const [activeTab, setActiveTab] = useState<ServiceCatalogTab>("grid");
-  const [showRules, setShowRules] = useState(false);
   const [keyword, setKeyword] = useState("");
+  // Gõ tìm kiếm không chặn ô nhập: danh sách lọc lại ở mức ưu tiên thấp
+  const deferredKeyword = useDeferredValue(keyword);
   const [testMethodId, setTestMethodId] = useState<string | undefined>();
-  const [showInactive, setShowInactive] = useState(false);
-  const [specimenCategory, setSpecimenCategory] = useState(ALL_CATEGORY);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
-  // Chỉ giữ id ô đang sửa; giá đang gõ nằm trong ô (local state) để gõ phím không render lại cả ma trận
-  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
-  const [matrixPageSize, setMatrixPageSize] = useState(DEFAULT_MATRIX_PAGE_SIZE);
-  // Tiêu đề cột + thanh cuộn ngang của ma trận dính theo màn hình (dưới header app)
-  const headerHeight = useHeaderHeight();
+  const [specimenKey, setSpecimenKey] = useState<string | undefined>();
+  const [quickFilter, setQuickFilter] = useState<ServiceQuickFilter>("all");
 
-  const navigate = useNavigate();
-  const [bulkPriceOpen, setBulkPriceOpen] = useState(false);
+  const [level, setLevel] = useState<ServiceOpenLevel>("indicator");
+  const [dense, setDense] = useState(false);
+  const [fold, setFold] = useState<FoldState>({});
+
+  // Giá đã sửa chưa lưu (serviceId → giá mới); id ô đang sửa — giá đang gõ nằm trong ô (local state)
+  const [edits, setEdits] = useState<ReadonlyMap<string, number>>(EMPTY_EDITS);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const [importOpen, setImportOpen] = useState(false);
   const [historyService, setHistoryService] = useState<ServiceCatalogItemDto | null>(null);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [groupSaving, setGroupSaving] = useState(false);
+  const groupForm = useForm<IndicatorGroupFormData>({
+    resolver: yupResolver(indicatorGroupSchema),
+    defaultValues: { name: "", isActive: true },
+  });
 
+  const navigate = useNavigate();
   const canCreate = authService.hasPermission(PERMISSIONS.MasterData.Create);
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
-  // Giá đổi là áp dụng ngay (không có ngày hiệu lực) → luôn xem giá hiện hành; lịch sử xem trong "Lịch sử giá"
   const loadServices = useCallback(async () => {
     setLoading(true);
     try {
@@ -82,118 +105,151 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     loadServices();
   }, [loadServices]);
 
-  useEffect(() => {
-    specimenTypeService
-      .getActive()
-      .then((specimens) => setSpecimenTypes(specimens.items))
-      .catch((error) => message.error(getApiErrorMessage(error, "Không tải được danh mục")));
+  // Còn giá chưa lưu: chuyển trang trong app (menu, nút Tạo dịch vụ / + Thêm) → hỏi; đóng tab / F5 → trình duyệt hỏi
+  useLeaveConfirm(edits.size > 0, discardConfirmText(edits.size));
+
+  const serviceById = useMemo(() => new Map(services.map((s) => [s.id, s])), [services]);
+  const methodOptions = useMemo(() => buildMethodOptions(services), [services]);
+  const specimenOptions = useMemo(() => buildSpecimenOptions(services), [services]);
+
+  const baseFiltered = useMemo(
+    () => filterServices(services, { keyword: deferredKeyword, testMethodId, specimenKey }),
+    [services, deferredKeyword, testMethodId, specimenKey]
+  );
+  const pendingCount = useMemo(() => baseFiltered.filter((s) => isPendingPrice(s, edits)).length, [baseFiltered, edits]);
+  const subcontractCount = useMemo(() => baseFiltered.filter(hasSubcontract).length, [baseFiltered]);
+  const visibleServices = useMemo(
+    () => applyQuickFilter(baseFiltered, quickFilter, edits),
+    [baseFiltered, quickFilter, edits]
+  );
+  const cards = useMemo(() => buildServiceGroups(visibleServices, edits), [visibleServices, edits]);
+  const specimenCount = useMemo(
+    () => new Set(visibleServices.map((s) => specimenKeyOf(s.specimenTypeId))).size,
+    [visibleServices]
+  );
+  const indicatorCount = useMemo(() => new Set(visibleServices.map((s) => s.indicatorId)).size, [visibleServices]);
+
+  const hasFilter = keyword.trim() !== "" || !!testMethodId || !!specimenKey || quickFilter !== "all";
+  const clearFilter = useCallback(() => {
+    setKeyword("");
+    setTestMethodId(undefined);
+    setSpecimenKey(undefined);
+    setQuickFilter("all");
   }, []);
 
-  const filteredServices = useMemo(() => {
-    const kw = keyword.trim().toLowerCase();
-    return services.filter(
-      (s) =>
-        (showInactive || s.isActive) &&
-        (!testMethodId || s.testMethodId === testMethodId) &&
-        (!kw ||
-          [s.serviceCode, s.indicatorName, s.indicatorCode, s.specimenTypeName, s.testMethodName, s.testMethodCode]
-            .filter(Boolean)
-            .some((v) => (v as string).toLowerCase().includes(kw)))
-    );
-  }, [services, keyword, testMethodId, showInactive]);
-
-  const matrixRows = useMemo(() => buildServiceMatrix(filteredServices), [filteredServices]);
-  const groupKeys = useMemo(() => matrixRows.map((r) => r.key), [matrixRows]);
-  const allExpanded = groupKeys.length > 0 && groupKeys.every((k) => expandedRowKeys.includes(k));
-
-  // Mặc định mở hết các nhóm mỗi khi tập nhóm thay đổi (lọc / tải lại)
-  useEffect(() => {
-    setExpandedRowKeys(groupKeys);
-  }, [groupKeys]);
-
-  // Phân trang theo dòng chỉ tiêu (không theo nhóm) — tránh vẽ cả trăm dòng × hàng chục cột một lúc
-  const matrixPageRows = useMemo(
-    () => buildMatrixPageRows(matrixRows, new Set(expandedRowKeys), matrixPageSize),
-    [matrixRows, expandedRowKeys, matrixPageSize]
-  );
-  const toggleGroup = useCallback(
-    (groupKey: string) =>
-      setExpandedRowKeys((prev) => (prev.includes(groupKey) ? prev.filter((k) => k !== groupKey) : [...prev, groupKey])),
+  // Đổi "Mở đến" → bỏ các lần gập/mở tay, áp lại theo cấp mới
+  const handleLevelChange = useCallback((next: ServiceOpenLevel) => {
+    setLevel(next);
+    setFold({});
+  }, []);
+  const handleToggleFold = useCallback(
+    (foldKey: string, open: boolean) => setFold((prev) => ({ ...prev, [foldKey]: open })),
     []
   );
-
-  const categoryBySpecimenId = useMemo(
-    () => new Map(specimenTypes.map((s) => [s.id, s.sampleTypeCategoryName ?? ""])),
-    [specimenTypes]
-  );
-  const allSpecimenColumns = useMemo(
-    () => collectSpecimenColumns(filteredServices, categoryBySpecimenId),
-    [filteredServices, categoryBySpecimenId]
-  );
-  const specimenCategories = useMemo(() => collectSpecimenCategories(allSpecimenColumns), [allSpecimenColumns]);
-  const visibleSpecimenColumns = useMemo(
-    () => filterSpecimenColumns(allSpecimenColumns, specimenCategory),
-    [allSpecimenColumns, specimenCategory]
-  );
-
-  const methodOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const s of services) {
-      if (!seen.has(s.testMethodId)) seen.set(s.testMethodId, `${s.testMethodCode} - ${s.testMethodName}`);
-    }
-    return [...seen.entries()].map(([value, label]) => ({ value, label }));
-  }, [services]);
-
-  const selectedRowSet = useMemo(() => new Set(selectedRowKeys.filter(isMatrixRowKey)), [selectedRowKeys]);
-  const selectedServices = useMemo(
-    () => filteredServices.filter((s) => selectedRowSet.has(rowKeyOf(s))),
-    [filteredServices, selectedRowSet]
-  );
-  const rowCount = matrixRows.reduce((sum, g) => sum + (g.rowCount ?? 0), 0);
 
   const replaceService = useCallback((updated: ServiceCatalogItemDto) => {
     setServices((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   }, []);
 
-  const reload = loadServices;
-
   const openBuilder = useCallback(
-    (prefill: ServiceDeclarePrefill | null) => navigate(buildServiceDeclareUrl(prefill)),
-    [navigate]
+    () => navigate(buildServiceDeclareUrl(testMethodId ? { testMethodId } : null)),
+    [navigate, testMethodId]
   );
+
+  // Đổi danh mục trên sidebar không qua router → useLeaveConfirm không chặn được, cha gọi hàm này
+  const confirmDiscard = useCallback(
+    (proceed: () => void) => {
+      if (edits.size === 0) {
+        proceed();
+        return;
+      }
+      Modal.confirm({
+        ...discardConfirmText(edits.size),
+        okText: "Bỏ thay đổi",
+        okButtonProps: { danger: true },
+        cancelText: "Ở lại",
+        centered: true,
+        onOk: proceed,
+      });
+    },
+    [edits.size]
+  );
+
+  const openCreateGroup = useCallback(() => {
+    groupForm.reset({ name: "", isActive: true });
+    setGroupModalOpen(true);
+  }, [groupForm]);
 
   useImperativeHandle(
     ref,
     () => ({
-      openBuilder: () => openBuilder(testMethodId ? { testMethodId } : null),
-      exportExcel: () => exportServicesToExcel(filteredServices),
+      openBuilder,
+      exportExcel: () => exportServicesToExcel(visibleServices),
       openImport: () => setImportOpen(true),
+      openCreateGroup,
+      confirmDiscard,
     }),
-    [openBuilder, testMethodId, filteredServices]
+    [openBuilder, visibleServices, openCreateGroup, confirmDiscard]
   );
 
-  const handleCellDoubleClick = useCallback(
-    (service: ServiceCatalogItemDto) => setEditingServiceId(service.id),
-    []
-  );
-  const handleEditCancel = useCallback(() => setEditingServiceId(null), []);
+  const handleStartEdit = useCallback((serviceId: string) => setEditingId(serviceId), []);
+  const handleEditCancel = useCallback(() => setEditingId(null), []);
 
-  // Callback ổn định (không phụ thuộc state đang sửa) để các ô React.memo không render lại
-  const handleEditCommit = useCallback(async (service: ServiceCatalogItemDto, value: number | null) => {
-    setEditingServiceId(null);
-    if (value == null || value === service.priceAtDate) return;
+  // Ghi nhận giá vào bản nháp (chưa gọi API); trùng giá gốc / xoá trống = bỏ sửa
+  const handleEditCommit = useCallback((service: ServiceCatalogItemDto, value: number | null) => {
+    setEditingId(null);
+    setEdits((prev) => {
+      const unchanged = value == null || value === (service.priceAtDate ?? null);
+      if (unchanged && !prev.has(service.id)) return prev;
+      if (!unchanged && prev.get(service.id) === value) return prev;
+      const next = new Map(prev);
+      if (unchanged) next.delete(service.id);
+      else next.set(service.id, value);
+      return next;
+    });
+  }, []);
+
+  const handleCancelEdits = useCallback(() => {
+    setEditingId(null);
+    setEdits(EMPTY_EDITS);
+  }, []);
+
+  const handleSaveEdits = useCallback(async () => {
+    const entries = [...edits.entries()].filter(([id]) => serviceById.has(id));
     try {
-      const updated = await serviceCatalogService.setPrice(service.id, {
-        unitPrice: value,
-        turnaroundDays: service.turnaroundDays ?? null,
-        note: "Sửa giá trên ma trận",
+      const results = await Promise.allSettled(
+        entries.map(([id, unitPrice]) =>
+          serviceCatalogService.setPrice(id, {
+            unitPrice,
+            turnaroundDays: serviceById.get(id)?.turnaroundDays ?? null,
+            note: "Sửa giá trên Bảng giá",
+          })
+        )
+      );
+      const updated = new Map<string, ServiceCatalogItemDto>();
+      let firstError: unknown;
+      results.forEach((r, i) => {
+        if (r.status === "fulfilled") updated.set(entries[i][0], r.value);
+        else firstError ??= r.reason;
       });
-      replaceService(updated);
-      message.success(`Đã đổi giá ${service.serviceCode ?? ""}`);
+      if (updated.size > 0) {
+        setServices((prev) => prev.map((s) => updated.get(s.id) ?? s));
+        setEdits((prev) => {
+          const next = new Map(prev);
+          updated.forEach((_v, id) => next.delete(id));
+          return next.size === 0 ? EMPTY_EDITS : next;
+        });
+      }
+      const failed = entries.length - updated.size;
+      if (failed === 0) message.success(`Đã lưu ${updated.size} đơn giá`);
+      else
+        message.error(
+          getApiErrorMessage(firstError, `Lưu được ${updated.size}/${entries.length} đơn giá, ${failed} đơn giá bị lỗi`)
+        );
     } catch (error) {
-      message.error(getApiErrorMessage(error, "Không đổi được giá"));
+      message.error(getApiErrorMessage(error, "Không lưu được đơn giá"));
     }
-  }, [replaceService]);
+  }, [edits, serviceById]);
 
   const handleCellAction = useCallback(
     async (action: ServiceCellAction, service: ServiceCatalogItemDto) => {
@@ -220,6 +276,12 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           try {
             await serviceCatalogService.delete(service.id);
             setServices((prev) => prev.filter((s) => s.id !== service.id));
+            setEdits((prev) => {
+              if (!prev.has(service.id)) return prev;
+              const next = new Map(prev);
+              next.delete(service.id);
+              return next;
+            });
             message.success("Đã xóa dịch vụ");
           } catch (error) {
             message.error(getApiErrorMessage(error, "Không xóa được dịch vụ"));
@@ -230,99 +292,76 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     [replaceService]
   );
 
-  const handleDeleteSelected = useCallback(async () => {
-    const ids = new Set(selectedServices.map((s) => s.id));
-    try {
-      const count = await serviceCatalogService.deleteMany([...ids]);
-      message.success(`Đã xóa ${count} dịch vụ`);
-      setServices((prev) => prev.filter((s) => !ids.has(s.id)));
-      setSelectedRowKeys([]);
-    } catch (error) {
-      message.error(getApiErrorMessage(error, "Không xóa được dịch vụ"));
-    }
-  }, [selectedServices]);
-
-  const handleEmptyCellDoubleClick = useCallback(
-    (row: ServiceMatrixRow, column: SpecimenColumn) =>
-      openBuilder({ testMethodId: row.testMethodId, indicatorId: row.indicatorId, specimenTypeId: column.specimenTypeId }),
-    [openBuilder]
+  const handleCreateGroup = useCallback(
+    async (data: IndicatorGroupFormData) => {
+      setGroupSaving(true);
+      try {
+        await indicatorGroupService.create(data as CreateUpdateIndicatorGroupDto);
+        message.success("Đã thêm nhóm dịch vụ. Khai báo nền mẫu / chỉ tiêu để nhóm hiện trong bảng giá.");
+        setGroupModalOpen(false);
+        groupForm.reset();
+      } catch (error) {
+        message.error(getApiErrorMessage(error, "Không thêm được nhóm dịch vụ"));
+      } finally {
+        setGroupSaving(false);
+      }
+    },
+    [groupForm]
   );
 
   return (
     <>
       <ServiceCatalogView
-        activeTab={activeTab}
-        showRules={showRules}
-        onTabChange={setActiveTab}
-        onToggleRules={() => setShowRules((v) => !v)}
-        gridCountText={`${matrixRows.length} nhóm · ${rowCount} dòng chỉ tiêu`}
-        listCountText={`${filteredServices.length} dịch vụ`}
         toolbar={{
           keyword,
           testMethodId,
+          specimenKey,
+          quickFilter,
           methodOptions,
-          showInactive,
-          specimenCategories,
-          specimenCategory,
-          allExpanded,
-          selectedRowCount: selectedRowSet.size,
-          selectedServiceCount: selectedServices.length,
-          loading,
-          canEdit,
-          canDelete,
+          specimenOptions,
+          pendingCount,
+          subcontractCount,
+          hasFilter,
           onKeywordChange: setKeyword,
           onTestMethodChange: setTestMethodId,
-          onShowInactiveChange: setShowInactive,
-          onSpecimenCategoryChange: setSpecimenCategory,
-          onToggleExpandAll: () => setExpandedRowKeys(allExpanded ? [] : groupKeys),
-          onBulkPrice: () => setBulkPriceOpen(true),
-          onClearSelection: () => setSelectedRowKeys([]),
-          onDeleteSelected: handleDeleteSelected,
-          onReload: reload,
+          onSpecimenChange: setSpecimenKey,
+          onQuickFilterChange: setQuickFilter,
+          onClearFilter: clearFilter,
         }}
-        matrix={{
-          rows: matrixPageRows,
-          specimenColumns: visibleSpecimenColumns,
-          loading,
-          selectedRowKeys,
-          pageSize: matrixPageSize,
-          stickyOffset: headerHeight,
-          editingServiceId,
-          canCreate,
-          canEdit,
-          canDelete,
-          onSelectionChange: setSelectedRowKeys,
-          onToggleGroup: toggleGroup,
-          onPageSizeChange: setMatrixPageSize,
-          onCellDoubleClick: handleCellDoubleClick,
-          onEmptyCellDoubleClick: handleEmptyCellDoubleClick,
-          onEditCommit: handleEditCommit,
-          onEditCancel: handleEditCancel,
-          onCellAction: handleCellAction,
+        viewBar={{
+          serviceCount: cards.length,
+          specimenCount,
+          indicatorCount,
+          level,
+          dense,
+          onLevelChange: handleLevelChange,
+          onDenseChange: setDense,
         }}
-        list={{
-          services: filteredServices,
-          loading,
-          canEdit,
-          canDelete,
-          onAction: handleCellAction,
-        }}
-      />
-      <BulkPriceModal
-        open={bulkPriceOpen}
-        services={selectedServices}
-        onDone={() => {
-          setBulkPriceOpen(false);
-          setSelectedRowKeys([]);
-          reload();
-        }}
-        onCancel={() => setBulkPriceOpen(false)}
+        cards={cards}
+        loading={loading}
+        fold={fold}
+        level={level}
+        dense={dense}
+        edits={edits}
+        editingId={editingId}
+        serviceById={serviceById}
+        canCreate={canCreate}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        onToggleFold={handleToggleFold}
+        onAddToGroup={openBuilder}
+        onStartEdit={handleStartEdit}
+        onEditCommit={handleEditCommit}
+        onEditCancel={handleEditCancel}
+        onCellAction={handleCellAction}
+        onCancelEdits={handleCancelEdits}
+        onSaveEdits={handleSaveEdits}
       />
       <ImportPricesModal
         open={importOpen}
         onDone={() => {
           setImportOpen(false);
-          reload();
+          loadServices();
         }}
         onCancel={() => setImportOpen(false)}
       />
@@ -334,6 +373,15 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           setHistoryService(updated);
         }}
         onClose={() => setHistoryService(null)}
+      />
+      <GroupModal
+        title="Thêm nhóm dịch vụ"
+        open={groupModalOpen}
+        loading={groupSaving}
+        editingGroup={null}
+        form={groupForm}
+        onOk={handleCreateGroup}
+        onCancel={() => setGroupModalOpen(false)}
       />
     </>
   );

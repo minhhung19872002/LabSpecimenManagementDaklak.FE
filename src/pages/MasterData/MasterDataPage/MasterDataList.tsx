@@ -434,7 +434,7 @@ const MasterDataList: React.FC = () => {
     [visibleCategories, statistics],
   );
 
-  const handleSelectCategory = useCallback(
+  const switchCategory = useCallback(
     (key: string) => {
       setActiveCategory(key);
       setSearchText("");
@@ -450,6 +450,18 @@ const MasterDataList: React.FC = () => {
       if (key === "products") setProductsRefreshKey((prev) => prev + 1);
     },
     [setActiveCategory, setSearchText],
+  );
+
+  // Rời "Dịch vụ & Bảng giá" khi còn đơn giá chưa lưu → hỏi xác nhận trước
+  const handleSelectCategory = useCallback(
+    (key: string) => {
+      if (key !== activeCategory && activeCategory === "services" && servicesRef.current) {
+        servicesRef.current.confirmDiscard(() => switchCategory(key));
+        return;
+      }
+      switchCategory(key);
+    },
+    [activeCategory, switchCategory],
   );
 
   return (
@@ -478,11 +490,16 @@ const MasterDataList: React.FC = () => {
         <MasterDataSidebar
           categories={sidebarCategories}
           activeKey={activeCategory}
-          pinnedKeys={sidebar.pinnedKeys}
           filterText={sidebar.filterText}
+          inline={sidebar.inline}
+          flyoutOpen={sidebar.flyoutOpen}
+          isWide={sidebar.isWide}
           onFilterChange={sidebar.setFilterText}
           onSelect={handleSelectCategory}
-          onTogglePin={sidebar.togglePin}
+          onCollapse={sidebar.collapse}
+          onOpenFromRail={sidebar.openFromRail}
+          onCloseFlyout={sidebar.closeFlyout}
+          onPinOpen={sidebar.pinOpen}
         />
       )}
 
@@ -779,15 +796,18 @@ const MasterDataList: React.FC = () => {
                   </Button>
                   {authService.hasPermission(PERMISSIONS.MasterData.Import) && (
                     <Button icon={<UploadOutlined />} onClick={() => servicesRef.current?.openImport()}>
-                      Nhập danh sách
+                      Nhập Excel
                     </Button>
                   )}
+                  <Button icon={<FolderAddOutlined />} onClick={() => servicesRef.current?.openCreateGroup()}>
+                    Thêm nhóm dịch vụ
+                  </Button>
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={() => servicesRef.current?.openBuilder()}
                   >
-                    Tạo dịch vụ hàng loạt
+                    Tạo dịch vụ
                   </Button>
                 </>
               )}

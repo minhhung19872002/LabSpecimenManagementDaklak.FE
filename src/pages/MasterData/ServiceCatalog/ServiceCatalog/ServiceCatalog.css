@@ -1,0 +1,525 @@
+/* L2 — Dịch vụ & Bảng giá (theo HTML BA: Dịch vụ → Nền mẫu → Chỉ tiêu & giá) */
+
+/* ---------- Thanh lọc ---------- */
+.svc-filterbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid #BAE0FF;
+  background: #F5FAFF;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.svc-filterbar-search {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.svc-filterbar-select {
+  width: 240px;
+  max-width: 100%;
+}
+
+.svc-seg {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  background: #FFFFFF;
+  border: 1px solid #D9D9D9;
+  border-radius: 8px;
+}
+
+.svc-seg-btn {
+  height: 28px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.svc-seg-btn.is-on {
+  background: #E6F4FF;
+  color: #0958D9;
+  font-weight: 500;
+}
+
+.svc-seg-badge {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #FFFFFF;
+  background: #531DAB;
+}
+
+.svc-seg-badge.is-pending {
+  background: #D46B08;
+}
+
+.svc-link-btn {
+  height: 36px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: #096DD9;
+  cursor: pointer;
+}
+
+/* ---------- Thanh xem ---------- */
+.svc-viewbar {
+  padding: 8px 16px;
+  border-bottom: 1px solid #F0F0F0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 13px;
+  color: #595959;
+}
+
+.svc-viewbar strong {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.svc-viewbar-level {
+  margin-left: auto;
+}
+
+.svc-radio {
+  display: flex;
+  padding: 2px;
+  gap: 2px;
+  background: #F0F2F5;
+  border-radius: 8px;
+}
+
+.svc-radio-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: #595959;
+  cursor: pointer;
+}
+
+.svc-radio-btn.is-on {
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  color: #096DD9;
+  font-weight: 500;
+}
+
+/* ---------- Danh sách ---------- */
+.svc-scroll {
+  overflow: auto;
+  max-height: max(420px, calc(100vh - 360px));
+}
+
+.svc-list {
+  min-width: 860px;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.svc-empty {
+  margin: 0;
+  padding: 40px 16px;
+  text-align: center;
+  color: #595959;
+}
+
+.svc-chev {
+  flex: none;
+  transition: transform 0.15s;
+}
+
+.svc-chev.is-open {
+  transform: rotate(90deg);
+}
+
+/* Thẻ dịch vụ */
+.svc-card {
+  border: 1px solid #F0F0F0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+.svc-card.is-open {
+  border-color: #91CAFF;
+  box-shadow: 0 2px 8px rgba(9, 109, 217, 0.08);
+}
+
+.svc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.svc-card-toggle {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 0 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.svc-avatar {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  background: #E6F4FF;
+  color: #096DD9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.svc-card-title {
+  min-width: 0;
+}
+
+.svc-card-name {
+  display: block;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.svc-card-meta {
+  display: block;
+  font-size: 13px;
+  line-height: 20px;
+  color: #595959;
+}
+
+.svc-pill {
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  border: 1px solid #D3ADF7;
+  background: #F9F0FF;
+  color: #531DAB;
+}
+
+.svc-pill.is-pending {
+  border-color: #FFD591;
+  background: #FFFBE6;
+  color: #AD4E00;
+}
+
+.svc-range {
+  font-size: 13px;
+  color: #595959;
+  white-space: nowrap;
+}
+
+.svc-add-btn {
+  height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #91CAFF;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #096DD9;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.svc-add-btn:hover {
+  background: #E6F7FF;
+}
+
+/* Lưới cột: Chỉ tiêu | Phương pháp | ĐVT | Đơn giá | Hợp đồng phụ */
+.svc-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(190px, 1fr) 80px 150px minmax(160px, 210px);
+  gap: 12px;
+  align-items: center;
+}
+
+.svc-colhead {
+  height: 32px;
+  padding: 0 14px 0 58px;
+  background: #FAFAFA;
+  border-top: 1px solid #F0F0F0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #595959;
+}
+
+.svc-colhead-price {
+  text-align: right;
+  padding-right: 10px;
+}
+
+/* Tiêu đề nền mẫu */
+.svc-specimen-head {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 14px 0 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-top: 1px solid #F0F0F0;
+  background: #F5FAFF;
+  color: #0958D9;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.svc-specimen-head.is-all {
+  background: #E6F4FF;
+}
+
+.svc-specimen-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.svc-specimen-count {
+  color: #595959;
+  white-space: nowrap;
+}
+
+.svc-tag-sm {
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  border: 1px solid #FFD591;
+  background: #FFFBE6;
+  color: #AD4E00;
+}
+
+/* Dòng chỉ tiêu */
+.svc-row {
+  min-height: 52px;
+  padding: 2px 14px 2px 58px;
+  border-top: 1px solid #F5F5F5;
+}
+
+.svc-row:hover {
+  background: #F5FAFF;
+}
+
+.svc-row.is-edited {
+  background: #FFFDF2;
+}
+
+.svc-cell {
+  min-width: 0;
+}
+
+.svc-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.svc-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.svc-indicator-name {
+  font-weight: 500;
+}
+
+.svc-row.is-inactive .svc-indicator-name {
+  color: #595959;
+}
+
+.svc-stop-tag {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 18px;
+  border: 1px solid #D9D9D9;
+  background: #FAFAFA;
+  color: #595959;
+}
+
+.svc-unit {
+  color: #595959;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.svc-price-cell {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.svc-price {
+  min-width: 120px;
+  min-height: 36px;
+  padding: 2px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  text-align: right;
+  color: rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+}
+
+.svc-price:not([aria-disabled="true"]):hover {
+  border-color: #40A9FF;
+  background: #FFFFFF;
+}
+
+.svc-price[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.svc-price.is-pending {
+  border: 1px dashed #FFD591;
+  background: #FFFBE6;
+}
+
+.svc-price.is-edited {
+  border-color: #FFD591;
+  background: #FFFBE6;
+}
+
+.svc-price-value {
+  font-weight: 500;
+}
+
+.svc-price.is-pending .svc-price-value {
+  font-weight: 400;
+  color: #AD4E00;
+}
+
+.svc-price-old {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  color: #595959;
+  text-decoration: line-through;
+}
+
+.svc-price-input.ant-input {
+  width: 128px;
+  height: 32px;
+  border-radius: 8px;
+  text-align: right;
+  font-weight: 500;
+}
+
+.svc-sub-none {
+  color: #8C8C8C;
+}
+
+.svc-sub-tag {
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  border: 1px solid #D3ADF7;
+  background: #F9F0FF;
+  color: #531DAB;
+}
+
+.svc-sub-tag.is-unnamed {
+  border-style: dashed;
+}
+
+/* Mật độ "Gọn": 1 dòng chữ, dòng thấp hơn */
+.svc-list.is-dense .svc-row {
+  min-height: 36px;
+}
+
+.svc-list.is-dense .svc-specimen-head {
+  min-height: 34px;
+}
+
+.svc-list.is-dense .svc-price {
+  min-height: 30px;
+}
+
+.svc-list.is-dense .svc-clamp {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Thanh lưu giá ---------- */
+.svc-pending-bar {
+  padding: 10px 16px;
+  border-top: 1px solid #FFD591;
+  background: #FFFBE6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.svc-pending-bar-icon {
+  color: #D46B08;
+  font-size: 18px;
+}
+
+.svc-pending-bar-text {
+  flex: 1;
+  min-width: 180px;
+  font-weight: 500;
+}
