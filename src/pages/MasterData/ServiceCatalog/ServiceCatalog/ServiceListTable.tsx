@@ -10,7 +10,7 @@ import {
 } from "../../../../components/common/Icon";
 import type { ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
 import type { ServiceCellAction } from "./ServiceMatrixTable";
-import { formatPrice, formatShortDate, hasUpcomingAfter } from "./utils";
+import { formatPrice, formatShortDate, hasUpcomingAfter, PENDING_PRICE_LABEL } from "./utils";
 
 export interface ServiceListTableProps {
   services: ServiceCatalogItemDto[];
@@ -80,7 +80,34 @@ const ServiceListTable: React.FC<ServiceListTableProps> = ({
       key: "price",
       width: 120,
       align: "right",
-      render: (v) => <span style={{ fontWeight: 500 }}>{formatPrice(v)}</span>,
+      render: (v) =>
+        v == null ? (
+          <Tag color="gold" style={{ margin: 0 }}>
+            {PENDING_PRICE_LABEL}
+          </Tag>
+        ) : (
+          <span style={{ fontWeight: 500 }}>{formatPrice(v)}</span>
+        ),
+    },
+    {
+      title: "Hợp đồng phụ",
+      key: "subcontract",
+      width: 180,
+      render: (_, s) =>
+        s.isSubcontract ? (
+          <span style={{ display: "inline-flex", flexDirection: "column" }}>
+            <Tag color="purple" style={{ margin: 0, width: "fit-content" }}>
+              HĐ phụ
+            </Tag>
+            {s.subcontractorName && (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {s.subcontractorName}
+              </Typography.Text>
+            )}
+          </span>
+        ) : (
+          <Typography.Text type="secondary">—</Typography.Text>
+        ),
     },
     {
       title: "TAT",
@@ -174,7 +201,7 @@ const ServiceListTable: React.FC<ServiceListTableProps> = ({
       rowKey="id"
       size="small"
       loading={loading}
-      scroll={{ x: 1520 }}
+      scroll={{ x: 1740 }}
       pagination={{
         defaultPageSize: 20,
         showSizeChanger: true,

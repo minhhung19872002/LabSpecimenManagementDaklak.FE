@@ -4,6 +4,7 @@ import { NumericFormat } from "react-number-format";
 import type { ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
 import {
   formatPrice,
+  PENDING_PRICE_LABEL,
   formatShortDate,
   hasUpcomingAfter,
   type ServiceMatrixRow,
@@ -51,6 +52,9 @@ const activePriceStyle: React.CSSProperties = { fontWeight: 500, color: "#262626
 const inactivePriceStyle: React.CSSProperties = { fontWeight: 500, color: "#8c8c8c", textDecoration: "line-through" };
 const subStyle: React.CSSProperties = { fontSize: 11, whiteSpace: "nowrap", color: "#8c8c8c" };
 const subUpcomingStyle: React.CSSProperties = { ...subStyle, color: "#AD4E00" };
+// Chờ định giá (giá null) — vàng như Phiếu khai báo
+const pendingBoxStyle: React.CSSProperties = { ...cellBoxStyle, background: "#FFFBE6", border: "1px dashed #FFD591" };
+const pendingPriceStyle: React.CSSProperties = { fontWeight: 500, fontSize: 12, color: "#AD4E00", whiteSpace: "nowrap" };
 const editInputStyle: React.CSSProperties = {
   width: "100%",
   height: 44,
@@ -147,17 +151,22 @@ const ServiceMatrixCell = React.memo<ServiceMatrixCellProps>(function ServiceMat
       ? `▲ ${formatPrice(service.upcomingPrice)} từ ${formatShortDate(service.upcomingEffectiveDate)}`
       : `${service.serviceCode ?? ""}${tat != null ? ` · ${tat} ngày` : ""}`;
 
+  const pending = service.priceAtDate == null;
   return (
     <div
       data-service-id={service.id}
       className={ACTION_CLASS}
-      style={service.isActive ? activeBoxStyle : inactiveBoxStyle}
+      style={!service.isActive ? inactiveBoxStyle : pending ? pendingBoxStyle : activeBoxStyle}
       title={`${service.serviceCode ?? ""} · hiệu lực từ ${formatShortDate(service.effectiveDateAtDate)}${
         canEdit ? " · nhấp đúp để sửa, chuột phải để xem thêm" : ""
       }`}
       onDoubleClick={canEdit && service.isActive ? () => onCellDoubleClick(service) : undefined}
     >
-      <span style={service.isActive ? activePriceStyle : inactivePriceStyle}>{formatPrice(service.priceAtDate)}</span>
+      {pending ? (
+        <span style={pendingPriceStyle}>{PENDING_PRICE_LABEL}</span>
+      ) : (
+        <span style={service.isActive ? activePriceStyle : inactivePriceStyle}>{formatPrice(service.priceAtDate)}</span>
+      )}
       <span style={upcoming && service.isActive ? subUpcomingStyle : subStyle}>{sub}</span>
     </div>
   );

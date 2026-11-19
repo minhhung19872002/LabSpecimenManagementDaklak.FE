@@ -1,16 +1,8 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { Modal, message } from "antd";
+import { useNavigate } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
-import {
-  indicatorGroupService,
-  indicatorService,
-  specimenTypeService,
-  testMethodService,
-  type IndicatorDto,
-  type IndicatorGroupDto,
-  type SpecimenTypeDto,
-  type TestMethodDto,
-} from "../../../services/masterDataService";
+import { specimenTypeService, type SpecimenTypeDto } from "../../../services/masterDataService";
 import { serviceCatalogService, type ServiceCatalogItemDto } from "../../../services/serviceCatalogService";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
@@ -32,7 +24,7 @@ import {
   type ServiceMatrixRow,
   type SpecimenColumn,
 } from "./ServiceCatalog/utils";
-import BulkCreateModal, { type BulkCreatePrefill } from "./BulkCreateModal";
+import { buildServiceDeclareUrl, type ServiceDeclarePrefill } from "../ServiceDeclare/ServiceDeclare/utils";
 import BulkPriceModal from "./BulkPriceModal";
 import ImportPricesModal from "./ImportPricesModal";
 import PriceHistoryModal from "./PriceHistoryModal";
@@ -44,25 +36,13 @@ export interface ServiceCatalogActions {
   openImport: () => void;
 }
 
-const flattenIndicators = (items: IndicatorDto[]): IndicatorDto[] => {
-  const map = new Map<string, IndicatorDto>();
-  for (const i of items) {
-    map.set(i.id, i);
-    for (const sub of i.subIndicators ?? []) map.set(sub.id, sub);
-  }
-  return [...map.values()];
-};
-
 const rowKeyOf = (s: ServiceCatalogItemDto) => `r:${s.indicatorId}:${s.testMethodId}`;
 
 /** Container L2 — Dịch vụ & Bảng giá */
 const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCatalogPage(_props, ref) {
   const [services, setServices] = useState<ServiceCatalogItemDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [testMethods, setTestMethods] = useState<TestMethodDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
-  const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
-  const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
 
   const [activeTab, setActiveTab] = useState<ServiceCatalogTab>("grid");
   const [showRules, setShowRules] = useState(false);
@@ -79,10 +59,7 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   // Tiêu đề cột + thanh cuộn ngang của ma trận dính theo màn hình (dưới header app)
   const headerHeight = useHeaderHeight();
 
-  const [bulkCreate, setBulkCreate] = useState<{ open: boolean; prefill: BulkCreatePrefill | null }>({
-    open: false,
-    prefill: null,
-  });
+  const navigate = useNavigate();
   const [bulkPriceOpen, setBulkPriceOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [historyService, setHistoryService] = useState<ServiceCatalogItemDto | null>(null);
@@ -107,18 +84,9 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   }, [loadServices, priceDate]);
 
   useEffect(() => {
-    Promise.all([
-      testMethodService.getAll(),
-      specimenTypeService.getActive(),
-      indicatorService.getActive(),
-      indicatorGroupService.getActive(),
-    ])
-      .then(([methods, specimens, inds, groups]) => {
-        setTestMethods(methods);
-        setSpecimenTypes(specimens.items);
-        setIndicators(flattenIndicators(inds));
-        setIndicatorGroups(groups);
-      })
+    specimenTypeService
+      .getActive()
+      .then((specimens) => setSpecimenTypes(specimens.items))
       .catch((error) => message.error(getApiErrorMessage(error, "Không tải được danh mục")));
   }, []);
 
@@ -191,8 +159,8 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   const reload = useCallback(() => loadServices(priceDate), [loadServices, priceDate]);
 
   const openBuilder = useCallback(
-    (prefill: BulkCreatePrefill | null) => setBulkCreate({ open: true, prefill }),
-    []
+    (prefill: ServiceDeclarePrefill | null) => navigate(buildServiceDeclareUrl(prefill)),
+    [navigate]
   );
 
   useImperativeHandle(
@@ -282,7 +250,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   );
 
   const viewDate = priceDate.format("YYYY-MM-DD");
-  const closeBuilder = () => setBulkCreate({ open: false, prefill: null });
 
   return (
     <>
@@ -347,21 +314,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           canDelete,
           onAction: handleCellAction,
         }}
-      />
-      <BulkCreateModal
-        open={bulkCreate.open}
-        prefill={bulkCreate.prefill}
-        testMethods={testMethods}
-        specimenTypes={specimenTypes}
-        indicators={indicators}
-        indicatorGroups={indicatorGroups}
-        existingServices={services}
-        onDone={() => {
-          closeBuilder();
-          setActiveTab("grid");
-          reload();
-        }}
-        onCancel={closeBuilder}
       />
       <BulkPriceModal
         open={bulkPriceOpen}

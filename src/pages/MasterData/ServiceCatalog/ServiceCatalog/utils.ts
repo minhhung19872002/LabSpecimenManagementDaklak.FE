@@ -21,6 +21,9 @@ export const specimenKeyOf = (specimenTypeId?: string | null): string => specime
 export const formatPrice = (value?: number | null): string =>
   value == null ? "—" : new Intl.NumberFormat("vi-VN").format(value);
 
+/** Dịch vụ chưa nhập giá (UnitPrice null) */
+export const PENDING_PRICE_LABEL = "Chờ định giá";
+
 export const formatShortDate = (value?: string | null): string => (value ? dayjs(value).format("DD/MM/YYYY") : "—");
 
 export const toApiDate = (value: dayjs.Dayjs): string => value.format("YYYY-MM-DD");
@@ -227,7 +230,7 @@ export const serviceDisplayName = (s: ServiceCatalogItemDto): string =>
 export const basisPriceAt = (s: ServiceCatalogItemDto, effectiveDate: string): number =>
   s.upcomingPrice != null && s.upcomingEffectiveDate && dayjs(s.upcomingEffectiveDate).format("YYYY-MM-DD") <= effectiveDate
     ? s.upcomingPrice
-    : s.unitPrice;
+    : s.unitPrice ?? 0;
 
 /** Giống BE ComputeAdjustedPrice: làm tròn 0 số lẻ (AwayFromZero), không âm */
 export const computeAdjustedPrice = (
@@ -260,7 +263,7 @@ export const exportServicesToExcel = (services: ServiceCatalogItemDto[]): void =
     Parameter: s.indicatorName,
     Matrix: s.specimenTypeName || "Mọi nền mẫu",
     Method: s.testMethodName,
-    Unit_Price: s.priceAtDate,
+    Unit_Price: s.priceAtDate ?? "",
     TAT_Days: s.turnaroundDaysAtDate ?? s.turnaroundDays ?? "",
     Effective_Date: s.effectiveDateAtDate ? dayjs(s.effectiveDateAtDate).format("DD/MM/YYYY") : "",
   }));

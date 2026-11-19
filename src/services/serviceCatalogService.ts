@@ -24,11 +24,14 @@ export interface ServiceCatalogItemDto {
   formattedUnit?: string | null;
   isActive: boolean;
   isSubcontract: boolean;
-  /** Giá đang áp dụng hôm nay */
-  unitPrice: number;
+  /** Đơn vị nhận thầu (Nhà thầu phụ) khi là HĐ phụ — không bắt buộc */
+  subcontractorId?: string | null;
+  subcontractorName?: string | null;
+  /** Giá đang áp dụng hôm nay. null = Chờ định giá */
+  unitPrice: number | null;
   turnaroundDays?: number | null;
-  /** Giá / TAT tại ngày đang xem */
-  priceAtDate: number;
+  /** Giá / TAT tại ngày đang xem. null = Chờ định giá */
+  priceAtDate: number | null;
   turnaroundDaysAtDate?: number | null;
   effectiveDateAtDate?: string | null;
   upcomingPrice?: number | null;
@@ -64,14 +67,22 @@ export interface ServicePriceVersionDto {
   creatorName?: string | null;
 }
 
+/** 1 ô của Phiếu khai báo dịch vụ = 1 dịch vụ (chỉ tiêu × nền mẫu) */
+export interface BulkCreateServiceItemInput {
+  indicatorId: string;
+  /** null = Mọi nền mẫu */
+  specimenTypeId: string | null;
+  /** null = Chờ định giá */
+  unitPrice: number | null;
+  isSubcontract: boolean;
+  /** Đơn vị nhận thầu — không bắt buộc */
+  subcontractorId: string | null;
+}
+
+/** Giá có hiệu lực ngay (hôm nay), không có TAT — sửa sau trên Ma trận giá */
 export interface BulkCreateServicesInput {
   testMethodId: string;
-  rows: { indicatorId: string; specimenTypeIds: string[] }[];
-  unitPrice: number;
-  turnaroundDays: number;
-  /** YYYY-MM-DD */
-  effectiveDate: string;
-  isSubcontract?: boolean;
+  items: BulkCreateServiceItemInput[];
 }
 
 export interface BulkCreateServicesResultDto {
@@ -153,7 +164,12 @@ export const serviceCatalogService = {
   },
   update: async (
     id: string,
-    input: { unit?: string | null; formattedUnit?: string | null; isSubcontract: boolean }
+    input: {
+      unit?: string | null;
+      formattedUnit?: string | null;
+      isSubcontract: boolean;
+      subcontractorId?: string | null;
+    }
   ): Promise<ServiceCatalogItemDto> => {
     const response = await api.put<ServiceCatalogItemDto>(`${SERVICE_URL}/${id}`, input);
     return response.data;

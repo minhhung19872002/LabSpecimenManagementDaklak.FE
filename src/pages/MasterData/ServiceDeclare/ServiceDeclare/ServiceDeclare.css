@@ -1,0 +1,31 @@
+.svc-declare-row:hover {
+  background: #f5faff;
+}
+
+.svc-declare-spin {
+  flex: 1;
+  min-height: 0;
+}
+
+.svc-declare-spin > .ant-spin-container {
+  height: 100%;
+}
+
+input.svc-declare-price {
+  text-align: right;
+}
+
+input.svc-declare-price-filled {
+  color: #237804;
+  font-weight: 500;
+}
+
+.svc-declare-price-row:hover {
+  background-color: #f5faff;
+}
+
+.svc-declare-vendor .ant-select-selector,
+.svc-declare-vendor.ant-select {
+  border-color: #d3adf7;
+  border-radius: 8px;
+}
