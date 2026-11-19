@@ -22,12 +22,12 @@ const schema: yup.ObjectSchema<NormFormValues> = yup.object({
 
 export interface NormFormModalProps {
   open: boolean;
-  testMethodId: string;
-  testMethodName: string;
+  testMethodIndicatorId: string;
+  serviceLabel: string;
   /** null = thêm mới */
   norm: MethodBatchNormDto | null;
   products: ProductDto[];
-  /** Vật tư đã có định mức trong phương pháp (BR-05: Phương pháp + Vật tư duy nhất) */
+  /** Vật tư đã có trong định mức của dịch vụ (BR-05: Dịch vụ + Vật tư duy nhất) */
   usedProductIds: string[];
   onSaved: (norm: MethodBatchNormDto) => void;
   onCancel: () => void;
@@ -36,8 +36,8 @@ export interface NormFormModalProps {
 /** Form thêm / sửa 1 dòng định mức — Vật tư và Tổng tiêu hao không bắt buộc */
 const NormFormModal: React.FC<NormFormModalProps> = ({
   open,
-  testMethodId,
-  testMethodName,
+  testMethodIndicatorId,
+  serviceLabel,
   norm,
   products,
   usedProductIds,
@@ -71,7 +71,7 @@ const NormFormModal: React.FC<NormFormModalProps> = ({
   const onSubmit = handleSubmit(async (values) => {
     setSaving(true);
     try {
-      const input = { testMethodId, productId: values.productId, batchQuantity: values.batchQuantity };
+      const input = { testMethodIndicatorId, productId: values.productId, batchQuantity: values.batchQuantity };
       const saved = norm ? await batchNormService.update(norm.id, input) : await batchNormService.create(input);
       message.success(norm ? "Đã cập nhật định mức" : "Đã thêm định mức");
       onSaved(saved);
@@ -99,8 +99,8 @@ const NormFormModal: React.FC<NormFormModalProps> = ({
       width={560}
     >
       <Form layout="vertical">
-        <Form.Item label="Phương pháp">
-          <Input value={testMethodName} disabled />
+        <Form.Item label="Dịch vụ">
+          <Input value={serviceLabel} disabled />
         </Form.Item>
         <Form.Item label="Vật tư">
           <Controller
@@ -147,7 +147,7 @@ const NormFormModal: React.FC<NormFormModalProps> = ({
           <Alert
             type="warning"
             showIcon
-            message="Thiếu vật tư hoặc tổng tiêu hao → phương pháp vẫn hiện “cần thiết lập tiêu hao” khi chấp nhận thử nghiệm."
+            message="Thiếu vật tư hoặc tổng tiêu hao → dịch vụ vẫn hiện “cần thiết lập tiêu hao” khi chấp nhận thử nghiệm."
           />
         )}
       </Form>

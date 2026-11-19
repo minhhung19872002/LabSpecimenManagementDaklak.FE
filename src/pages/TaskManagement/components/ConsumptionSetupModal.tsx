@@ -17,7 +17,7 @@ export interface ConsumptionSetupIndicator {
   unit?: string;
   testMethodId?: string;
   testMethodIndicatorId?: string;
-  /** Đã có định mức theo mẻ (L3) đầy đủ cho phương pháp */
+  /** Đã có định mức theo mẻ (L3) đầy đủ cho dịch vụ (nền mẫu × chỉ tiêu × PP) */
   hasNorm: boolean;
   /** Đã có dự toán mẫu năm (L4) cho dịch vụ */
   hasForecast: boolean;
@@ -65,6 +65,10 @@ const ConsumptionSetupModal: React.FC<ConsumptionSetupModalProps> = ({
       message.warning("Chỉ tiêu chưa được gán phương pháp");
       return;
     }
+    if (!indicator.testMethodIndicatorId) {
+      message.warning("Không tìm thấy dịch vụ (chỉ tiêu - nền mẫu - phương pháp) trong Dịch vụ & Bảng giá");
+      return;
+    }
     setNormTarget(indicator);
   }, []);
 
@@ -78,11 +82,11 @@ const ConsumptionSetupModal: React.FC<ConsumptionSetupModalProps> = ({
 
   const handleNormChanged = useCallback(
     (norms: MethodBatchNormDto[]) => {
-      if (!normTarget?.testMethodId) return;
-      const methodId = normTarget.testMethodId;
+      if (!normTarget?.testMethodIndicatorId) return;
+      const serviceId = normTarget.testMethodIndicatorId;
       const hasNorm = norms.some((n) => n.isActive && n.isComplete);
       setIndicators((prev) =>
-        prev.map((ind) => (ind.testMethodId === methodId ? withConsumption({ ...ind, hasNorm }) : ind))
+        prev.map((ind) => (ind.testMethodIndicatorId === serviceId ? withConsumption({ ...ind, hasNorm }) : ind))
       );
     },
     [normTarget]
@@ -180,7 +184,7 @@ const ConsumptionSetupModal: React.FC<ConsumptionSetupModalProps> = ({
 
       <Modal
         open={!!normTarget}
-        title={`Định mức theo mẻ — ${normTarget?.methodName ?? ""}`}
+        title={`Định mức theo mẻ — ${normTarget?.indicatorName ?? ""} — ${normTarget?.methodName ?? ""}`}
         width={1000}
         centered
         destroyOnHidden
@@ -188,10 +192,10 @@ const ConsumptionSetupModal: React.FC<ConsumptionSetupModalProps> = ({
         onCancel={() => setNormTarget(null)}
         styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
       >
-        {normTarget?.testMethodId && (
+        {normTarget?.testMethodIndicatorId && (
           <MethodNormPanel
-            testMethodId={normTarget.testMethodId}
-            testMethodName={normTarget.methodName}
+            testMethodIndicatorId={normTarget.testMethodIndicatorId}
+            serviceLabel={`${normTarget.indicatorName} — ${normTarget.methodName}`}
             onChanged={handleNormChanged}
           />
         )}

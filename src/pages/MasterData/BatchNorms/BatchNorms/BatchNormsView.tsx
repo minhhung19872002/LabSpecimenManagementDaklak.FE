@@ -1,45 +1,119 @@
 import React from "react";
-import { Typography } from "antd";
-import type { BatchNormMethodDto, MethodBatchNormDto } from "../../../../services/serviceCatalogService";
+import { Spin } from "antd";
+import type { MethodBatchNormDto, ServiceBatchNormDto } from "../../../../services/serviceCatalogService";
 import BatchNormsToolbar, { type BatchNormsToolbarProps } from "./BatchNormsToolbar";
-import BatchNormMethodTable from "./BatchNormMethodTable";
-import MethodNormPanel from "../MethodNormPanel";
+import BatchNormsViewBar from "./BatchNormsViewBar";
+import NormGroupCard from "./NormGroupCard";
+import AddMethodModal, { type AddMethodModalProps } from "./AddMethodModal";
+import DeleteNormConfirm, { type DeleteNormConfirmProps } from "./DeleteNormConfirm";
+import UndoToast, { type UndoToastProps } from "./UndoToast";
+import type { FoldState, NormGroupCard as GroupCardData, NormIndicatorBlock as IndicatorBlockData } from "./utils";
+import "../../ServiceCatalog/ServiceCatalog/ServiceCatalog.css";
+import "./BatchNorms.css";
 
-export interface BatchNormsViewProps extends BatchNormsToolbarProps {
-  methods: BatchNormMethodDto[];
-  expandedKeys: string[];
-  onExpandedKeysChange: (keys: string[]) => void;
-  onNormsChanged: (testMethodId: string, norms: MethodBatchNormDto[]) => void;
+export interface BatchNormsViewProps {
+  loading: boolean;
+  /** Chưa có định mức nào (khác với lọc không ra) */
+  isEmpty: boolean;
+  toolbar: BatchNormsToolbarProps;
+  cards: GroupCardData[];
+  specimenCount: number;
+  indicatorCount: number;
+  normCount: number;
+  fold: FoldState;
+  more: FoldState;
+  allOpen: boolean;
+  filtered: boolean;
+  keyword: string;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  onToggle: (foldKey: string, open: boolean) => void;
+  onToggleMore: (blockKey: string, expanded: boolean) => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+  onAddMethod: (block: IndicatorBlockData) => void;
+  onToggleActive: (normId: string) => Promise<void>;
+  onDelete: (norm: ServiceBatchNormDto) => void;
+  loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
+  addModal: AddMethodModalProps;
+  deleteConfirm: DeleteNormConfirmProps;
+  toast: UndoToastProps;
 }
 
-/** L3 — Định mức tiêu hao theo mẻ */
+/** L3 — Định mức theo mẻ: Nhóm nền mẫu → Nền mẫu → Chỉ tiêu × Phương pháp */
 const BatchNormsView: React.FC<BatchNormsViewProps> = ({
-  methods,
-  expandedKeys,
-  onExpandedKeysChange,
-  onNormsChanged,
-  ...toolbarProps
+  loading,
+  isEmpty,
+  toolbar,
+  cards,
+  specimenCount,
+  indicatorCount,
+  normCount,
+  fold,
+  more,
+  allOpen,
+  filtered,
+  keyword,
+  canCreate,
+  canEdit,
+  canDelete,
+  onToggle,
+  onToggleMore,
+  onExpandAll,
+  onCollapseAll,
+  onAddMethod,
+  onToggleActive,
+  onDelete,
+  loadMaterials,
+  addModal,
+  deleteConfirm,
+  toast,
 }) => (
-  <div style={{ padding: 16 }}>
-    <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-      Thiết lập định mức tiêu hao thực tế cho 1 mẫu theo từng phương pháp (tương đương “Tiêu hao / mẫu” trong danh mục
-      cũ). Lượng ghi nhận tiêu hao khi trả kết quả = Tiêu hao / mẫu ÷ Dự toán mẫu năm của dịch vụ.
-    </Typography.Paragraph>
-    <BatchNormsToolbar {...toolbarProps} />
-    <BatchNormMethodTable
-      methods={methods}
-      loading={toolbarProps.loading}
-      expandedKeys={expandedKeys}
-      onExpandedKeysChange={onExpandedKeysChange}
-      renderNorms={(method) => (
-        <MethodNormPanel
-          testMethodId={method.testMethodId}
-          testMethodName={method.name}
-          onChanged={(norms) => onNormsChanged(method.testMethodId, norms)}
-        />
-      )}
+  <Spin spinning={loading}>
+    <BatchNormsToolbar {...toolbar} />
+    <BatchNormsViewBar
+      groupCount={cards.length}
+      specimenCount={specimenCount}
+      indicatorCount={indicatorCount}
+      normCount={normCount}
+      onExpandAll={onExpandAll}
+      onCollapseAll={onCollapseAll}
     />
-  </div>
+    <div className="svc-scroll">
+      {cards.length === 0 ? (
+        <p className="svc-empty">
+          {loading ? "Đang tải…" : isEmpty ? "Chưa có định mức." : "Không có định mức khớp bộ lọc."}
+        </p>
+      ) : (
+        <div className="svc-list bn-list">
+          {cards.map((card) => (
+            <NormGroupCard
+              key={card.foldKey}
+              card={card}
+              fold={fold}
+              more={more}
+              allOpen={allOpen}
+              filtered={filtered}
+              keyword={keyword}
+              canCreate={canCreate}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onToggle={onToggle}
+              onToggleMore={onToggleMore}
+              onAddMethod={onAddMethod}
+              onToggleActive={onToggleActive}
+              onDelete={onDelete}
+              loadMaterials={loadMaterials}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+    <AddMethodModal {...addModal} />
+    <DeleteNormConfirm {...deleteConfirm} />
+    <UndoToast {...toast} />
+  </Spin>
 );
 
 export default BatchNormsView;

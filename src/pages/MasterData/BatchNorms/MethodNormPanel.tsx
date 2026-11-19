@@ -10,17 +10,18 @@ import MethodNormTable from "./BatchNorms/MethodNormTable";
 import NormFormModal from "./NormFormModal";
 
 export interface MethodNormPanelProps {
-  testMethodId: string;
-  testMethodName: string;
+  testMethodIndicatorId: string;
+  /** Tên hiển thị dịch vụ: Nền mẫu · Chỉ tiêu · PP */
+  serviceLabel: string;
   /** Báo lên cha khi định mức thay đổi (cập nhật số vật tư / trạng thái khai báo) */
   onChanged?: (norms: MethodBatchNormDto[]) => void;
 }
 
 /**
- * Container định mức của 1 phương pháp: tự tải + thêm / sửa / ngừng / xóa.
+ * Container định mức của 1 dịch vụ (Nền mẫu × Chỉ tiêu × PP): tự tải + thêm / sửa / ngừng / xóa.
  * Dùng ở dòng mở rộng màn L3 và popup "cần thiết lập tiêu hao" khi chấp nhận thử nghiệm.
  */
-const MethodNormPanel: React.FC<MethodNormPanelProps> = ({ testMethodId, testMethodName, onChanged }) => {
+const MethodNormPanel: React.FC<MethodNormPanelProps> = ({ testMethodIndicatorId, serviceLabel, onChanged }) => {
   const [norms, setNorms] = useState<MethodBatchNormDto[]>([]);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,7 @@ const MethodNormPanel: React.FC<MethodNormPanelProps> = ({ testMethodId, testMet
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([batchNormService.getByMethod(testMethodId), loadConsumableProducts()])
+    Promise.all([batchNormService.getByService(testMethodIndicatorId), loadConsumableProducts()])
       .then(([normList, productList]) => {
         if (cancelled) return;
         setNorms(normList);
@@ -59,7 +60,7 @@ const MethodNormPanel: React.FC<MethodNormPanelProps> = ({ testMethodId, testMet
     return () => {
       cancelled = true;
     };
-  }, [testMethodId]);
+  }, [testMethodIndicatorId]);
 
   const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const usedProductIds = useMemo(
@@ -117,8 +118,8 @@ const MethodNormPanel: React.FC<MethodNormPanelProps> = ({ testMethodId, testMet
       />
       <NormFormModal
         open={editing.open}
-        testMethodId={testMethodId}
-        testMethodName={testMethodName}
+        testMethodIndicatorId={testMethodIndicatorId}
+        serviceLabel={serviceLabel}
         norm={editing.norm}
         products={products}
         usedProductIds={usedProductIds}

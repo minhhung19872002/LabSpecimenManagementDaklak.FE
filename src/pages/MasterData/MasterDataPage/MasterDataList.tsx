@@ -37,7 +37,7 @@ import SampleConditionsTab, {
 import UnitsTab, { type UnitActions } from "../Units";
 import ProductCatalogTab, { type ProductCatalogActions } from "../ProductCatalog";
 import ServiceCatalogPage, { type ServiceCatalogActions } from "../ServiceCatalog/ServiceCatalogPage";
-import BatchNormsPage from "../BatchNorms/BatchNormsPage";
+import BatchNormsPage, { type BatchNormsActions } from "../BatchNorms/BatchNormsPage";
 import YearlyForecastsPage, { type YearlyForecastActions } from "../YearlyForecasts/YearlyForecastsPage";
 import ForecastCardActions, {
   type YearlyForecastActionState,
@@ -377,6 +377,7 @@ const MasterDataList: React.FC = () => {
   const unitsRef = useRef<UnitActions>(null);
   const productCatalogRef = useRef<ProductCatalogActions>(null);
   const servicesRef = useRef<ServiceCatalogActions>(null);
+  const batchNormsRef = useRef<BatchNormsActions>(null);
   const forecastsRef = useRef<YearlyForecastActions>(null);
   const [forecastActionState, setForecastActionState] = useState<YearlyForecastActionState | null>(null);
   const handleForecastClone = useCallback(() => forecastsRef.current?.clone(), []);
@@ -812,6 +813,24 @@ const MasterDataList: React.FC = () => {
                 </>
               )}
 
+              {/* Batch Norms Tab (L3) */}
+              {activeCategory === "batchNorms" && (
+                <>
+                  <Button icon={<DownloadOutlined />} onClick={() => batchNormsRef.current?.exportExcel()}>
+                    Xuất Excel
+                  </Button>
+                  {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => batchNormsRef.current?.openCreate()}
+                    >
+                      Thêm định mức
+                    </Button>
+                  )}
+                </>
+              )}
+
               {/* Yearly Forecasts Tab (L4) */}
               {activeCategory === "yearlyForecasts" && (
                 <ForecastCardActions
@@ -999,7 +1018,7 @@ const MasterDataList: React.FC = () => {
                 ) : key === "services" ? (
                   activeCategory === "services" && <ServiceCatalogPage ref={servicesRef} />
                 ) : key === "batchNorms" ? (
-                  activeCategory === "batchNorms" && <BatchNormsPage />
+                  activeCategory === "batchNorms" && <BatchNormsPage ref={batchNormsRef} />
                 ) : key === "yearlyForecasts" ? (
                   activeCategory === "yearlyForecasts" && (
                     <YearlyForecastsPage ref={forecastsRef} onActionStateChange={setForecastActionState} />

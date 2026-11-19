@@ -258,20 +258,54 @@ export const serviceCatalogService = {
 
 // ===================== L3 — Định mức tiêu hao theo mẻ =====================
 
-export interface BatchNormMethodDto {
+/** Định mức của 1 dịch vụ (Nền mẫu × Chỉ tiêu × PP) */
+export interface ServiceBatchNormDto {
+  id: string;
+  testMethodIndicatorId: string;
+  serviceCode?: string | null;
+  serviceGroupName?: string | null;
   testMethodId: string;
-  code: string;
-  name: string;
-  formattedName?: string | null;
+  testMethodCode?: string | null;
+  testMethodName?: string | null;
+  testMethodFormattedName?: string | null;
+  indicatorId: string;
+  indicatorCode?: string | null;
+  indicatorName?: string | null;
+  indicatorFormattedName?: string | null;
+  specimenTypeId?: string | null;
+  specimenTypeName?: string | null;
+  specimenTypeSortOrder: number;
+  sampleTypeCategoryId?: string | null;
+  sampleTypeCategoryName?: string | null;
   isActive: boolean;
-  serviceCount: number;
-  normCount: number;
-  hasCompleteNorm: boolean;
+  materialCount: number;
+  equipmentCount: number;
+  /** Đã phát sinh tiêu hao → không xóa được */
+  isUsed: boolean;
+  creationTime: string;
+}
+
+/** Dịch vụ (PP) có thể thêm vào 1 cặp nền mẫu × chỉ tiêu đã có định mức */
+export interface BatchNormCandidateDto {
+  testMethodIndicatorId: string;
+  serviceCode?: string | null;
+  serviceGroupName?: string | null;
+  testMethodId: string;
+  testMethodCode?: string | null;
+  testMethodName?: string | null;
+  indicatorId: string;
+  specimenTypeId?: string | null;
+}
+
+export interface BatchNormOverviewDto {
+  norms: ServiceBatchNormDto[];
+  candidates: BatchNormCandidateDto[];
 }
 
 export interface MethodBatchNormDto {
   id: string;
   code: string;
+  serviceBatchNormId?: string | null;
   testMethodId: string;
   testMethodCode?: string | null;
   testMethodName?: string | null;
@@ -291,7 +325,7 @@ export interface MethodBatchNormDto {
 }
 
 export interface CreateUpdateMethodBatchNormInput {
-  testMethodId: string;
+  testMethodIndicatorId: string;
   productId?: string | null;
   batchQuantity?: number | null;
 }
@@ -299,12 +333,34 @@ export interface CreateUpdateMethodBatchNormInput {
 const NORM_URL = "/api/v1/batch-norms";
 
 export const batchNormService = {
-  getMethods: async (params: { keyword?: string; hasNorm?: boolean } = {}): Promise<BatchNormMethodDto[]> => {
-    const response = await api.get<BatchNormMethodDto[] | { items: BatchNormMethodDto[] }>(`${NORM_URL}/methods`, { params });
+  getOverview: async (): Promise<BatchNormOverviewDto> => {
+    const response = await api.get<BatchNormOverviewDto>(`${NORM_URL}/overview`);
+    return {
+      norms: response.data?.norms ?? [],
+      candidates: response.data?.candidates ?? [],
+    };
+  },
+  addServices: async (testMethodIndicatorIds: string[]): Promise<ServiceBatchNormDto[]> => {
+    const response = await api.post<ServiceBatchNormDto[] | { items: ServiceBatchNormDto[] }>(`${NORM_URL}/services`, {
+      testMethodIndicatorIds,
+    });
     return toList(response.data);
   },
-  getByMethod: async (testMethodId: string): Promise<MethodBatchNormDto[]> => {
-    const response = await api.get<MethodBatchNormDto[] | { items: MethodBatchNormDto[] }>(`${NORM_URL}/by-method/${testMethodId}`);
+  toggleServiceActive: async (id: string): Promise<ServiceBatchNormDto> => {
+    const response = await api.post<ServiceBatchNormDto>(`${NORM_URL}/services/${id}/toggle-active`);
+    return response.data;
+  },
+  deleteService: async (id: string): Promise<void> => {
+    await api.delete(`${NORM_URL}/services/${id}`);
+  },
+  restoreService: async (id: string): Promise<ServiceBatchNormDto> => {
+    const response = await api.post<ServiceBatchNormDto>(`${NORM_URL}/services/${id}/restore`);
+    return response.data;
+  },
+  getByService: async (testMethodIndicatorId: string): Promise<MethodBatchNormDto[]> => {
+    const response = await api.get<MethodBatchNormDto[] | { items: MethodBatchNormDto[] }>(
+      `${NORM_URL}/by-service/${testMethodIndicatorId}`
+    );
     return toList(response.data);
   },
   create: async (input: CreateUpdateMethodBatchNormInput): Promise<MethodBatchNormDto> => {
