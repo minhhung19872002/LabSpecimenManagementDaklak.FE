@@ -267,6 +267,36 @@
   background: #E6F7FF;
 }
 
+.svc-more-btn {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #D9D9D9;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #595959;
+  cursor: pointer;
+}
+
+.svc-more-btn:hover {
+  background: #F5F5F5;
+}
+
+.svc-card-empty {
+  margin: 0;
+  padding: 14px 16px;
+  color: #595959;
+  font-size: 13px;
+}
+
+.svc-assign-target {
+  margin: 0 0 12px;
+  color: #595959;
+}
+
 /* Lưới cột: Chỉ tiêu | Phương pháp | ĐVT | Đơn giá | Hợp đồng phụ */
 .svc-grid {
   display: grid;

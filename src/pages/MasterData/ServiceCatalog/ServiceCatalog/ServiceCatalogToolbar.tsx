@@ -56,7 +56,7 @@ const ServiceCatalogToolbar: React.FC<ServiceCatalogToolbarProps> = ({
       <Input
         className="svc-filterbar-search"
         prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
-        placeholder="Tìm chỉ tiêu, tên dịch vụ, mã DV, đơn vị HĐ phụ…"
+        placeholder="Tìm chỉ tiêu, tên dịch vụ, mã NDV / DV…"
         aria-label="Tìm chỉ tiêu, tên dịch vụ, mã DV"
         allowClear
         value={keyword}

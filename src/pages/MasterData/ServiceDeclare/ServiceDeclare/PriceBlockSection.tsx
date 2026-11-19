@@ -3,8 +3,8 @@ import { Button, Input } from "antd";
 import { NumericFormat } from "react-number-format";
 import { DownOutlined } from "../../../../components/common/Icon";
 import type { IndicatorDto } from "../../../../services/masterDataService";
-import DeclarePriceRow, { type SelectOption } from "./DeclarePriceRow";
-import { cellKeyOf, type DeclareColumn } from "./utils";
+import DeclarePriceRow, { PRICE_ROW_COLUMNS } from "./DeclarePriceRow";
+import { cellKeyOf, type DeclareColumn, type ExistingServiceInfo } from "./utils";
 
 export interface PriceBlockStats {
   newCount: number;
@@ -19,18 +19,21 @@ export interface PriceBlockSectionProps {
   folded: boolean;
   blockPrice: number | null;
   prices: Record<string, number | null>;
-  /** khóa ô → đơn vị nhận thầu (có khóa = đã tích Hợp đồng phụ) */
-  subcontracts: Record<string, string | null>;
-  existingPrices: Map<string, number | null>;
+  /** khóa ô → ĐVT đã gõ (không có khóa = theo ĐVT mặc định) */
+  units: Record<string, string>;
+  /** ĐVT mặc định = ĐVT của phương pháp */
+  defaultUnit: string;
+  /** khóa ô đã tích Hợp đồng phụ */
+  subcontracts: Set<string>;
+  existingServices: Map<string, ExistingServiceInfo>;
   canCopy: boolean;
-  subcontractorOptions: SelectOption[];
   onToggleFold: (columnKey: string) => void;
   onBlockPriceChange: (columnKey: string, value: number | null) => void;
   onFillBlock: (columnKey: string) => void;
   onPriceChange: (cellKey: string, value: number | null) => void;
+  onUnitChange: (cellKey: string, value: string) => void;
   onCopyPrice: (indicatorId: string, value: number) => void;
   onSubcontractChange: (cellKey: string, checked: boolean) => void;
-  onSubcontractorChange: (cellKey: string, subcontractorId: string | null) => void;
 }
 
 const headStyle: React.CSSProperties = {
@@ -77,6 +80,19 @@ const tagBase: React.CSSProperties = {
 };
 const pendingTag: React.CSSProperties = { ...tagBase, background: "#fffbe6", color: "#ad4e00", borderColor: "#ffd591" };
 const subTag: React.CSSProperties = { ...tagBase, background: "#f9f0ff", color: "#531dab", borderColor: "#d3adf7" };
+const columnHeadStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: PRICE_ROW_COLUMNS,
+  gap: 10,
+  alignItems: "center",
+  height: 30,
+  padding: "0 16px 0 38px",
+  background: "#fafafa",
+  borderBottom: "1px solid #f0f0f0",
+  fontSize: 12,
+  fontWeight: 500,
+  color: "#595959",
+};
 
 /** Khối giá của 1 nền mẫu: tiêu đề dính + giá chung + các dòng chỉ tiêu */
 const PriceBlockSection: React.FC<PriceBlockSectionProps> = ({
@@ -86,17 +102,18 @@ const PriceBlockSection: React.FC<PriceBlockSectionProps> = ({
   folded,
   blockPrice,
   prices,
+  units,
+  defaultUnit,
   subcontracts,
-  existingPrices,
+  existingServices,
   canCopy,
-  subcontractorOptions,
   onToggleFold,
   onBlockPriceChange,
   onFillBlock,
   onPriceChange,
+  onUnitChange,
   onCopyPrice,
   onSubcontractChange,
-  onSubcontractorChange,
 }) => (
   <section aria-label={`Giá cho ${column.name}`} style={{ borderBottom: "1px solid #f0f0f0" }}>
     <div style={headStyle}>
@@ -147,28 +164,39 @@ const PriceBlockSection: React.FC<PriceBlockSectionProps> = ({
         </Button>
       </span>
     </div>
-    {!folded &&
-      indicators.map((ind) => {
-        const key = cellKeyOf(ind.id, column.specimenTypeId);
-        return (
-          <DeclarePriceRow
-            key={key}
-            cellKey={key}
-            columnName={column.name}
-            indicator={ind}
-            existingPrice={existingPrices.has(key) ? (existingPrices.get(key) ?? null) : undefined}
-            price={prices[key] ?? null}
-            isSubcontract={key in subcontracts}
-            subcontractorId={subcontracts[key] ?? null}
-            canCopy={canCopy}
-            subcontractorOptions={subcontractorOptions}
-            onPriceChange={onPriceChange}
-            onCopyPrice={onCopyPrice}
-            onSubcontractChange={onSubcontractChange}
-            onSubcontractorChange={onSubcontractorChange}
-          />
-        );
-      })}
+    {!folded && (
+      <>
+        <div role="row" style={columnHeadStyle}>
+          <span>Chỉ tiêu</span>
+          <span title="Đơn vị tiêu hao của chỉ tiêu">ĐVT (tiêu hao)</span>
+          <span style={{ textAlign: "right" }}>Đơn giá (đ)</span>
+          <span />
+          <span>Hợp đồng phụ</span>
+        </div>
+        {indicators.map((ind) => {
+          const key = cellKeyOf(ind.id, column.specimenTypeId);
+          const typed = units[key];
+          return (
+            <DeclarePriceRow
+              key={key}
+              cellKey={key}
+              columnName={column.name}
+              indicator={ind}
+              existing={existingServices.get(key)}
+              price={prices[key] ?? null}
+              unit={typed ?? defaultUnit}
+              unitChanged={typed !== undefined && typed.trim() !== "" && typed !== defaultUnit}
+              isSubcontract={subcontracts.has(key)}
+              canCopy={canCopy}
+              onPriceChange={onPriceChange}
+              onUnitChange={onUnitChange}
+              onCopyPrice={onCopyPrice}
+              onSubcontractChange={onSubcontractChange}
+            />
+          );
+        })}
+      </>
+    )}
   </section>
 );
 

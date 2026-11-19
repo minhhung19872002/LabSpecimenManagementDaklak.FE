@@ -16,8 +16,8 @@ import {
   serviceCatalogService,
   type BulkCreateServiceItemInput,
   type ServiceCatalogItemDto,
+  type ServiceGroupDto,
 } from "../../../services/serviceCatalogService";
-import { subcontractorService, type SubcontractorDto } from "../../../services/subcontractorService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 import { useHeaderHeight, useLeaveConfirm } from "../../../hooks";
 import { specimenKeyOf } from "../ServiceCatalog/ServiceCatalog/utils";
@@ -27,9 +27,10 @@ import type { PriceBlockView } from "./ServiceDeclare/PriceDeclarePanel";
 import {
   ALL_SPECIMEN_COLUMN,
   SERVICE_CATALOG_URL,
-  buildExistingPriceMap,
+  buildExistingServiceMap,
   buildIndicatorTree,
   cellKeyOf,
+  filterServiceGroups,
   groupSpecimensByCategory,
   normalizeSearch,
   parseServiceDeclarePrefill,
@@ -74,9 +75,12 @@ const ServiceDeclarePage = () => {
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
-  const [subcontractors, setSubcontractors] = useState<SubcontractorDto[]>([]);
+  const [serviceGroups, setServiceGroups] = useState<ServiceGroupDto[]>([]);
   const [existingServices, setExistingServices] = useState<ServiceCatalogItemDto[]>([]);
 
+  const [serviceName, setServiceName] = useState("");
+  /** Tên điền sẵn từ link (?service=) — không tính là đã sửa phiếu */
+  const [initialServiceName, setInitialServiceName] = useState("");
   const [testMethodId, setTestMethodId] = useState<string | undefined>(prefill.testMethodId);
   const [allSpecimens, setAllSpecimens] = useState(prefill.specimenTypeId === null);
   const [specimenIds, setSpecimenIds] = useState<string[]>(prefill.specimenTypeId ? [prefill.specimenTypeId] : []);
@@ -88,7 +92,10 @@ const ServiceDeclarePage = () => {
   );
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
   const [prices, setPrices] = useState<Record<string, number | null>>({});
-  const [subcontracts, setSubcontracts] = useState<Record<string, string | null>>({});
+  /** khóa ô → ĐVT đã gõ; không có khóa = theo ĐVT của phương pháp */
+  const [units, setUnits] = useState<Record<string, string>>({});
+  /** khóa ô đã tích Hợp đồng phụ */
+  const [subcontracts, setSubcontracts] = useState<Set<string>>(() => new Set());
   const [foldedBlocks, setFoldedBlocks] = useState<Set<string>>(() => new Set());
   const [blockPrices, setBlockPrices] = useState<Record<string, number | null>>({});
   const [quickPrice, setQuickPrice] = useState<number | null>(null);
@@ -100,22 +107,28 @@ const ServiceDeclarePage = () => {
       specimenTypeService.getActive(),
       indicatorService.getActive(),
       indicatorGroupService.getActive(),
-      subcontractorService.getActive(),
+      serviceCatalogService.getServiceGroups(),
     ])
-      .then(([methods, specimens, inds, groups, subs]) => {
+      .then(([methods, specimens, inds, groups, services]) => {
         const flat = flattenIndicators(inds);
         setTestMethods(methods);
         setSpecimenTypes(specimens.items);
         setIndicators(flat);
         setIndicatorGroups(groups);
-        setSubcontractors(Array.isArray(subs) ? subs : ((subs as { items?: SubcontractorDto[] }).items ?? []));
+        setServiceGroups(services);
+        // "+ Thêm" trên thẻ dịch vụ của L2 → điền sẵn tên dịch vụ
+        const preService = prefill.serviceGroupId ? services.find((s) => s.id === prefill.serviceGroupId) : undefined;
+        if (preService) {
+          setServiceName(preService.name);
+          setInitialServiceName(preService.name);
+        }
         // Mở sẵn nhóm của chỉ tiêu được điền sẵn (nhấp đúp ô trống ma trận)
         const pre = prefill.indicatorId ? flat.find((i) => i.id === prefill.indicatorId) : undefined;
         if (pre) setOpenGroups(new Set([pre.indicatorGroupId || "__none__"]));
       })
       .catch((error) => message.error(getApiErrorMessage(error, "Không tải được danh mục")))
       .finally(() => setLoading(false));
-  }, [prefill.indicatorId]);
+  }, [prefill.indicatorId, prefill.serviceGroupId]);
 
   // Dịch vụ đã có của phương pháp → các ô trùng hiện "Đã có dịch vụ — bỏ qua"
   useEffect(() => {
@@ -143,15 +156,16 @@ const ServiceDeclarePage = () => {
   const selectedMethod = activeMethods.find((m) => m.id === testMethodId);
   const specimenMap = useMemo(() => new Map(specimenTypes.map((s) => [s.id, s])), [specimenTypes]);
   const activeSpecimens = useMemo(() => specimenTypes.filter((s) => s.isActive), [specimenTypes]);
-  const subcontractorOptions = useMemo(
-    () =>
-      subcontractors
-        .filter((s) => s.isActive)
-        .map((s) => ({ value: s.id, label: s.code ? `${s.code} - ${s.name}` : s.name })),
-    [subcontractors]
-  );
   const tree = useMemo(() => buildIndicatorTree(indicators, indicatorGroups), [indicators, indicatorGroups]);
-  const existingPrices = useMemo(() => buildExistingPriceMap(existingServices), [existingServices]);
+  const existingMap = useMemo(() => buildExistingServiceMap(existingServices), [existingServices]);
+  const trimmedServiceName = serviceName.trim();
+  /** Tên trùng dịch vụ có sẵn → gắn vào dịch vụ đó, không thì tạo dịch vụ mới */
+  const matchedServiceGroup = useMemo(
+    () => filterServiceGroups(serviceGroups, serviceName).exact,
+    [serviceGroups, serviceName]
+  );
+  /** ĐVT (tiêu hao) mặc định của mỗi dòng = ĐVT của phương pháp */
+  const defaultUnit = selectedMethod?.unit?.trim() ?? "";
 
   // ---------- Cột nền mẫu + ô ----------
   const columns = useMemo<DeclareColumn[]>(
@@ -170,32 +184,35 @@ const ServiceDeclarePage = () => {
       columns.flatMap((c) =>
         selectedIndicators.map((ind) => {
           const key = cellKeyOf(ind.id, c.specimenTypeId);
-          return { key, indicatorId: ind.id, columnKey: c.key, specimenTypeId: c.specimenTypeId, existing: existingPrices.has(key) };
+          return { key, indicatorId: ind.id, columnKey: c.key, specimenTypeId: c.specimenTypeId, existing: existingMap.has(key) };
         })
       ),
-    [columns, selectedIndicators, existingPrices]
+    [columns, selectedIndicators, existingMap]
   );
+  const unitOf = useCallback((key: string) => (units[key] ?? defaultUnit).trim(), [units, defaultUnit]);
   const newCells = useMemo(() => cells.filter((c) => !c.existing), [cells]);
 
   const stats = useMemo(() => {
     const perBlock = new Map<string, { newCount: number; pendingCount: number; subcontractCount: number }>();
     let pending = 0;
     let sub = 0;
+    let noUnit = 0;
     for (const c of newCells) {
+      if (!unitOf(c.key)) noUnit++;
       const s = perBlock.get(c.columnKey) ?? { newCount: 0, pendingCount: 0, subcontractCount: 0 };
       s.newCount++;
       if (prices[c.key] == null) {
         s.pendingCount++;
         pending++;
       }
-      if (c.key in subcontracts) {
+      if (subcontracts.has(c.key)) {
         s.subcontractCount++;
         sub++;
       }
       perBlock.set(c.columnKey, s);
     }
-    return { perBlock, pending, sub };
-  }, [newCells, prices, subcontracts]);
+    return { perBlock, pending, sub, noUnit };
+  }, [newCells, prices, subcontracts, unitOf]);
 
   const newCount = newCells.length;
   const existingCount = cells.length - newCount;
@@ -261,25 +278,23 @@ const ServiceDeclarePage = () => {
         const next = { ...prev };
         for (const c of columns) {
           const key = cellKeyOf(indicatorId, c.specimenTypeId);
-          if (!existingPrices.has(key)) next[key] = value;
+          if (!existingMap.has(key)) next[key] = value;
         }
         return next;
       });
     },
-    [columns, existingPrices]
+    [columns, existingMap]
+  );
+  const handleUnitChange = useCallback(
+    (key: string, value: string) => setUnits((prev) => ({ ...prev, [key]: value })),
+    []
   );
   const handleSubcontractChange = useCallback((key: string, checked: boolean) => {
     setSubcontracts((prev) => {
-      const next = { ...prev };
-      if (checked) next[key] = prev[key] ?? null;
-      else delete next[key];
-      return next;
+      if (prev.has(key) === checked) return prev;
+      return toggleInSet(prev, key);
     });
   }, []);
-  const handleSubcontractorChange = useCallback(
-    (key: string, subcontractorId: string | null) => setSubcontracts((prev) => ({ ...prev, [key]: subcontractorId })),
-    []
-  );
   const handleToggleFold = useCallback((key: string) => setFoldedBlocks((prev) => toggleInSet(prev, key)), []);
   const handleBlockPriceChange = useCallback(
     (key: string, value: number | null) => setBlockPrices((prev) => ({ ...prev, [key]: value })),
@@ -316,7 +331,8 @@ const ServiceDeclarePage = () => {
   );
 
   // ---------- Hủy / Tạo ----------
-  const dirty = selectedIndicatorIds.size > 0 || specimenIds.length > 0 || allSpecimens;
+  const dirty =
+    selectedIndicatorIds.size > 0 || specimenIds.length > 0 || allSpecimens || trimmedServiceName !== initialServiceName.trim();
   // Rời phiếu bằng mọi đường (nút quay lại, Hủy, menu sang trang khác, đóng tab) đều hỏi lại
   const allowLeave = useLeaveConfirm(dirty, {
     title: "Hủy phiếu khai báo?",
@@ -326,18 +342,27 @@ const ServiceDeclarePage = () => {
   });
   const handleCancel = () => navigate(SERVICE_CATALOG_URL);
 
-  const canSubmit = !!testMethodId && columns.length > 0 && selectedIndicators.length > 0 && newCount > 0;
+  const problems: string[] = [];
+  if (!trimmedServiceName) problems.push("Chưa nhập tên dịch vụ");
+  if (stats.noUnit > 0) problems.push(`${stats.noUnit} dòng chưa nhập ĐVT`);
+  const canSubmit =
+    !!testMethodId && columns.length > 0 && selectedIndicators.length > 0 && newCount > 0 && problems.length === 0;
   const handleSubmit = async () => {
-    if (!testMethodId || newCount === 0) return;
+    if (!canSubmit || !testMethodId) return;
     const items: BulkCreateServiceItemInput[] = newCells.map((c) => ({
       indicatorId: c.indicatorId,
       specimenTypeId: c.specimenTypeId,
       unitPrice: prices[c.key] ?? null,
-      isSubcontract: c.key in subcontracts,
-      subcontractorId: c.key in subcontracts ? (subcontracts[c.key] ?? null) : null,
+      unit: unitOf(c.key),
+      isSubcontract: subcontracts.has(c.key),
     }));
     try {
-      const result = await serviceCatalogService.bulkCreate({ testMethodId, items });
+      const result = await serviceCatalogService.bulkCreate({
+        testMethodId,
+        serviceGroupId: matchedServiceGroup?.id ?? null,
+        serviceGroupName: matchedServiceGroup ? null : trimmedServiceName,
+        items,
+      });
       message.success(
         `Đã tạo ${result.createdCount} dịch vụ${result.skippedCount ? `, bỏ qua ${result.skippedCount} đã có` : ""}`
       );
@@ -348,9 +373,15 @@ const ServiceDeclarePage = () => {
     }
   };
 
-  const step1Done = !!testMethodId;
-  const step2Done = columns.length > 0;
-  const step3Done = selectedIndicators.length > 0;
+  const nameDone = !!trimmedServiceName;
+  const methodDone = !!testMethodId;
+  const specimenDone = columns.length > 0;
+  const indicatorDone = selectedIndicators.length > 0;
+  const treeLockMessage = !nameDone
+    ? "Nhập tên dịch vụ ở bước ① rồi chọn phương pháp ở bước ②."
+    : !methodDone
+      ? "Chọn phương pháp ở bước ② trước."
+      : undefined;
 
   return (
     <ServiceDeclareView
@@ -359,6 +390,9 @@ const ServiceDeclarePage = () => {
       newCount={newCount}
       onBack={handleCancel}
       setup={{
+        serviceName,
+        serviceGroups,
+        onServiceNameChange: setServiceName,
         methodOptions,
         testMethodId,
         onTestMethodChange: setTestMethodId,
@@ -377,12 +411,13 @@ const ServiceDeclarePage = () => {
           onToggleCategory: handleToggleCategory,
           onDone: () => setPickerOpen(false),
         },
-        step1: { done: step1Done, active: !step1Done },
-        step2: { done: step2Done, active: step1Done && !step2Done },
+        step1: { done: nameDone, active: !nameDone },
+        step2: { done: methodDone, active: nameDone && !methodDone },
+        step3: { done: specimenDone, active: nameDone && methodDone && !specimenDone },
       }}
       tree={{
-        step: { done: step3Done, active: step1Done && step2Done && !step3Done },
-        disabled: !testMethodId,
+        step: { done: indicatorDone, active: nameDone && methodDone && specimenDone && !indicatorDone },
+        lockMessage: treeLockMessage,
         query: indicatorQuery,
         groups: treeGroups,
         selectedIds: selectedIndicatorIds,
@@ -393,7 +428,10 @@ const ServiceDeclarePage = () => {
         onToggleIndicator: handleToggleIndicator,
       }}
       prices={{
-        step: { done: newCount > 0 && stats.pending === 0, active: step3Done && stats.pending > 0 },
+        step: {
+          done: newCount > 0 && stats.pending === 0 && stats.noUnit === 0,
+          active: indicatorDone && (stats.pending > 0 || stats.noUnit > 0),
+        },
         indicators: selectedIndicators,
         blocks,
         quickFill: {
@@ -407,21 +445,24 @@ const ServiceDeclarePage = () => {
         },
         shared: {
           prices,
+          units,
+          defaultUnit,
           subcontracts,
-          existingPrices,
+          existingServices: existingMap,
           canCopy: columns.length >= 2,
-          subcontractorOptions,
           onToggleFold: handleToggleFold,
           onBlockPriceChange: handleBlockPriceChange,
           onFillBlock: handleFillBlock,
           onPriceChange: handlePriceChange,
+          onUnitChange: handleUnitChange,
           onCopyPrice: handleCopyPrice,
           onSubcontractChange: handleSubcontractChange,
-          onSubcontractorChange: handleSubcontractorChange,
         },
       }}
       footer={{
+        problems,
         summary: {
+          serviceName,
           methodName: selectedMethod?.name,
           specimenLabel: allSpecimens ? "Mọi nền mẫu" : `${columns.length} nền mẫu`,
           indicatorCount: selectedIndicators.length,

@@ -2,8 +2,9 @@ import React, { useRef, useState } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import type { ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
+import { ALL_SPECIMEN_NAME } from "./utils";
 
-export type ServiceCellAction = "history" | "toggle" | "delete";
+export type ServiceCellAction = "history" | "assign" | "assignBlock" | "toggle" | "delete";
 
 export interface ServiceCellContextMenuProps {
   /** Tra dịch vụ theo `data-service-id` của ô được nhấp chuột phải */
@@ -16,7 +17,13 @@ export interface ServiceCellContextMenuProps {
 
 const buildMenu = (service: ServiceCatalogItemDto, canEdit: boolean, canDelete: boolean): MenuProps["items"] => {
   const items: MenuProps["items"] = [{ key: "history", label: "Lịch sử giá / đổi giá" }];
-  if (canEdit) items.push({ key: "toggle", label: service.isActive ? "Ngừng sử dụng" : "Kích hoạt lại" });
+  if (canEdit) {
+    items.push(
+      { key: "assign", label: "Đổi dịch vụ / hợp đồng phụ…" },
+      { key: "assignBlock", label: `Chuyển cả nền mẫu “${service.specimenTypeName || ALL_SPECIMEN_NAME}” sang dịch vụ khác…` },
+      { key: "toggle", label: service.isActive ? "Ngừng sử dụng" : "Kích hoạt lại" }
+    );
+  }
   if (canDelete) items.push({ type: "divider" }, { key: "delete", label: "Xóa dịch vụ", danger: true });
   return items;
 };

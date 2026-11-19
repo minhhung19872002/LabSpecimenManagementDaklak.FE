@@ -1,10 +1,15 @@
 import React from "react";
-import { Checkbox, Popover, Select, Tag } from "antd";
+import { AutoComplete, Checkbox, Popover, Select, Tag } from "antd";
+import type { ServiceGroupDto } from "../../../../services/serviceCatalogService";
 import StepLabel, { type StepState } from "./StepLabel";
 import SpecimenPickerPanel, { type SpecimenPickerPanelProps } from "./SpecimenPickerPanel";
-import { normalizeSearch } from "./utils";
+import { filterServiceGroups, normalizeSearch } from "./utils";
 
 export interface DeclareSetupBarProps {
+  /** ① Tên dịch vụ: gõ tên mới hoặc chọn dịch vụ có sẵn */
+  serviceName: string;
+  serviceGroups: ServiceGroupDto[];
+  onServiceNameChange: (name: string) => void;
   methodOptions: { value: string; label: string }[];
   testMethodId?: string;
   onTestMethodChange: (id: string | undefined) => void;
@@ -17,6 +22,7 @@ export interface DeclareSetupBarProps {
   picker: SpecimenPickerPanelProps;
   step1: StepState;
   step2: StepState;
+  step3: StepState;
 }
 
 const chipStyle: React.CSSProperties = {
@@ -46,8 +52,15 @@ const addChipStyle: React.CSSProperties = {
 const filterMethod = (input: string, option?: { label?: React.ReactNode }) =>
   normalizeSearch(String(option?.label ?? "")).includes(normalizeSearch(input));
 
-/** Bước ① Phương pháp + ② Nền mẫu */
+const optionRowStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8 };
+const newOptionStyle: React.CSSProperties = { color: "#096dd9" };
+const hintStyle: React.CSSProperties = { fontSize: 12, lineHeight: "18px", color: "#595959" };
+
+/** Bước ① Tên dịch vụ + ② Phương pháp + ③ Nền mẫu */
 const DeclareSetupBar: React.FC<DeclareSetupBarProps> = ({
+  serviceName,
+  serviceGroups,
+  onServiceNameChange,
   methodOptions,
   testMethodId,
   onTestMethodChange,
@@ -60,8 +73,25 @@ const DeclareSetupBar: React.FC<DeclareSetupBarProps> = ({
   picker,
   step1,
   step2,
+  step3,
 }) => {
   const specimenOk = allSpecimens || selectedSpecimens.length > 0;
+  const trimmedName = serviceName.trim();
+  const { items: matchedGroups, exact } = filterServiceGroups(serviceGroups, serviceName);
+  const serviceOptions = [
+    ...matchedGroups.map((g) => ({
+      value: g.name,
+      label: (
+        <span style={optionRowStyle}>
+          <span style={{ flex: 1, minWidth: 0, fontWeight: g === exact ? 500 : undefined }}>{g.name}</span>
+          <span style={{ fontSize: 12, color: "#595959" }}>{g.code}</span>
+        </span>
+      ),
+    })),
+    ...(trimmedName && !exact
+      ? [{ value: trimmedName, label: <span style={newOptionStyle}>+ Dùng tên mới “{trimmedName}”</span> }]
+      : []),
+  ];
   return (
     <div
       style={{
@@ -74,8 +104,27 @@ const DeclareSetupBar: React.FC<DeclareSetupBarProps> = ({
         alignItems: "flex-start",
       }}
     >
-      <div style={{ flex: "0 1 360px", minWidth: 260, display: "flex", flexDirection: "column", gap: 6 }}>
-        <StepLabel index={1} state={step1} title="Phương pháp" required />
+      <div style={{ flex: "0 1 320px", minWidth: 260, display: "flex", flexDirection: "column", gap: 6 }}>
+        <StepLabel index={1} state={step1} title="Tên dịch vụ" required />
+        <AutoComplete
+          allowClear
+          size="large"
+          aria-label="Tên dịch vụ"
+          placeholder="Nhập hoặc chọn tên dịch vụ…"
+          style={{ width: "100%" }}
+          status={trimmedName ? undefined : "error"}
+          value={serviceName}
+          options={serviceOptions}
+          filterOption={false}
+          maxLength={256}
+          onChange={(v) => onServiceNameChange(v ?? "")}
+        />
+        {trimmedName && (
+          <span style={hintStyle}>{exact ? `Dịch vụ có sẵn · ${exact.code}` : "Tên mới — sẽ tạo nhóm dịch vụ mới"}</span>
+        )}
+      </div>
+      <div style={{ flex: "0 1 320px", minWidth: 260, display: "flex", flexDirection: "column", gap: 6 }}>
+        <StepLabel index={2} state={step2} title="Phương pháp" required />
         <Select
           showSearch
           allowClear
@@ -83,6 +132,7 @@ const DeclareSetupBar: React.FC<DeclareSetupBarProps> = ({
           aria-label="Phương pháp"
           placeholder="Chọn phương pháp…"
           style={{ width: "100%" }}
+          disabled={!trimmedName}
           value={testMethodId}
           options={methodOptions}
           filterOption={filterMethod}
@@ -91,8 +141,8 @@ const DeclareSetupBar: React.FC<DeclareSetupBarProps> = ({
       </div>
       <div style={{ flex: "1 1 480px", minWidth: 300, display: "flex", flexDirection: "column", gap: 6 }}>
         <StepLabel
-          index={2}
-          state={step2}
+          index={3}
+          state={step3}
           title="Nền mẫu"
           required
           extra={

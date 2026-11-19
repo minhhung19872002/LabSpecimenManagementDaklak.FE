@@ -24,7 +24,7 @@ export interface PriceDeclarePanelProps {
   shared: SharedBlockProps;
 }
 
-/** Bước ④ Giá: điền nhanh + khối giá theo từng nền mẫu */
+/** Bước ⑤ ĐVT + Giá: điền nhanh + khối giá theo từng nền mẫu */
 const PriceDeclarePanel: React.FC<PriceDeclarePanelProps> = ({ step, indicators, blocks, quickFill, shared }) => {
   const ready = indicators.length > 0 && blocks.length > 0;
   return (
@@ -39,7 +39,7 @@ const PriceDeclarePanel: React.FC<PriceDeclarePanelProps> = ({ step, indicators,
           borderBottom: "1px solid #f0f0f0",
         }}
       >
-        <StepLabel index={4} state={step} title="Giá tiền" hint="(không bắt buộc)" />
+        <StepLabel index={5} state={step} title="ĐVT & giá tiền" hint="(giá không bắt buộc)" />
         {ready && <QuickFillBar {...quickFill} />}
       </div>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", position: "relative" }}>
@@ -49,8 +49,8 @@ const PriceDeclarePanel: React.FC<PriceDeclarePanelProps> = ({ step, indicators,
             style={{ marginTop: 64 }}
             description={
               blocks.length === 0
-                ? "Chọn nền mẫu ở bước ② — bảng giá sẽ hiện ở đây."
-                : "Tích chọn chỉ tiêu ở bước ③ — bảng giá sẽ hiện ở đây."
+                ? "Chọn nền mẫu ở bước ③ — bảng giá sẽ hiện ở đây."
+                : "Tích chọn chỉ tiêu ở bước ④ — bảng giá sẽ hiện ở đây."
             }
           />
         ) : (
@@ -68,7 +68,8 @@ const PriceDeclarePanel: React.FC<PriceDeclarePanelProps> = ({ step, indicators,
             ))}
             <p style={{ margin: 0, padding: "10px 16px", fontSize: 12, color: "#595959" }}>
               3 cách điền nhanh: ô “Điền nhanh” phía trên (cả phiếu) · “Giá cho cả nền mẫu” trên từng nhóm · nút sao chép cạnh
-              ô giá để dùng cùng giá cho chỉ tiêu đó ở mọi nền mẫu. Ô để trống → “Chờ định giá”.
+              ô giá để dùng cùng giá cho chỉ tiêu đó ở mọi nền mẫu. Ô để trống → “Chờ định giá”. ĐVT (đơn vị tiêu hao)
+              điền sẵn theo phương pháp, gõ lại ở từng dòng nếu khác — bắt buộc.
             </p>
           </>
         )}

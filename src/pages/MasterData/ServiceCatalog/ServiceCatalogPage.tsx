@@ -11,31 +11,47 @@ import { Modal, message } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useNavigate } from "react-router-dom";
-import { indicatorGroupService, type CreateUpdateIndicatorGroupDto } from "../../../services/masterDataService";
-import { serviceCatalogService, type ServiceCatalogItemDto } from "../../../services/serviceCatalogService";
+import {
+  serviceCatalogService,
+  type ServiceCatalogItemDto,
+  type ServiceGroupDto,
+} from "../../../services/serviceCatalogService";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 import { useLeaveConfirm } from "../../../hooks";
 import ServiceCatalogView from "./ServiceCatalog/ServiceCatalogView";
 import type { ServiceCellAction } from "./ServiceCatalog/ServiceCellContextMenu";
+import type { ServiceGroupAction } from "./ServiceCatalog/ServiceGroupCard";
 import {
+  ALL_SPECIMEN_NAME,
+  applyAssign,
   applyQuickFilter,
+  buildGroupOptions,
   buildMethodOptions,
   buildServiceGroups,
   buildSpecimenOptions,
   exportServicesToExcel,
   filterServices,
+  findEmptyGroups,
+  groupKeyOf,
   hasSubcontract,
   isPendingPrice,
+  NO_GROUP_KEY,
+  NO_GROUP_NAME,
+  serviceGroupSchema,
   specimenKeyOf,
+  type AssignServiceFormData,
+  type AssignTarget,
   type FoldState,
+  type ServiceGroupCard as GroupCardData,
   type ServiceOpenLevel,
   type ServiceQuickFilter,
+  type ServiceGroupFormData,
 } from "./ServiceCatalog/utils";
 import { buildServiceDeclareUrl } from "../ServiceDeclare/ServiceDeclare/utils";
-import { GroupModal } from "../Indicators/components";
-import { indicatorGroupSchema, type IndicatorGroupFormData } from "../Indicators/schemas/indicatorSchema";
+import ServiceGroupModal from "./ServiceCatalog/ServiceGroupModal";
+import AssignServiceModal from "./ServiceCatalog/AssignServiceModal";
 import ImportPricesModal from "./ImportPricesModal";
 import PriceHistoryModal from "./PriceHistoryModal";
 
@@ -59,6 +75,8 @@ const EMPTY_EDITS: ReadonlyMap<string, number> = new Map();
 /** Container L2 — Dịch vụ & Bảng giá (Dịch vụ = nhóm chỉ tiêu ▸ Nền mẫu ▸ Chỉ tiêu & giá) */
 const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCatalogPage(_props, ref) {
   const [services, setServices] = useState<ServiceCatalogItemDto[]>([]);
+  // Mọi "Tên dịch vụ" (kể cả chưa có dòng nào) — cho thẻ rỗng + Select chuyển dịch vụ
+  const [groups, setGroups] = useState<ServiceGroupDto[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [keyword, setKeyword] = useState("");
@@ -80,9 +98,16 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   const [historyService, setHistoryService] = useState<ServiceCatalogItemDto | null>(null);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [groupSaving, setGroupSaving] = useState(false);
-  const groupForm = useForm<IndicatorGroupFormData>({
-    resolver: yupResolver(indicatorGroupSchema),
-    defaultValues: { name: "", isActive: true },
+  // Thẻ đang đổi tên (null = modal đang ở chế độ thêm mới)
+  const [renameCard, setRenameCard] = useState<GroupCardData | null>(null);
+  const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
+  const [assignSaving, setAssignSaving] = useState(false);
+  const assignForm = useForm<AssignServiceFormData>({
+    defaultValues: { serviceGroupKey: NO_GROUP_KEY, subcontract: "keep" },
+  });
+  const groupForm = useForm<ServiceGroupFormData>({
+    resolver: yupResolver(serviceGroupSchema),
+    defaultValues: { name: "" },
   });
 
   const navigate = useNavigate();
@@ -101,9 +126,18 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     }
   }, []);
 
+  const loadGroups = useCallback(async () => {
+    try {
+      setGroups(await serviceCatalogService.getServiceGroups());
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không tải được danh sách tên dịch vụ"));
+    }
+  }, []);
+
   useEffect(() => {
     loadServices();
-  }, [loadServices]);
+    loadGroups();
+  }, [loadServices, loadGroups]);
 
   // Còn giá chưa lưu: chuyển trang trong app (menu, nút Tạo dịch vụ / + Thêm) → hỏi; đóng tab / F5 → trình duyệt hỏi
   useLeaveConfirm(edits.size > 0, discardConfirmText(edits.size));
@@ -122,7 +156,15 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     () => applyQuickFilter(baseFiltered, quickFilter, edits),
     [baseFiltered, quickFilter, edits]
   );
-  const cards = useMemo(() => buildServiceGroups(visibleServices, edits), [visibleServices, edits]);
+  const emptyGroups = useMemo(
+    () => findEmptyGroups(groups, services, { keyword: deferredKeyword, testMethodId, specimenKey, quickFilter }),
+    [groups, services, deferredKeyword, testMethodId, specimenKey, quickFilter]
+  );
+  const cards = useMemo(
+    () => buildServiceGroups(visibleServices, edits, emptyGroups),
+    [visibleServices, edits, emptyGroups]
+  );
+  const groupOptions = useMemo(() => buildGroupOptions(groups), [groups]);
   const specimenCount = useMemo(
     () => new Set(visibleServices.map((s) => specimenKeyOf(s.specimenTypeId))).size,
     [visibleServices]
@@ -151,8 +193,15 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     setServices((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   }, []);
 
+  // serviceGroupId: "+ Thêm" trên thẻ dịch vụ → phiếu điền sẵn tên dịch vụ đó
   const openBuilder = useCallback(
-    () => navigate(buildServiceDeclareUrl(testMethodId ? { testMethodId } : null)),
+    (serviceGroupId?: string | null) =>
+      navigate(
+        buildServiceDeclareUrl({
+          ...(testMethodId ? { testMethodId } : {}),
+          ...(serviceGroupId ? { serviceGroupId } : {}),
+        })
+      ),
     [navigate, testMethodId]
   );
 
@@ -176,7 +225,8 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   );
 
   const openCreateGroup = useCallback(() => {
-    groupForm.reset({ name: "", isActive: true });
+    setRenameCard(null);
+    groupForm.reset({ name: "" });
     setGroupModalOpen(true);
   }, [groupForm]);
 
@@ -257,6 +307,34 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
         setHistoryService(service);
         return;
       }
+      if (action === "assign" || action === "assignBlock") {
+        const currentGroupKey = groupKeyOf(service.serviceGroupId);
+        const single = action === "assign";
+        const blockSpecimenKey = specimenKeyOf(service.specimenTypeId);
+        // Cả nền mẫu: các dòng đang thấy (theo bộ lọc) cùng thẻ dịch vụ + cùng nền mẫu
+        const ids = single
+          ? [service.id]
+          : visibleServices
+              .filter(
+                (s) =>
+                  groupKeyOf(s.serviceGroupId) === currentGroupKey && specimenKeyOf(s.specimenTypeId) === blockSpecimenKey
+              )
+              .map((s) => s.id);
+        const specimenName = service.specimenTypeName || ALL_SPECIMEN_NAME;
+        assignForm.reset({
+          serviceGroupKey: currentGroupKey,
+          subcontract: single ? (service.isSubcontract ? "yes" : "no") : "keep",
+        });
+        setAssignTarget({
+          title: single
+            ? `${service.indicatorName} · ${specimenName} · ${service.testMethodName}`
+            : `Nền mẫu “${specimenName}” trong dịch vụ “${service.serviceGroupName || NO_GROUP_NAME}”`,
+          serviceIds: ids,
+          currentGroupKey,
+          single,
+        });
+        return;
+      }
       if (action === "toggle") {
         try {
           await serviceCatalogService.toggleActive(service.id);
@@ -289,24 +367,116 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
         },
       });
     },
-    [replaceService]
+    [replaceService, visibleServices, assignForm]
   );
 
-  const handleCreateGroup = useCallback(
-    async (data: IndicatorGroupFormData) => {
+  const handleAssignOk = useCallback(
+    async (data: AssignServiceFormData) => {
+      if (!assignTarget) return;
+      const changeServiceGroup = data.serviceGroupKey !== assignTarget.currentGroupKey;
+      const isSubcontract = data.subcontract === "keep" ? null : data.subcontract === "yes";
+      // undefined = giữ nhóm; null = "Chưa thuộc dịch vụ"
+      const target = changeServiceGroup ? (groups.find((g) => g.id === data.serviceGroupKey) ?? null) : undefined;
+      setAssignSaving(true);
+      try {
+        const changed = await serviceCatalogService.assignServices({
+          serviceIds: assignTarget.serviceIds,
+          serviceGroupId: target?.id ?? null,
+          changeServiceGroup,
+          isSubcontract,
+        });
+        setServices((prev) => applyAssign(prev, new Set(assignTarget.serviceIds), target, isSubcontract));
+        setAssignTarget(null);
+        if (changed === 0) message.info("Không có thay đổi");
+        else
+          message.success(
+            `Đã cập nhật ${changed} chỉ tiêu${target !== undefined ? ` sang “${target?.name ?? NO_GROUP_NAME}”` : ""}`
+          );
+      } catch (error) {
+        message.error(getApiErrorMessage(error, "Không chuyển được dịch vụ"));
+      } finally {
+        setAssignSaving(false);
+      }
+    },
+    [assignTarget, groups]
+  );
+
+  const handleGroupOk = useCallback(
+    async (data: ServiceGroupFormData) => {
+      const name = data.name.trim();
       setGroupSaving(true);
       try {
-        await indicatorGroupService.create(data as CreateUpdateIndicatorGroupDto);
-        message.success("Đã thêm nhóm dịch vụ. Khai báo nền mẫu / chỉ tiêu để nhóm hiện trong bảng giá.");
+        if (renameCard?.groupId) {
+          const updated = await serviceCatalogService.updateServiceGroup(renameCard.groupId, name);
+          setGroups((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
+          setServices((prev) =>
+            prev.map((s) => (s.serviceGroupId === updated.id ? { ...s, serviceGroupName: updated.name } : s))
+          );
+          message.success(`Đã đổi tên dịch vụ ${updated.code}`);
+          setGroupModalOpen(false);
+          setRenameCard(null);
+          return;
+        }
+        const created = await serviceCatalogService.createServiceGroup(name);
+        setGroups((prev) => [...prev, created]);
+        message.success(`Đã thêm dịch vụ ${created.code}. Khai báo chỉ tiêu cho dịch vụ này.`);
         setGroupModalOpen(false);
         groupForm.reset();
+        // Mở luôn phiếu khai báo, điền sẵn tên
+        openBuilder(created.id);
       } catch (error) {
-        message.error(getApiErrorMessage(error, "Không thêm được nhóm dịch vụ"));
+        message.error(
+          getApiErrorMessage(error, renameCard ? "Không đổi được tên dịch vụ" : "Không thêm được nhóm dịch vụ")
+        );
       } finally {
         setGroupSaving(false);
       }
     },
-    [groupForm]
+    [groupForm, openBuilder, renameCard]
+  );
+
+  const handleGroupAction = useCallback(
+    (action: ServiceGroupAction, card: GroupCardData) => {
+      const groupId = card.groupId;
+      if (!groupId) return;
+      if (action === "rename") {
+        setRenameCard(card);
+        groupForm.reset({ name: card.name });
+        setGroupModalOpen(true);
+        return;
+      }
+      const used = services.filter((s) => s.serviceGroupId === groupId).length;
+      Modal.confirm({
+        title: `Xóa dịch vụ “${card.name}”?`,
+        content:
+          used > 0
+            ? `${used} chỉ tiêu trong dịch vụ này sẽ chuyển về “${NO_GROUP_NAME}” (giữ nguyên giá, ĐVT). Phiếu / báo giá cũ không bị ảnh hưởng.`
+            : "Dịch vụ chưa có chỉ tiêu nào.",
+        okText: "Xóa",
+        okButtonProps: { danger: true },
+        cancelText: "Hủy",
+        centered: true,
+        onOk: async () => {
+          try {
+            const moved = await serviceCatalogService.deleteServiceGroup(groupId);
+            setGroups((prev) => prev.filter((g) => g.id !== groupId));
+            setServices((prev) =>
+              prev.map((s) =>
+                s.serviceGroupId === groupId
+                  ? { ...s, serviceGroupId: null, serviceGroupCode: null, serviceGroupName: null }
+                  : s
+              )
+            );
+            message.success(
+              moved > 0 ? `Đã xóa dịch vụ, ${moved} chỉ tiêu chuyển về “${NO_GROUP_NAME}”` : "Đã xóa dịch vụ"
+            );
+          } catch (error) {
+            message.error(getApiErrorMessage(error, "Không xóa được dịch vụ"));
+          }
+        },
+      });
+    },
+    [groupForm, services]
   );
 
   return (
@@ -350,6 +520,7 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
         canDelete={canDelete}
         onToggleFold={handleToggleFold}
         onAddToGroup={openBuilder}
+        onGroupAction={handleGroupAction}
         onStartEdit={handleStartEdit}
         onEditCommit={handleEditCommit}
         onEditCancel={handleEditCancel}
@@ -374,14 +545,22 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
         }}
         onClose={() => setHistoryService(null)}
       />
-      <GroupModal
-        title="Thêm nhóm dịch vụ"
+      <ServiceGroupModal
         open={groupModalOpen}
+        mode={renameCard ? "rename" : "create"}
+        code={renameCard?.code}
         loading={groupSaving}
-        editingGroup={null}
         form={groupForm}
-        onOk={handleCreateGroup}
+        onOk={handleGroupOk}
         onCancel={() => setGroupModalOpen(false)}
+      />
+      <AssignServiceModal
+        target={assignTarget}
+        loading={assignSaving}
+        groupOptions={groupOptions}
+        form={assignForm}
+        onOk={handleAssignOk}
+        onCancel={() => setAssignTarget(null)}
       />
     </>
   );

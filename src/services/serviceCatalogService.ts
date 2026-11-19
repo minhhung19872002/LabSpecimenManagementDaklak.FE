@@ -17,6 +17,10 @@ export interface ServiceCatalogItemDto {
   parentIndicatorId?: string | null;
   indicatorGroupId?: string | null;
   indicatorGroupName?: string | null;
+  /** Dịch vụ cấp 1. null = dịch vụ cũ "Chưa thuộc dịch vụ" */
+  serviceGroupId?: string | null;
+  serviceGroupCode?: string | null;
+  serviceGroupName?: string | null;
   specimenTypeId?: string | null;
   specimenTypeCode?: string | null;
   specimenTypeName?: string | null;
@@ -74,18 +78,43 @@ export interface BulkCreateServiceItemInput {
   specimenTypeId: string | null;
   /** null = Chờ định giá */
   unitPrice: number | null;
+  /** ĐVT (tiêu hao) — trống = theo đơn vị của phương pháp */
+  unit: string | null;
   isSubcontract: boolean;
-  /** Đơn vị nhận thầu — không bắt buộc */
-  subcontractorId: string | null;
+  /** Đơn vị nhận thầu — không bắt buộc (đang ẩn trên UI theo BA) */
+  subcontractorId?: string | null;
 }
 
 /** Giá có hiệu lực ngay (hôm nay), không có TAT — sửa sau trên Ma trận giá */
 export interface BulkCreateServicesInput {
   testMethodId: string;
+  /** Dịch vụ có sẵn; bỏ trống thì gửi serviceGroupName để tạo mới */
+  serviceGroupId?: string | null;
+  serviceGroupName?: string | null;
   items: BulkCreateServiceItemInput[];
 }
 
+/** Dịch vụ cấp 1 (vd "Kiểm nghiệm thực phẩm") */
+export interface ServiceGroupDto {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+/** Chuyển dịch vụ sang tên dịch vụ khác / đổi HĐ phụ (không đổi ĐVT, giá) */
+export interface AssignServicesInput {
+  serviceIds: string[];
+  /** null = "Chưa thuộc dịch vụ" */
+  serviceGroupId?: string | null;
+  /** false = giữ nguyên nhóm */
+  changeServiceGroup: boolean;
+  /** null/undefined = giữ nguyên HĐ phụ */
+  isSubcontract?: boolean | null;
+}
+
 export interface BulkCreateServicesResultDto {
+  serviceGroupId?: string | null;
   createdCount: number;
   skippedCount: number;
 }
@@ -160,6 +189,28 @@ export const serviceCatalogService = {
   },
   bulkCreate: async (input: BulkCreateServicesInput): Promise<BulkCreateServicesResultDto> => {
     const response = await api.post<BulkCreateServicesResultDto>(`${SERVICE_URL}/bulk-create`, input);
+    return response.data;
+  },
+  getServiceGroups: async (): Promise<ServiceGroupDto[]> => {
+    const response = await api.get<ServiceGroupDto[] | { items: ServiceGroupDto[] }>(`${SERVICE_URL}/service-groups`);
+    return toList(response.data);
+  },
+  createServiceGroup: async (name: string): Promise<ServiceGroupDto> => {
+    const response = await api.post<ServiceGroupDto>(`${SERVICE_URL}/service-groups`, { name });
+    return response.data;
+  },
+  updateServiceGroup: async (id: string, name: string): Promise<ServiceGroupDto> => {
+    const response = await api.put<ServiceGroupDto>(`${SERVICE_URL}/service-groups/${id}`, { name });
+    return response.data;
+  },
+  /** Trả về số dòng chuyển về "Chưa thuộc dịch vụ" */
+  deleteServiceGroup: async (id: string): Promise<number> => {
+    const response = await api.delete<number>(`${SERVICE_URL}/service-groups/${id}`);
+    return response.data;
+  },
+  /** Trả về số dòng thay đổi */
+  assignServices: async (input: AssignServicesInput): Promise<number> => {
+    const response = await api.post<number>(`${SERVICE_URL}/assign`, input);
     return response.data;
   },
   update: async (

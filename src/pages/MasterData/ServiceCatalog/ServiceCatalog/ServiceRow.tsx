@@ -73,14 +73,10 @@ const SubcontractCell: React.FC<{ service: ServiceCatalogItemDto }> = ({ service
       </span>
     );
   }
-  const name = service.subcontractorName?.trim();
-  return name ? (
-    <span className="svc-sub-tag" title={`Hợp đồng phụ: ${name}`}>
-      {name}
-    </span>
-  ) : (
-    <span className="svc-sub-tag is-unnamed" title="Hợp đồng phụ – chưa ghi tên đơn vị">
-      Có · chưa ghi tên đơn vị
+  // BA TIHE_1811: ẩn đơn vị nhận thầu, chỉ hiện có/không
+  return (
+    <span className="svc-sub-tag" title="Có hợp đồng phụ">
+      Có
     </span>
   );
 };

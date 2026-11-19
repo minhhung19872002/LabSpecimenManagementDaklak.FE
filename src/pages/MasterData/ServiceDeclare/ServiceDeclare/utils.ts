@@ -13,6 +13,8 @@ const NO_GROUP_NAME = "Chưa phân nhóm";
 const NO_CATEGORY_NAME = "Khác";
 
 export interface ServiceDeclarePrefill {
+  /** Dịch vụ cấp 1 (nút "+ Thêm" trên thẻ dịch vụ của L2) */
+  serviceGroupId?: string;
   testMethodId?: string;
   indicatorId?: string;
   /** null = Mọi nền mẫu */
@@ -22,6 +24,7 @@ export interface ServiceDeclarePrefill {
 /** Link mở Phiếu khai báo có điền sẵn (nút "Tạo dịch vụ hàng loạt" / nhấp đúp ô trống ma trận) */
 export const buildServiceDeclareUrl = (prefill?: ServiceDeclarePrefill | null): string => {
   const params = new URLSearchParams();
+  if (prefill?.serviceGroupId) params.set("service", prefill.serviceGroupId);
   if (prefill?.testMethodId) params.set("method", prefill.testMethodId);
   if (prefill?.indicatorId) params.set("indicator", prefill.indicatorId);
   if (prefill && prefill.specimenTypeId !== undefined) {
@@ -34,6 +37,7 @@ export const buildServiceDeclareUrl = (prefill?: ServiceDeclarePrefill | null): 
 export const parseServiceDeclarePrefill = (params: URLSearchParams): ServiceDeclarePrefill => {
   const specimen = params.get("specimen");
   return {
+    serviceGroupId: params.get("service") ?? undefined,
     testMethodId: params.get("method") ?? undefined,
     indicatorId: params.get("indicator") ?? undefined,
     specimenTypeId: specimen == null ? undefined : specimen === ALL_SPECIMEN_PARAM ? null : specimen,
@@ -108,9 +112,36 @@ export const groupSpecimensByCategory = (specimens: SpecimenTypeDto[], query: st
     .map(([name, items]) => ({ name, items }));
 };
 
-/** Dịch vụ đã có của phương pháp: khóa ô → giá (null = Chờ định giá) */
-export const buildExistingPriceMap = (services: ServiceCatalogItemDto[]): Map<string, number | null> =>
-  new Map(services.map((s) => [cellKeyOf(s.indicatorId, s.specimenTypeId ?? null), s.priceAtDate ?? null]));
+/** Dịch vụ đã có (chỉ tiêu × nền mẫu của phương pháp) → dòng "Đã có dịch vụ · bỏ qua" */
+export interface ExistingServiceInfo {
+  /** null = Chờ định giá */
+  price: number | null;
+  unit: string | null;
+  isSubcontract: boolean;
+}
+
+/** Dịch vụ đã có của phương pháp: khóa ô → giá / ĐVT / HĐ phụ */
+export const buildExistingServiceMap = (services: ServiceCatalogItemDto[]): Map<string, ExistingServiceInfo> =>
+  new Map(
+    services.map((s) => [
+      cellKeyOf(s.indicatorId, s.specimenTypeId ?? null),
+      { price: s.priceAtDate ?? null, unit: s.unit ?? null, isSubcontract: s.isSubcontract },
+    ])
+  );
+
+/** Gợi ý ① Tên dịch vụ: lọc không dấu, khớp đúng tên lên đầu */
+export const filterServiceGroups = <T extends { name: string }>(groups: T[], query: string): { items: T[]; exact?: T } => {
+  const q = normalizeSearch(query.trim());
+  if (!q) return { items: groups };
+  // Khớp đúng: so chữ thường (giữ dấu) — giống BE dùng lại dịch vụ trùng tên
+  const lower = query.trim().toLowerCase();
+  const exact = groups.find((g) => g.name.trim().toLowerCase() === lower);
+  const items = groups.filter((g) => normalizeSearch(g.name).includes(q));
+  return { items: exact ? [exact, ...items.filter((g) => g !== exact)] : items, exact };
+};
+
+/** ĐVT tối đa trên phiếu (theo mẫu BA) */
+export const UNIT_MAX_LENGTH = 30;
 
 export type QuickFillScope = "empty" | "all";
 

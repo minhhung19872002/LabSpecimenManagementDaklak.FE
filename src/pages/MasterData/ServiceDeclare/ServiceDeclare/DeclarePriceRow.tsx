@@ -1,38 +1,39 @@
 import React from "react";
-import { Button, Checkbox, Input, Select } from "antd";
+import { Button, Checkbox, Input } from "antd";
 import { NumericFormat } from "react-number-format";
 import { IndicatorName } from "../../../../components/common";
 import { CopyOutlined } from "../../../../components/common/Icon";
 import type { IndicatorDto } from "../../../../services/masterDataService";
 import { PENDING_PRICE_LABEL, formatPrice } from "../../ServiceCatalog/ServiceCatalog/utils";
-
-export interface SelectOption {
-  value: string;
-  label: string;
-}
+import { UNIT_MAX_LENGTH, type ExistingServiceInfo } from "./utils";
 
 export interface DeclarePriceRowProps {
   cellKey: string;
   /** Tên nền mẫu của khối — dùng cho aria-label */
   columnName: string;
   indicator: IndicatorDto;
-  /** undefined = chưa có dịch vụ; number/null = đã có (null = Chờ định giá) → bỏ qua */
-  existingPrice: number | null | undefined;
+  /** undefined = chưa có dịch vụ; có = đã có dịch vụ → bỏ qua */
+  existing: ExistingServiceInfo | undefined;
   price: number | null;
+  /** ĐVT (tiêu hao) đang hiện trong ô */
+  unit: string;
+  /** ĐVT đã gõ khác mặc định (ĐVT của phương pháp) → tô xanh */
+  unitChanged: boolean;
   isSubcontract: boolean;
-  subcontractorId: string | null;
   /** Có ≥ 2 cột nền mẫu → cho chép giá sang nền mẫu khác */
   canCopy: boolean;
-  subcontractorOptions: SelectOption[];
   onPriceChange: (cellKey: string, value: number | null) => void;
+  onUnitChange: (cellKey: string, value: string) => void;
   onCopyPrice: (indicatorId: string, value: number) => void;
   onSubcontractChange: (cellKey: string, checked: boolean) => void;
-  onSubcontractorChange: (cellKey: string, subcontractorId: string | null) => void;
 }
+
+/** Chỉ tiêu | ĐVT (tiêu hao) | Đơn giá | chép giá | Hợp đồng phụ */
+export const PRICE_ROW_COLUMNS = "minmax(0,1fr) 120px 150px 34px 130px";
 
 const gridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(0,1fr) 150px 34px 130px",
+  gridTemplateColumns: PRICE_ROW_COLUMNS,
   alignItems: "center",
   gap: 10,
   minHeight: 44,
@@ -40,54 +41,76 @@ const gridStyle: React.CSSProperties = {
 };
 const ellipsis: React.CSSProperties = { display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
 const groupStyle: React.CSSProperties = { ...ellipsis, fontSize: 12, lineHeight: "18px", color: "#595959" };
-const priceBase: React.CSSProperties = { width: "100%", height: 32, borderRadius: 8 };
-const emptyInputStyle: React.CSSProperties = { ...priceBase, border: "1px dashed #ffd591", background: "#fffbe6" };
-const filledInputStyle: React.CSSProperties = { ...priceBase, border: "1px solid #b7eb8f", background: "#f6ffed" };
+const existTagStyle: React.CSSProperties = {
+  flex: "none",
+  fontSize: 12,
+  lineHeight: "18px",
+  padding: "0 6px",
+  borderRadius: 4,
+  background: "#f5f5f5",
+  color: "#595959",
+  border: "1px solid #d9d9d9",
+};
+const existCellStyle: React.CSSProperties = { padding: "0 8px", fontSize: 13, color: "rgba(0,0,0,.85)" };
+const inputBase: React.CSSProperties = { width: "100%", height: 32, borderRadius: 8 };
+const emptyInputStyle: React.CSSProperties = { ...inputBase, border: "1px dashed #ffd591", background: "#fffbe6" };
+const filledInputStyle: React.CSSProperties = { ...inputBase, border: "1px solid #b7eb8f", background: "#f6ffed" };
+const unitEmptyStyle: React.CSSProperties = { ...inputBase, fontSize: 13, border: "1px solid #ffa39e", background: "#fff1f0" };
+const unitChangedStyle: React.CSSProperties = { ...inputBase, fontSize: 13, border: "1px solid #91caff", background: "#e6f4ff" };
+const unitDefaultStyle: React.CSSProperties = { ...inputBase, fontSize: 13 };
 const copyBase: React.CSSProperties = { width: 34, height: 32, borderRadius: 8, background: "#fff", padding: 0 };
 const copyOn: React.CSSProperties = { ...copyBase, border: "1px solid #91caff", color: "#096dd9" };
 const copyOff: React.CSSProperties = { ...copyBase, border: "1px solid #f0f0f0", color: "rgba(0,0,0,.25)" };
-
-const filterOption = (input: string, option?: SelectOption) =>
-  (option?.label ?? "").toLowerCase().includes(input.toLowerCase());
 
 /** 1 dòng chỉ tiêu trong khối giá của 1 nền mẫu — memo theo ô */
 const DeclarePriceRow = React.memo<DeclarePriceRowProps>(function DeclarePriceRow({
   cellKey,
   columnName,
   indicator,
-  existingPrice,
+  existing,
   price,
+  unit,
+  unitChanged,
   isSubcontract,
-  subcontractorId,
   canCopy,
-  subcontractorOptions,
   onPriceChange,
+  onUnitChange,
   onCopyPrice,
   onSubcontractChange,
-  onSubcontractorChange,
 }) {
   const name = (
     <span style={{ minWidth: 0 }}>
-      <span style={ellipsis} title={indicator.name}>
-        <IndicatorName name={indicator.name} formattedName={indicator.formattedName} />
+      <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+        <span style={{ ...ellipsis, minWidth: 0 }} title={indicator.name}>
+          <IndicatorName name={indicator.name} formattedName={indicator.formattedName} />
+        </span>
+        {existing && <span style={existTagStyle}>Đã có dịch vụ · bỏ qua</span>}
       </span>
       {indicator.indicatorGroupName && <span style={groupStyle}>{indicator.indicatorGroupName}</span>}
     </span>
   );
 
-  if (existingPrice !== undefined) {
+  if (existing) {
     return (
       <div className="svc-declare-price-row" style={{ borderTop: "1px solid #fafafa", background: "#fafafa" }}>
         <div style={gridStyle}>
           {name}
-          <span style={{ gridColumn: "span 3", textAlign: "right", fontSize: 13, color: "#595959" }}>
-            Đã có dịch vụ · {existingPrice == null ? PENDING_PRICE_LABEL : `${formatPrice(existingPrice)} đ`} — bỏ qua
+          <span style={{ ...existCellStyle, ...ellipsis }} title={existing.unit ?? undefined}>
+            {existing.unit || "—"}
+          </span>
+          <span style={{ ...existCellStyle, textAlign: "right", fontWeight: 500 }}>
+            {existing.price == null ? PENDING_PRICE_LABEL : `${formatPrice(existing.price)} đ`}
+          </span>
+          <span aria-hidden="true" />
+          <span style={{ ...ellipsis, fontSize: 13, color: existing.isSubcontract ? "#531dab" : "#595959" }}>
+            {existing.isSubcontract ? "Có HĐ phụ" : "Không có HĐ phụ"}
           </span>
         </div>
       </div>
     );
   }
 
+  const unitEmpty = !unit.trim();
   const copyEnabled = canCopy && price != null;
   const copyTitle = `Dùng giá này cho ${indicator.name} ở mọi nền mẫu`;
   return (
@@ -97,6 +120,15 @@ const DeclarePriceRow = React.memo<DeclarePriceRowProps>(function DeclarePriceRo
     >
       <div style={gridStyle}>
         {name}
+        <Input
+          value={unit}
+          maxLength={UNIT_MAX_LENGTH}
+          placeholder="Nhập ĐVT"
+          aria-label={`Đơn vị tính (tiêu hao) của ${indicator.name} – ${columnName}`}
+          status={unitEmpty ? "error" : undefined}
+          style={unitEmpty ? unitEmptyStyle : unitChanged ? unitChangedStyle : unitDefaultStyle}
+          onChange={(e) => onUnitChange(cellKey, e.target.value)}
+        />
         <NumericFormat
           value={price ?? ""}
           onValueChange={(values, info) => {
@@ -128,23 +160,6 @@ const DeclarePriceRow = React.memo<DeclarePriceRowProps>(function DeclarePriceRo
           Hợp đồng phụ
         </Checkbox>
       </div>
-      {isSubcontract && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px 10px 38px" }}>
-          <span style={{ fontSize: 13, color: "#531dab" }}>Đơn vị nhận thầu</span>
-          <Select<string, SelectOption>
-            allowClear
-            showSearch
-            placeholder="Chọn đơn vị nhận thầu…"
-            aria-label={`Đơn vị nhận thầu cho ${indicator.name} – ${columnName}`}
-            className="svc-declare-vendor"
-            style={{ width: 260, height: 32 }}
-            value={subcontractorId ?? undefined}
-            options={subcontractorOptions}
-            filterOption={filterOption}
-            onChange={(v) => onSubcontractorChange(cellKey, v ?? null)}
-          />
-        </div>
-      )}
     </div>
   );
 });

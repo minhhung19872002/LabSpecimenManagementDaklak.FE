@@ -3,7 +3,7 @@ import { Spin } from "antd";
 import type { ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
 import ServiceCatalogToolbar, { type ServiceCatalogToolbarProps } from "./ServiceCatalogToolbar";
 import ServiceViewBar, { type ServiceViewBarProps } from "./ServiceViewBar";
-import ServiceGroupCard from "./ServiceGroupCard";
+import ServiceGroupCard, { type ServiceGroupAction } from "./ServiceGroupCard";
 import ServiceCellContextMenu, { type ServiceCellAction } from "./ServiceCellContextMenu";
 import PendingPriceBar from "./PendingPriceBar";
 import type { FoldState, PriceEdits, ServiceGroupCard as GroupCardData, ServiceOpenLevel } from "./utils";
@@ -24,7 +24,8 @@ export interface ServiceCatalogViewProps {
   canEdit: boolean;
   canDelete: boolean;
   onToggleFold: (foldKey: string, open: boolean) => void;
-  onAddToGroup: () => void;
+  onAddToGroup: (serviceGroupId: string | null) => void;
+  onGroupAction: (action: ServiceGroupAction, card: GroupCardData) => void;
   onStartEdit: (serviceId: string) => void;
   onEditCommit: (service: ServiceCatalogItemDto, value: number | null) => void;
   onEditCancel: () => void;
@@ -50,6 +51,7 @@ const ServiceCatalogView: React.FC<ServiceCatalogViewProps> = ({
   canDelete,
   onToggleFold,
   onAddToGroup,
+  onGroupAction,
   onStartEdit,
   onEditCommit,
   onEditCancel,
@@ -77,8 +79,10 @@ const ServiceCatalogView: React.FC<ServiceCatalogViewProps> = ({
                   editingId={editingId}
                   canCreate={canCreate}
                   canEdit={canEdit}
+                  canDelete={canDelete}
                   onToggle={onToggleFold}
                   onAdd={onAddToGroup}
+                  onGroupAction={onGroupAction}
                   onStartEdit={onStartEdit}
                   onEditCommit={onEditCommit}
                   onEditCancel={onEditCancel}

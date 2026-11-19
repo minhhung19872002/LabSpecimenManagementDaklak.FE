@@ -39,7 +39,7 @@ export interface ServiceDeclareViewProps {
   footer: DeclareFooterProps;
 }
 
-/** Phiếu khai báo dịch vụ: ① Phương pháp → ② Nền mẫu → ③ Chỉ tiêu → ④ Giá */
+/** Phiếu khai báo dịch vụ: ① Tên dịch vụ → ② Phương pháp → ③ Nền mẫu → ④ Chỉ tiêu → ⑤ ĐVT + Giá */
 const ServiceDeclareView: React.FC<ServiceDeclareViewProps> = ({
   headerHeight,
   loading,
@@ -72,7 +72,8 @@ const ServiceDeclareView: React.FC<ServiceDeclareViewProps> = ({
       </button>
       <h1 style={{ margin: 0, fontSize: 24, fontWeight: 500, lineHeight: "32px" }}>Phiếu khai báo dịch vụ</h1>
       <div style={{ fontSize: 13, color: "#595959" }}>
-        Tạo 1 hoặc nhiều dịch vụ cùng lúc · mỗi chỉ tiêu × mỗi nền mẫu = 1 dịch vụ · giá để trống → “Chờ định giá”
+        Tạo 1 hoặc nhiều dịch vụ cùng lúc · mỗi chỉ tiêu × mỗi nền mẫu × phương pháp = 1 dịch vụ · giá để trống → “Chờ
+        định giá”
       </div>
     </div>
     <Spin spinning={loading} wrapperClassName="svc-declare-spin">

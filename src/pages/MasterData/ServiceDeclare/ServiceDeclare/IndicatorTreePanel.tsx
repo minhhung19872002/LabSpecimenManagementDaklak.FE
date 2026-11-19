@@ -17,7 +17,8 @@ export interface IndicatorTreeGroupView {
 
 export interface IndicatorTreePanelProps {
   step: StepState;
-  disabled: boolean;
+  /** Có = khóa cây + hiện lời nhắc làm bước trước */
+  lockMessage?: string;
   query: string;
   groups: IndicatorTreeGroupView[];
   selectedIds: Set<string>;
@@ -96,10 +97,10 @@ const IndicatorTreeItem = React.memo<{
   );
 });
 
-/** Bước ③ Chỉ tiêu: cây Nhóm chỉ tiêu → chỉ tiêu, tìm không dấu */
+/** Bước ④ Chỉ tiêu: cây Nhóm chỉ tiêu → chỉ tiêu, tìm không dấu */
 const IndicatorTreePanel: React.FC<IndicatorTreePanelProps> = ({
   step,
-  disabled,
+  lockMessage,
   query,
   groups,
   selectedIds,
@@ -122,7 +123,7 @@ const IndicatorTreePanel: React.FC<IndicatorTreePanelProps> = ({
   >
     <div style={{ padding: "12px 12px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
       <StepLabel
-        index={3}
+        index={4}
         state={step}
         title="Chỉ tiêu"
         required
@@ -172,7 +173,7 @@ const IndicatorTreePanel: React.FC<IndicatorTreePanelProps> = ({
         </React.Fragment>
       ))}
     </div>
-    {disabled && (
+    {lockMessage && (
       <div
         style={{
           position: "absolute",
@@ -186,7 +187,7 @@ const IndicatorTreePanel: React.FC<IndicatorTreePanelProps> = ({
           color: "#595959",
         }}
       >
-        Chọn phương pháp ở bước ① trước.
+        {lockMessage}
       </div>
     )}
   </div>

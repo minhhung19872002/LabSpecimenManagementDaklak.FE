@@ -4,6 +4,7 @@ import CreateServicesButton from "./CreateServicesButton";
 import { PILL_STYLE } from "./utils";
 
 export interface DeclareSummary {
+  serviceName: string;
   methodName?: string;
   /** "2 nền mẫu" / "Mọi nền mẫu" */
   specimenLabel: string;
@@ -16,6 +17,8 @@ export interface DeclareSummary {
 
 export interface DeclareFooterProps {
   summary: DeclareSummary;
+  /** Lỗi chặn nút Tạo (vd "Chưa nhập tên dịch vụ", "2 dòng chưa nhập ĐVT") */
+  problems: string[];
   canSubmit: boolean;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
@@ -25,9 +28,10 @@ const newPill: React.CSSProperties = { ...PILL_STYLE, background: "#e6f4ff", col
 const existPill: React.CSSProperties = { ...PILL_STYLE, background: "#f5f5f5", color: "#595959", borderColor: "#d9d9d9" };
 const pendingPill: React.CSSProperties = { ...PILL_STYLE, background: "#fffbe6", color: "#ad4e00", borderColor: "#ffd591" };
 const subPill: React.CSSProperties = { ...PILL_STYLE, background: "#f9f0ff", color: "#531dab", borderColor: "#d3adf7" };
+const problemPill: React.CSSProperties = { ...PILL_STYLE, background: "#fff1f0", color: "#cf1322", borderColor: "#ffa39e" };
 
 /** Chân phiếu: tóm tắt + Hủy / Tạo N dịch vụ */
-const DeclareFooter: React.FC<DeclareFooterProps> = ({ summary, canSubmit, onCancel, onSubmit }) => (
+const DeclareFooter: React.FC<DeclareFooterProps> = ({ summary, problems, canSubmit, onCancel, onSubmit }) => (
   <div
     style={{
       padding: "12px 20px",
@@ -42,13 +46,19 @@ const DeclareFooter: React.FC<DeclareFooterProps> = ({ summary, canSubmit, onCan
   >
     <div style={{ flex: 1, minWidth: 300, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 8px" }}>
       <span style={{ color: "#595959" }}>
-        {summary.methodName ?? "Chưa chọn phương pháp"} · {summary.specimenLabel} × {summary.indicatorCount} chỉ tiêu
+        {summary.serviceName.trim() || "Chưa đặt tên dịch vụ"} · {summary.methodName ?? "Chưa chọn phương pháp"} ·{" "}
+        {summary.specimenLabel} × {summary.indicatorCount} chỉ tiêu
       </span>
       <span aria-hidden="true" style={{ color: "#8c8c8c" }}>→</span>
       <span style={newPill}>{summary.newCount} dịch vụ mới</span>
       {summary.existingCount > 0 && <span style={existPill}>{summary.existingCount} đã có, bỏ qua</span>}
       {summary.pendingCount > 0 && <span style={pendingPill}>{summary.pendingCount} chờ định giá</span>}
       {summary.subcontractCount > 0 && <span style={subPill}>{summary.subcontractCount} hợp đồng phụ</span>}
+      {problems.length > 0 && (
+        <span role="alert" style={problemPill}>
+          {problems.join(" · ")}
+        </span>
+      )}
     </div>
     <span style={{ display: "inline-flex", gap: 8 }}>
       <Button onClick={onCancel} style={{ height: 38, padding: "0 16px", borderRadius: 8 }}>

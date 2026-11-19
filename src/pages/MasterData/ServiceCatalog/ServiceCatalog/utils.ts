@@ -1,13 +1,19 @@
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
-import type { ImportServicePriceRowInput, ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
+import * as yup from "yup";
+import type {
+  ImportServicePriceRowInput,
+  ServiceCatalogItemDto,
+  ServiceGroupDto,
+} from "../../../../services/serviceCatalogService";
 
 /** Nền mẫu "Mọi nền mẫu" (dịch vụ không gắn nền mẫu) */
 export const ALL_SPECIMEN_KEY = "__all__";
 export const ALL_SPECIMEN_NAME = "Mọi nền mẫu";
 
-const NO_GROUP_KEY = "__none__";
-const NO_GROUP_NAME = "Chưa phân nhóm";
+/** Giá trị "Chưa thuộc dịch vụ" (serviceGroupId null) — dùng làm khoá thẻ và option trong Select */
+export const NO_GROUP_KEY = "__none__";
+export const NO_GROUP_NAME = "Chưa thuộc dịch vụ";
 
 export const specimenKeyOf = (specimenTypeId?: string | null): string => specimenTypeId || ALL_SPECIMEN_KEY;
 
@@ -81,9 +87,10 @@ export const filterServices = (services: ServiceCatalogItemDto[], f: ServiceBase
             s.indicatorName,
             s.specimenTypeName || ALL_SPECIMEN_NAME,
             s.serviceCode,
+            s.serviceGroupName,
+            s.serviceGroupCode,
             s.indicatorGroupName,
             s.testMethodName,
-            s.subcontractorName,
           ].join(" ")
         ).includes(kw))
   );
@@ -146,11 +153,13 @@ export interface ServiceSpecimenBlock {
   pendingCount: number;
 }
 
-/** 1 thẻ "Dịch vụ" = 1 Nhóm chỉ tiêu (BA: tên dịch vụ chính là nhóm chỉ tiêu cũ) */
+/** 1 thẻ "Dịch vụ" = 1 ServiceGroup (NDVxxxx); groupId null = "Chưa thuộc dịch vụ" */
 export interface ServiceGroupCard {
   /** Khoá gập/mở: "S:<nhóm>" */
   foldKey: string;
   groupId: string | null;
+  /** Mã dịch vụ NDVxxxx (null với thẻ "Chưa thuộc dịch vụ") */
+  code: string | null;
   name: string;
   initials: string;
   specimenCount: number;
@@ -211,14 +220,24 @@ const buildSpecimenBlocks = (groupKey: string, items: ServiceCatalogItemDto[], e
   return result;
 };
 
-/** Gom dịch vụ: Dịch vụ (nhóm chỉ tiêu) ▸ Nền mẫu ▸ Chỉ tiêu (mỗi dòng 1 phương pháp) */
-export const buildServiceGroups = (services: ServiceCatalogItemDto[], edits: PriceEdits): ServiceGroupCard[] => {
-  const groups = new Map<string, { id: string | null; name: string; items: ServiceCatalogItemDto[] }>();
+/**
+ * Gom dịch vụ: Dịch vụ (ServiceGroup, khai báo ở phiếu) ▸ Nền mẫu ▸ Chỉ tiêu (mỗi dòng 1 phương pháp). Dòng cũ chưa gắn → "Chưa thuộc dịch vụ" (cuối).
+ * `emptyGroups`: tên dịch vụ chưa có dòng nào → vẫn hiện thẻ rỗng để đổi tên / xóa / thêm chỉ tiêu.
+ */
+export const buildServiceGroups = (
+  services: ServiceCatalogItemDto[],
+  edits: PriceEdits,
+  emptyGroups: readonly ServiceGroupDto[] = []
+): ServiceGroupCard[] => {
+  const groups = new Map<string, { id: string | null; code: string | null; name: string; items: ServiceCatalogItemDto[] }>();
+  for (const g of emptyGroups) {
+    groups.set(g.id, { id: g.id, code: g.code, name: g.name, items: [] });
+  }
   for (const s of services) {
-    const key = s.indicatorGroupId || NO_GROUP_KEY;
+    const key = s.serviceGroupId || NO_GROUP_KEY;
     let g = groups.get(key);
     if (!g) {
-      g = { id: s.indicatorGroupId ?? null, name: s.indicatorGroupName || NO_GROUP_NAME, items: [] };
+      g = { id: s.serviceGroupId ?? null, code: s.serviceGroupCode ?? null, name: s.serviceGroupName || NO_GROUP_NAME, items: [] };
       groups.set(key, g);
     }
     g.items.push(s);
@@ -231,6 +250,7 @@ export const buildServiceGroups = (services: ServiceCatalogItemDto[], edits: Pri
     cards.push({
       foldKey: `S:${groupKey}`,
       groupId: g.id,
+      code: g.code,
       name: g.name,
       initials: initialsOf(g.name),
       specimenCount: specimens.length,
@@ -249,6 +269,21 @@ export const buildServiceGroups = (services: ServiceCatalogItemDto[], edits: Pri
 
 export type FoldState = Readonly<Record<string, boolean>>;
 
+/**
+ * Tên dịch vụ chưa có dòng nào (kể cả dòng bị lọc ẩn). Đang lọc phương pháp / nền mẫu / lọc nhanh → không hiện;
+ * đang gõ tìm → chỉ hiện nhóm khớp tên / mã.
+ */
+export const findEmptyGroups = (
+  groups: readonly ServiceGroupDto[],
+  services: readonly ServiceCatalogItemDto[],
+  f: ServiceBaseFilter & { quickFilter: ServiceQuickFilter }
+): ServiceGroupDto[] => {
+  if (f.testMethodId || f.specimenKey || f.quickFilter !== "all") return [];
+  const used = new Set(services.map((s) => s.serviceGroupId).filter(Boolean));
+  const kw = foldText(f.keyword.trim());
+  return groups.filter((g) => !used.has(g.id) && (!kw || foldText(`${g.name} ${g.code}`).includes(kw)));
+};
+
 /** Thẻ dịch vụ mở? Người dùng đã bấm thì theo đó, chưa thì theo "Mở đến" */
 export const isServiceOpen = (fold: FoldState, key: string, level: ServiceOpenLevel): boolean =>
   fold[key] ?? level !== "service";
@@ -261,16 +296,33 @@ export const isSpecimenOpen = (fold: FoldState, key: string, level: ServiceOpenL
 
 export const EXCEL_COLUMNS = ["Service_ID", "Parameter", "Matrix", "Method", "Unit_Price"] as const;
 
+/** Cột file xuất: cột bắt buộc khi nhập + thông tin dịch vụ (nhập Excel chỉ đọc Service_ID, Unit_Price theo tên cột) */
+export const EXPORT_COLUMNS = [
+  "Service_ID",
+  "Service_Group_Code",
+  "Service_Name",
+  "Parameter",
+  "Matrix",
+  "Method",
+  "Unit",
+  "Subcontract",
+  "Unit_Price",
+] as const;
+
 export const exportServicesToExcel = (services: ServiceCatalogItemDto[]): void => {
   const rows = services.map((s) => ({
     Service_ID: s.serviceCode ?? "",
+    Service_Group_Code: s.serviceGroupCode ?? "",
+    Service_Name: s.serviceGroupName || NO_GROUP_NAME,
     Parameter: s.indicatorName,
     Matrix: s.specimenTypeName || ALL_SPECIMEN_NAME,
     Method: s.testMethodName,
+    Unit: s.unit ?? "",
+    Subcontract: s.isSubcontract ? "Có" : "",
     Unit_Price: s.priceAtDate ?? "",
   }));
-  const ws = XLSX.utils.json_to_sheet(rows, { header: [...EXCEL_COLUMNS] });
-  ws["!cols"] = [{ wch: 12 }, { wch: 40 }, { wch: 22 }, { wch: 40 }, { wch: 14 }];
+  const ws = XLSX.utils.json_to_sheet(rows, { header: [...EXPORT_COLUMNS] });
+  ws["!cols"] = [{ wch: 12 }, { wch: 12 }, { wch: 32 }, { wch: 40 }, { wch: 22 }, { wch: 40 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "BangGia");
   XLSX.writeFile(wb, `bang-gia-dich-vu_${dayjs().format("YYYY-MM-DD")}.xlsx`);
@@ -307,3 +359,72 @@ export const parseImportFile = async (file: File): Promise<ImportServicePriceRow
     })
     .filter((r) => r.serviceCode || r.unitPrice != null);
 };
+
+// ===================== Thêm dịch vụ (ServiceGroup) =====================
+
+export const serviceGroupSchema = yup.object({
+  name: yup.string().trim().required("Vui lòng nhập tên dịch vụ").max(256, "Tối đa 256 ký tự"),
+});
+
+export type ServiceGroupFormData = yup.InferType<typeof serviceGroupSchema>;
+
+// ===================== Chuyển dịch vụ / HĐ phụ =====================
+
+/** HĐ phụ khi chuyển nhiều dòng: giữ nguyên / có / không */
+export type SubcontractChoice = "keep" | "yes" | "no";
+
+export interface AssignServiceFormData {
+  /** NO_GROUP_KEY = "Chưa thuộc dịch vụ" */
+  serviceGroupKey: string;
+  subcontract: SubcontractChoice;
+}
+
+/** Đối tượng đang chuyển: 1 dòng (đổi cả HĐ phụ) hoặc cả nền mẫu trong 1 thẻ */
+export interface AssignTarget {
+  title: string;
+  serviceIds: string[];
+  /** Nhóm hiện tại (để mặc định + báo "không đổi") */
+  currentGroupKey: string;
+  single: boolean;
+}
+
+export interface GroupOption {
+  value: string;
+  label: string;
+  /** Chuỗi không dấu để tìm */
+  search: string;
+}
+
+export const buildGroupOptions = (groups: readonly ServiceGroupDto[]): GroupOption[] => [
+  ...[...groups]
+    .sort((a, b) => compareVi(a.name, b.name))
+    .map((g) => ({ value: g.id, label: `${g.code} · ${g.name}`, search: foldText(`${g.code} ${g.name}`) })),
+  { value: NO_GROUP_KEY, label: NO_GROUP_NAME, search: foldText(NO_GROUP_NAME) },
+];
+
+export const groupKeyOf = (serviceGroupId?: string | null): string => serviceGroupId || NO_GROUP_KEY;
+
+/** Áp kết quả chuyển lên danh sách đang hiển thị (không tải lại) */
+export const applyAssign = (
+  services: ServiceCatalogItemDto[],
+  ids: ReadonlySet<string>,
+  group: ServiceGroupDto | null | undefined,
+  isSubcontract: boolean | null
+): ServiceCatalogItemDto[] =>
+  services.map((s) => {
+    if (!ids.has(s.id)) return s;
+    const next = { ...s };
+    if (group !== undefined) {
+      next.serviceGroupId = group?.id ?? null;
+      next.serviceGroupCode = group?.code ?? null;
+      next.serviceGroupName = group?.name ?? null;
+    }
+    if (isSubcontract != null) {
+      next.isSubcontract = isSubcontract;
+      if (!isSubcontract) {
+        next.subcontractorId = null;
+        next.subcontractorName = null;
+      }
+    }
+    return next;
+  });
