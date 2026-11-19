@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Switch, Tooltip } from "antd";
 import { DeleteOutlined, EditOutlined, RightOutlined } from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
-import type { MethodBatchNormDto, ServiceBatchNormDto } from "../../../../services/serviceCatalogService";
+import type { MethodBatchNormDto, ServiceBatchNormDto, ServiceBatchNormEquipmentDto } from "../../../../services/serviceCatalogService";
 import { NormEquipmentPopover, NormMaterialPopover } from "./NormMaterialPopover";
 import { NORM_PREVIEW_LIMIT, isNormPending, methodNameOf, type NormIndicatorBlock as IndicatorBlockData } from "./utils";
 
@@ -18,6 +18,7 @@ export interface NormIndicatorBlockProps {
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
+  loadEquipments: (testMethodIndicatorId: string) => Promise<ServiceBatchNormEquipmentDto[]>;
 }
 
 /** Công tắc Trạng thái sử dụng — tự quản loading, chỉ dòng được bấm re-render */
@@ -66,6 +67,7 @@ const NormIndicatorBlock: React.FC<NormIndicatorBlockProps> = ({
   onToggleActive,
   onDelete,
   loadMaterials,
+  loadEquipments,
 }) => {
   const total = block.norms.length;
   const hidden = Math.max(0, total - NORM_PREVIEW_LIMIT);
@@ -92,10 +94,17 @@ const NormIndicatorBlock: React.FC<NormIndicatorBlockProps> = ({
         return (
           <React.Fragment key={n.id}>
             <div className={cellClass("bn-method", i, n.isActive)} style={{ gridRow: row, gridColumn: 2 }}>
-              <span className="bn-method-name" title={n.serviceCode ? `${methodName} · ${n.serviceCode}` : methodName}>
-                {methodName}
+              <span className="bn-method-line">
+                <span className="bn-method-name" title={n.serviceCode ? `${methodName} · ${n.serviceCode}` : methodName}>
+                  {methodName}
+                </span>
+                {isNormPending(n) && <span className="bn-tag-pending">Chưa khai báo định mức</span>}
               </span>
-              {isNormPending(n) && <span className="bn-tag-pending">Chưa khai báo định mức</span>}
+              {n.code && (
+                <span className="bn-norm-code" title="Mã định mức">
+                  {n.code}
+                </span>
+              )}
             </div>
             <div className={cellClass("is-centered", i, n.isActive)} style={{ gridRow: row, gridColumn: 3 }}>
               <NormMaterialPopover
@@ -106,7 +115,12 @@ const NormIndicatorBlock: React.FC<NormIndicatorBlockProps> = ({
               />
             </div>
             <div className={cellClass("is-centered", i, n.isActive)} style={{ gridRow: row, gridColumn: 4 }}>
-              <NormEquipmentPopover count={n.equipmentCount} title={label} />
+              <NormEquipmentPopover
+                testMethodIndicatorId={n.testMethodIndicatorId}
+                count={n.equipmentCount}
+                title={label}
+                loadEquipments={loadEquipments}
+              />
             </div>
             <div className={cellClass("bn-status", i, n.isActive)} style={{ gridRow: row, gridColumn: 5 }}>
               <NormStatusSwitch

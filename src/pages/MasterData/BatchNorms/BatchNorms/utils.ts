@@ -88,6 +88,7 @@ export const filterNorms = (norms: readonly ServiceBatchNormDto[], f: NormFilter
     if (f.testMethodId && n.testMethodId !== f.testMethodId) return false;
     if (!kw) return true;
     const text = [
+      n.code,
       categoryNameOf(n),
       specimenNameOf(n),
       n.indicatorName,
@@ -359,6 +360,7 @@ export const applyAddMethodTab = (options: readonly AddMethodOption[], tab: AddM
 // ===================== Xuất Excel =====================
 
 const EXPORT_COLUMNS = [
+  "Mã định mức",
   "Nhóm nền mẫu",
   "Nền mẫu",
   "Chỉ tiêu",
@@ -376,6 +378,7 @@ export const exportNormsToExcel = (cards: readonly NormGroupCard[]): void => {
     card.specimens.flatMap((s) =>
       s.indicators.flatMap((b) =>
         b.norms.map((n) => ({
+          "Mã định mức": n.code ?? "",
           "Nhóm nền mẫu": card.name,
           "Nền mẫu": s.name,
           "Chỉ tiêu": b.indicatorName,
@@ -390,7 +393,7 @@ export const exportNormsToExcel = (cards: readonly NormGroupCard[]): void => {
     )
   );
   const ws = XLSX.utils.json_to_sheet(rows, { header: [...EXPORT_COLUMNS] });
-  ws["!cols"] = [{ wch: 24 }, { wch: 30 }, { wch: 36 }, { wch: 36 }, { wch: 12 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 16 }];
+  ws["!cols"] = [{ wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 36 }, { wch: 36 }, { wch: 12 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 16 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "DinhMuc");
   XLSX.writeFile(wb, `dinh-muc-theo-me_${dayjs().format("YYYY-MM-DD")}.xlsx`);

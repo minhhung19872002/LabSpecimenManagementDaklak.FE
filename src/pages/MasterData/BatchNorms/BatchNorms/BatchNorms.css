@@ -191,6 +191,16 @@
 
 .bn-method {
   grid-column: 2;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.bn-method-line {
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
 }
 
 .bn-method-name {
@@ -198,6 +208,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.bn-norm-code {
+  flex: none;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+  color: #8c8c8c;
+  white-space: nowrap;
 }
 
 .bn-tag-pending {

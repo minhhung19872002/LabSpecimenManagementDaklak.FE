@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { message } from "antd";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   batchNormService,
   type BatchNormOverviewDto,
@@ -11,7 +12,8 @@ import { getApiErrorMessage } from "../../../utils/errorHandler";
 import BatchNormsView from "./BatchNorms/BatchNormsView";
 import type { DeleteNormTarget } from "./BatchNorms/DeleteNormConfirm";
 import type { UndoToastData } from "./BatchNorms/UndoToast";
-import { ALL_SPECIMEN_NAME, type FoldState } from "../ServiceCatalog/ServiceCatalog/utils";
+import { ALL_SPECIMEN_NAME, specimenKeyOf, type FoldState } from "../ServiceCatalog/ServiceCatalog/utils";
+import { BATCH_NORM_CREATE_PATH, type BatchNormCreatedState } from "./BatchNormCreate/utils";
 import {
   NO_CATEGORY_NAME,
   applyAddMethodTab,
@@ -21,6 +23,7 @@ import {
   buildNormGroups,
   buildNormMethodOptions,
   buildSpecimenFilterOptions,
+  categoryKeyOf,
   exportNormsToExcel,
   filterAddMethodOptions,
   filterNorms,
@@ -36,7 +39,7 @@ import {
 /** Nút trên header trang Danh mục gọi vào L3 */
 export interface BatchNormsActions {
   exportExcel: () => void;
-  /** Thêm định mức — chờ task sau */
+  /** Thêm định mức → Phiếu khai báo định mức theo mẻ */
   openCreate: () => void;
 }
 
@@ -50,8 +53,15 @@ const categoryNameOf = (n: ServiceBatchNormDto) =>
 
 const blockKeyOfNorm = (n: ServiceBatchNormDto) => indicatorBlockKeyOf(n.specimenTypeId, n.indicatorId);
 
+const isCreatedState = (state: unknown): state is BatchNormCreatedState =>
+  typeof state === "object" && state != null && typeof (state as BatchNormCreatedState).createdToast === "string";
+
 /** Container L3 — Định mức theo mẻ (theo dịch vụ = nền mẫu × chỉ tiêu × phương pháp) */
 const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_props, ref) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  /** Vừa tạo từ Phiếu khai báo → mở sẵn các định mức mới sau khi tải */
+  const [createdIds, setCreatedIds] = useState<readonly string[] | null>(null);
   const [overview, setOverview] = useState<BatchNormOverviewDto>(EMPTY_OVERVIEW);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -102,6 +112,27 @@ const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_pr
   }, [toast]);
 
   const { norms } = overview;
+
+  useEffect(() => {
+    if (!createdIds || createdIds.length === 0) return;
+    const ids = new Set(createdIds);
+    const created = norms.filter((n) => ids.has(n.id));
+    if (created.length === 0) return;
+    setFold((prev) => {
+      const next = { ...prev };
+      for (const n of created) {
+        next[`G:${categoryKeyOf(n)}`] = true;
+        next[`N:${specimenKeyOf(n.specimenTypeId)}`] = true;
+      }
+      return next;
+    });
+    setMore((prev) => {
+      const next = { ...prev };
+      for (const n of created) next[blockKeyOfNorm(n)] = true;
+      return next;
+    });
+    setCreatedIds(null);
+  }, [createdIds, norms]);
   const candidatesByKey = useMemo(() => groupCandidates(overview.candidates), [overview.candidates]);
 
   const baseNorms = useMemo(
@@ -167,6 +198,16 @@ const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_pr
     setToast({ key: Date.now(), text, canUndo: undo != null });
   }, []);
 
+  // Quay về từ Phiếu khai báo định mức: hiện toast, nhớ id để mở sẵn, xóa state khỏi history
+  useEffect(() => {
+    const state: unknown = location.state;
+    if (!isCreatedState(state)) return;
+    showToast(state.createdToast, null);
+    setCreatedIds(state.createdIds ?? []);
+    navigate(location.pathname + location.search, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ xử lý khi state điều hướng đổi
+  }, [location.state]);
+
   const handleToggleActive = useCallback(async (id: string) => {
     try {
       const updated = await batchNormService.toggleServiceActive(id);
@@ -181,6 +222,10 @@ const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_pr
 
   const loadMaterials = useCallback(
     async (testMethodIndicatorId: string) => batchNormService.getByService(testMethodIndicatorId),
+    []
+  );
+  const loadEquipments = useCallback(
+    async (testMethodIndicatorId: string) => batchNormService.getEquipments(testMethodIndicatorId),
     []
   );
 
@@ -317,9 +362,9 @@ const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_pr
         }
         exportNormsToExcel(cards);
       },
-      openCreate: () => undefined,
+      openCreate: () => navigate(BATCH_NORM_CREATE_PATH),
     }),
-    [cards]
+    [cards, navigate]
   );
 
   return (
@@ -364,6 +409,7 @@ const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_pr
       onToggleActive={handleToggleActive}
       onDelete={handleDelete}
       loadMaterials={loadMaterials}
+      loadEquipments={loadEquipments}
       addModal={{
         target: addTarget,
         options: addOptions,

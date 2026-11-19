@@ -1,6 +1,6 @@
 import React from "react";
 import { RightOutlined } from "../../../../components/common/Icon";
-import type { MethodBatchNormDto, ServiceBatchNormDto } from "../../../../services/serviceCatalogService";
+import type { MethodBatchNormDto, ServiceBatchNormDto, ServiceBatchNormEquipmentDto } from "../../../../services/serviceCatalogService";
 import NormSpecimenBlock from "./NormSpecimenBlock";
 import {
   isFoldOpen,
@@ -26,6 +26,7 @@ export interface NormGroupCardProps {
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
+  loadEquipments: (testMethodIndicatorId: string) => Promise<ServiceBatchNormEquipmentDto[]>;
 }
 
 /** Cấp 1: thẻ nhóm nền mẫu — tên, số liệu, số đang / ngừng sử dụng */
@@ -45,6 +46,7 @@ const NormGroupCard: React.FC<NormGroupCardProps> = ({
   onToggleActive,
   onDelete,
   loadMaterials,
+  loadEquipments,
 }) => {
   const open = isFoldOpen(fold, card.foldKey, allOpen, filtered);
   return (
@@ -97,6 +99,7 @@ const NormGroupCard: React.FC<NormGroupCardProps> = ({
               onToggleActive={onToggleActive}
               onDelete={onDelete}
               loadMaterials={loadMaterials}
+              loadEquipments={loadEquipments}
             />
           ))}
         </>

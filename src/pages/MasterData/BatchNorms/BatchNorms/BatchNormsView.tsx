@@ -1,6 +1,6 @@
 import React from "react";
 import { Spin } from "antd";
-import type { MethodBatchNormDto, ServiceBatchNormDto } from "../../../../services/serviceCatalogService";
+import type { MethodBatchNormDto, ServiceBatchNormDto, ServiceBatchNormEquipmentDto } from "../../../../services/serviceCatalogService";
 import BatchNormsToolbar, { type BatchNormsToolbarProps } from "./BatchNormsToolbar";
 import BatchNormsViewBar from "./BatchNormsViewBar";
 import NormGroupCard from "./NormGroupCard";
@@ -36,6 +36,7 @@ export interface BatchNormsViewProps {
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
+  loadEquipments: (testMethodIndicatorId: string) => Promise<ServiceBatchNormEquipmentDto[]>;
   addModal: AddMethodModalProps;
   deleteConfirm: DeleteNormConfirmProps;
   toast: UndoToastProps;
@@ -66,6 +67,7 @@ const BatchNormsView: React.FC<BatchNormsViewProps> = ({
   onToggleActive,
   onDelete,
   loadMaterials,
+  loadEquipments,
   addModal,
   deleteConfirm,
   toast,
@@ -105,6 +107,7 @@ const BatchNormsView: React.FC<BatchNormsViewProps> = ({
               onToggleActive={onToggleActive}
               onDelete={onDelete}
               loadMaterials={loadMaterials}
+              loadEquipments={loadEquipments}
             />
           ))}
         </div>

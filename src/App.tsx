@@ -231,6 +231,10 @@ const ServiceDeclarePage = Loadable(
   lazy(() => import("./pages/MasterData/ServiceDeclare/ServiceDeclarePage")),
 );
 
+const BatchNormCreatePage = Loadable(
+  lazy(() => import("./pages/MasterData/BatchNorms/BatchNormCreatePage")),
+);
+
 // Organization
 const OrganizationList = Loadable(
   lazy(() => import("./pages/Organization/OrganizationList")),
@@ -463,6 +467,7 @@ function App() {
           {/* Master Data - Ngân hàng dữ liệu */}
           <Route path="master-data" element={<MasterDataList />} />
           <Route path="master-data/services/declare" element={<ServiceDeclarePage />} />
+          <Route path="master-data/batch-norms/create" element={<BatchNormCreatePage />} />
 
           {/* Organization - Cơ sở/Doanh nghiệp */}
           <Route path="organizations" element={<OrganizationList />} />

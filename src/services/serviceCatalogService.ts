@@ -1,4 +1,5 @@
 import { api } from "./api";
+import type { ProductType } from "./productService";
 
 // ===================== L2 — Dịch vụ & Bảng giá =====================
 
@@ -261,6 +262,8 @@ export const serviceCatalogService = {
 /** Định mức của 1 dịch vụ (Nền mẫu × Chỉ tiêu × PP) */
 export interface ServiceBatchNormDto {
   id: string;
+  /** Mã định mức DM-{năm}-{0001} */
+  code: string;
   testMethodIndicatorId: string;
   serviceCode?: string | null;
   serviceGroupName?: string | null;
@@ -330,6 +333,81 @@ export interface CreateUpdateMethodBatchNormInput {
   batchQuantity?: number | null;
 }
 
+// ---- Phiếu khai báo định mức theo mẻ ----
+
+/** Tên dịch vụ (NDV) để chọn bộ áp dụng; id null = dịch vụ chưa đặt tên */
+export interface BatchNormServiceGroupOptionDto {
+  id?: string | null;
+  code?: string | null;
+  name: string;
+  totalCount: number;
+  /** Số bộ chưa có định mức */
+  freeCount: number;
+}
+
+/** 1 bộ Nền mẫu × Chỉ tiêu × Phương pháp trong tên dịch vụ */
+export interface BatchNormComboDto {
+  testMethodIndicatorId: string;
+  serviceCode?: string | null;
+  sampleTypeCategoryId?: string | null;
+  sampleTypeCategoryName?: string | null;
+  specimenTypeId?: string | null;
+  specimenTypeName?: string | null;
+  specimenTypeSortOrder: number;
+  indicatorId: string;
+  indicatorCode?: string | null;
+  indicatorName?: string | null;
+  indicatorFormattedName?: string | null;
+  testMethodId: string;
+  testMethodCode?: string | null;
+  testMethodName?: string | null;
+  /** Đã có định mức → không chọn được */
+  existingNormCode?: string | null;
+}
+
+export interface BatchNormUnitOptionDto {
+  id: string;
+  name: string;
+}
+
+/** Vật tư / thiết bị từ Danh mục vật tư thiết bị */
+export interface BatchNormProductOptionDto {
+  id: string;
+  code: string;
+  name: string;
+  formattedName?: string | null;
+  productType: ProductType;
+  categories?: string | null;
+  /** Đơn vị tiêu hao hợp lệ (ĐV thể tích, ĐV cơ sở, ĐV quy đổi) */
+  units: BatchNormUnitOptionDto[];
+  defaultUnitId?: string | null;
+}
+
+export interface BatchNormCreateOptionsDto {
+  serviceGroups: BatchNormServiceGroupOptionDto[];
+  combos: BatchNormComboDto[];
+  nextCode: string;
+  materials: BatchNormProductOptionDto[];
+  equipments: BatchNormProductOptionDto[];
+  capacityUnits: string[];
+}
+
+export interface BulkCreateBatchNormsInput {
+  testMethodIndicatorIds: string[];
+  materials: { productId: string; quantity: number; unitId: string }[];
+  equipments: { productId: string; capacity: number; capacityUnit: string }[];
+}
+
+export interface ServiceBatchNormEquipmentDto {
+  id: string;
+  productId: string;
+  productCode?: string | null;
+  productName?: string | null;
+  productFormattedName?: string | null;
+  capacity: number;
+  capacityUnit: string;
+}
+
 const NORM_URL = "/api/v1/batch-norms";
 
 export const batchNormService = {
@@ -360,6 +438,37 @@ export const batchNormService = {
   getByService: async (testMethodIndicatorId: string): Promise<MethodBatchNormDto[]> => {
     const response = await api.get<MethodBatchNormDto[] | { items: MethodBatchNormDto[] }>(
       `${NORM_URL}/by-service/${testMethodIndicatorId}`
+    );
+    return toList(response.data);
+  },
+  getEquipments: async (testMethodIndicatorId: string): Promise<ServiceBatchNormEquipmentDto[]> => {
+    const response = await api.get<ServiceBatchNormEquipmentDto[] | { items: ServiceBatchNormEquipmentDto[] }>(
+      `${NORM_URL}/by-service/${testMethodIndicatorId}/equipments`
+    );
+    return toList(response.data);
+  },
+  /** serviceGroupId = null + ungrouped = true → bộ chưa đặt tên dịch vụ */
+  getCreateOptions: async (params: { serviceGroupId?: string | null; ungrouped?: boolean } = {}): Promise<BatchNormCreateOptionsDto> => {
+    const response = await api.get<BatchNormCreateOptionsDto>(`${NORM_URL}/create-options`, {
+      params: {
+        serviceGroupId: params.serviceGroupId || undefined,
+        ungrouped: params.ungrouped || undefined,
+      },
+    });
+    const d = response.data;
+    return {
+      serviceGroups: d?.serviceGroups ?? [],
+      combos: d?.combos ?? [],
+      nextCode: d?.nextCode ?? "",
+      materials: d?.materials ?? [],
+      equipments: d?.equipments ?? [],
+      capacityUnits: d?.capacityUnits ?? [],
+    };
+  },
+  bulkCreate: async (input: BulkCreateBatchNormsInput): Promise<ServiceBatchNormDto[]> => {
+    const response = await api.post<ServiceBatchNormDto[] | { items: ServiceBatchNormDto[] }>(
+      `${NORM_URL}/bulk-create`,
+      input
     );
     return toList(response.data);
   },

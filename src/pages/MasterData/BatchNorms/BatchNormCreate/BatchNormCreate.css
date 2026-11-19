@@ -1,0 +1,228 @@
+.bnc-spin {
+  flex: 1;
+  min-height: 0;
+}
+
+.bnc-spin > .ant-spin-container {
+  height: 100%;
+}
+
+.bnc-row:hover {
+  background: #f5faff !important;
+}
+
+.bnc-btn-link {
+  height: 24px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: #096dd9;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.bnc-del {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #cf1322;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+}
+
+.bnc-del.is-small {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: #8c8c8c;
+}
+
+.bnc-del:hover {
+  background: #fff1f0;
+  border-color: #ff7875;
+  color: #cf1322;
+}
+
+.bnc-pick-btn {
+  height: 40px;
+  border: 1px dashed #096dd9;
+  border-radius: 8px;
+  background: #fff;
+  color: #096dd9;
+  font: inherit;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.bnc-pick-btn:hover {
+  background: #e6f4ff;
+}
+
+.bnc-pick-btn.is-error {
+  border-color: #ff4d4f;
+  color: #cf1322;
+}
+
+.bnc-addbox {
+  position: relative;
+  margin-left: auto;
+  flex: 0 0 240px;
+}
+
+.bnc-addbox-input {
+  height: 34px;
+  box-sizing: border-box;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  background: #fff;
+}
+
+.bnc-addbox-input:focus-within {
+  border-color: #096dd9;
+  box-shadow: 0 0 0 2px rgba(9, 109, 217, 0.2);
+}
+
+.bnc-addbox-input input {
+  border: 0;
+  outline: none;
+  font: inherit;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+}
+
+.bnc-listbox {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  width: 460px;
+  z-index: 20;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  padding: 4px;
+}
+
+.bnc-option {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bnc-option:hover,
+.bnc-option.is-active {
+  background: #f5faff;
+}
+
+.bnc-option:disabled {
+  cursor: not-allowed;
+  color: #bfbfbf;
+}
+
+.bnc-ellipsis {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bnc-code {
+  display: block;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+  color: #8c8c8c;
+}
+
+.bnc-qty input.ant-input,
+input.bnc-qty {
+  text-align: right;
+  font-weight: 500;
+}
+
+.bnc-input-empty input.ant-input,
+input.bnc-input-empty {
+  border-style: dashed;
+  border-color: #ffd591;
+  background: #fffbe6;
+}
+
+.bnc-pick-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 170px;
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.bnc-pick-row.is-selected {
+  background: #e6f4ff;
+}
+
+.bnc-pick-row.is-has {
+  cursor: not-allowed;
+  background: #fafafa;
+  color: #8c8c8c;
+}
+
+.bnc-pick-row.is-head {
+  height: 36px;
+  min-height: 36px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #595959;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  cursor: default;
+}
+
+.bnc-modal .ant-modal-container,
+.bnc-modal .ant-modal-content {
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.bnc-modal .ant-modal-body {
+  padding: 0;
+}
+
+.bnc-filter-select.is-on .ant-select-selector,
+.bnc-filter-select.is-on.ant-select {
+  border-color: #096dd9;
+  background: #e6f4ff;
+}

@@ -1,6 +1,6 @@
 import React from "react";
 import { ExperimentOutlined, RightOutlined } from "../../../../components/common/Icon";
-import type { MethodBatchNormDto, ServiceBatchNormDto } from "../../../../services/serviceCatalogService";
+import type { MethodBatchNormDto, ServiceBatchNormDto, ServiceBatchNormEquipmentDto } from "../../../../services/serviceCatalogService";
 import NormIndicatorBlock from "./NormIndicatorBlock";
 import {
   isBlockExpanded,
@@ -23,6 +23,7 @@ export interface NormSpecimenBlockProps {
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
+  loadEquipments: (testMethodIndicatorId: string) => Promise<ServiceBatchNormEquipmentDto[]>;
 }
 
 /** Cấp 2: tiêu đề nền mẫu (gập/mở) + các khối chỉ tiêu */
@@ -40,6 +41,7 @@ const NormSpecimenBlock: React.FC<NormSpecimenBlockProps> = ({
   onToggleActive,
   onDelete,
   loadMaterials,
+  loadEquipments,
 }) => (
   <>
     <button
@@ -77,6 +79,7 @@ const NormSpecimenBlock: React.FC<NormSpecimenBlockProps> = ({
           onToggleActive={onToggleActive}
           onDelete={onDelete}
           loadMaterials={loadMaterials}
+          loadEquipments={loadEquipments}
         />
       ))}
   </>
