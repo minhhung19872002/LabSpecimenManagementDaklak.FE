@@ -453,10 +453,10 @@ const TaskManagementList: React.FC = () => {
 
       <style>{`
         .urgent-row > td {
-          background-color: #fff2f0 !important;
+          background-color: #ffccc7 !important;
         }
         .urgent-row:hover > td {
-          background-color: #ffebe8 !important;
+          background-color: #ffa39e !important;
         }
         .delayed-row > td {
           background-color: #fff7e6 !important;
