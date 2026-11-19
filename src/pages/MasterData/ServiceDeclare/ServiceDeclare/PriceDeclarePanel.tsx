@@ -68,7 +68,7 @@ const PriceDeclarePanel: React.FC<PriceDeclarePanelProps> = ({ step, indicators,
             ))}
             <p style={{ margin: 0, padding: "10px 16px", fontSize: 12, color: "#595959" }}>
               3 cách điền nhanh: ô “Điền nhanh” phía trên (cả phiếu) · “Giá cho cả nền mẫu” trên từng nhóm · nút sao chép cạnh
-              ô giá để dùng cùng giá cho chỉ tiêu đó ở mọi nền mẫu. Ô để trống → “Chờ định giá”. ĐVT (đơn vị tiêu hao)
+              ô giá để dùng cùng giá cho chỉ tiêu đó ở mọi nền mẫu. Ô để trống → “Chờ định giá”. ĐVT (đơn vị tính hiển thị trên phiếu kết quả)
               điền sẵn theo phương pháp, gõ lại ở từng dòng nếu khác — bắt buộc.
             </p>
           </>

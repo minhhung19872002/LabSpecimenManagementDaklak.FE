@@ -15,7 +15,7 @@ export interface DeclarePriceRowProps {
   /** undefined = chưa có dịch vụ; có = đã có dịch vụ → bỏ qua */
   existing: ExistingServiceInfo | undefined;
   price: number | null;
-  /** ĐVT (tiêu hao) đang hiện trong ô */
+  /** ĐVT của chỉ tiêu (hiển thị trên phiếu kết quả) đang hiện trong ô */
   unit: string;
   /** ĐVT đã gõ khác mặc định (ĐVT của phương pháp) → tô xanh */
   unitChanged: boolean;
@@ -28,7 +28,7 @@ export interface DeclarePriceRowProps {
   onSubcontractChange: (cellKey: string, checked: boolean) => void;
 }
 
-/** Chỉ tiêu | ĐVT (tiêu hao) | Đơn giá | chép giá | Hợp đồng phụ */
+/** Chỉ tiêu | ĐVT | Đơn giá | chép giá | Hợp đồng phụ */
 export const PRICE_ROW_COLUMNS = "minmax(0,1fr) 120px 150px 34px 130px";
 
 const gridStyle: React.CSSProperties = {
@@ -124,7 +124,7 @@ const DeclarePriceRow = React.memo<DeclarePriceRowProps>(function DeclarePriceRo
           value={unit}
           maxLength={UNIT_MAX_LENGTH}
           placeholder="Nhập ĐVT"
-          aria-label={`Đơn vị tính (tiêu hao) của ${indicator.name} – ${columnName}`}
+          aria-label={`Đơn vị tính của ${indicator.name} – ${columnName}`}
           status={unitEmpty ? "error" : undefined}
           style={unitEmpty ? unitEmptyStyle : unitChanged ? unitChangedStyle : unitDefaultStyle}
           onChange={(e) => onUnitChange(cellKey, e.target.value)}

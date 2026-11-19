@@ -168,7 +168,7 @@ const PriceBlockSection: React.FC<PriceBlockSectionProps> = ({
       <>
         <div role="row" style={columnHeadStyle}>
           <span>Chỉ tiêu</span>
-          <span title="Đơn vị tiêu hao của chỉ tiêu">ĐVT (tiêu hao)</span>
+          <span title="Đơn vị tính của chỉ tiêu, hiển thị trên phiếu kết quả">ĐVT</span>
           <span style={{ textAlign: "right" }}>Đơn giá (đ)</span>
           <span />
           <span>Hợp đồng phụ</span>

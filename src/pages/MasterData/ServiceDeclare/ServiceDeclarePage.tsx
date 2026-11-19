@@ -164,7 +164,7 @@ const ServiceDeclarePage = () => {
     () => filterServiceGroups(serviceGroups, serviceName).exact,
     [serviceGroups, serviceName]
   );
-  /** ĐVT (tiêu hao) mặc định của mỗi dòng = ĐVT của phương pháp */
+  /** ĐVT (đơn vị tính của chỉ tiêu, in trên phiếu KQ) mặc định của mỗi dòng = ĐVT của phương pháp */
   const defaultUnit = selectedMethod?.unit?.trim() ?? "";
 
   // ---------- Cột nền mẫu + ô ----------
