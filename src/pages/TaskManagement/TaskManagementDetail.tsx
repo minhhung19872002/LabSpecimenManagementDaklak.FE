@@ -45,6 +45,7 @@ import {
   LaboratoryTaskStatusColors,
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
+  isIndicatorTesting,
   MethodLookupDto,
   UserLookupDto,
   SampleInfo,
@@ -462,11 +463,8 @@ const TaskManagementDetail: React.FC = () => {
           activeIndicators.length > 0 &&
           activeIndicators.every((i) => i.methodId && i.technicianId);
 
-        // Có ≥1 chỉ tiêu đang thử nghiệm (có testDate, KTV đã check-in)
-        const anyTesting = activeIndicators.some(
-          (i) =>
-            i.testDate && i.approvalStatus === IndicatorApprovalStatus.Pending,
-        );
+        // Có ≥1 chỉ tiêu đang thử nghiệm (check-in / chọn ngày TN / lưu KQ, chưa gửi) — khớp trang Quản lý thử nghiệm
+        const anyTesting = activeIndicators.some(isIndicatorTesting);
 
         // Có ≥1 chỉ tiêu chờ phê duyệt (Entered) - ưu tiên hiển thị vì cần action
         const anyEntered = activeIndicators.some(

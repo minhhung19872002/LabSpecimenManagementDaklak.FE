@@ -24,6 +24,9 @@ import {
   IndicatorApprovalStatus,
   IndicatorApprovalStatusLabels,
   IndicatorApprovalStatusColors,
+  INDICATOR_TESTING_COLOR,
+  INDICATOR_TESTING_LABEL,
+  isIndicatorTesting,
   MethodLookupDto,
   IndicatorEvaluationAction,
 } from "../../../types/laboratoryTask";
@@ -498,6 +501,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
           <Tag color="cyan">YC bổ sung</Tag>
         </Tooltip>
       );
+    }
+
+    // KTV đã bắt đầu TN nhưng chưa gửi KQ → "Đang TN" (đồng bộ trang Quản lý thử nghiệm)
+    if (isIndicatorTesting(record)) {
+      return <StatusTag color={INDICATOR_TESTING_COLOR}>{INDICATOR_TESTING_LABEL}</StatusTag>;
     }
 
     return (

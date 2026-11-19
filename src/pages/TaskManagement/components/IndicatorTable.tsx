@@ -24,6 +24,9 @@ import {
   IndicatorApprovalStatus,
   IndicatorApprovalStatusLabels,
   IndicatorApprovalStatusColors,
+  INDICATOR_TESTING_COLOR,
+  INDICATOR_TESTING_LABEL,
+  isIndicatorTesting,
   MethodLookupDto,
   UserLookupDto,
   SampleStatus,
@@ -1037,7 +1040,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           </Button>
         ) : null;
 
-        const statusTag = (
+        // KTV đã bắt đầu TN nhưng chưa gửi KQ → "Đang TN" (đồng bộ trang Quản lý thử nghiệm)
+        const statusTag = isIndicatorTesting(record) ? (
+          <StatusTag color={INDICATOR_TESTING_COLOR}>{INDICATOR_TESTING_LABEL}</StatusTag>
+        ) : (
           <StatusTag color={IndicatorApprovalStatusColors[status]}>
             {IndicatorApprovalStatusLabels[status]}
           </StatusTag>

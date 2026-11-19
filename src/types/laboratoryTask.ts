@@ -92,6 +92,19 @@ export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.SupplementaryRequested]: 'purple'
 };
 
+// Trạng thái hiển thị "Đang TN" của chỉ tiêu — khớp "Đang thí nghiệm" bên trang Quản lý thử nghiệm
+// (BE TestingAppService.CalculateIndicatorTestingStatus): KTV đã check-in / chọn ngày TN / lưu KQ nhưng chưa gửi duyệt
+export const INDICATOR_TESTING_LABEL = 'Đang TN';
+export const INDICATOR_TESTING_COLOR = 'processing';
+
+export const isIndicatorTesting = (
+  indicator: Pick<LaboratoryTaskIndicatorDto, 'approvalStatus' | 'testDate' | 'entryDate'>,
+): boolean =>
+  (indicator.approvalStatus === IndicatorApprovalStatus.Pending ||
+    indicator.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+    indicator.approvalStatus === IndicatorApprovalStatus.MethodChanged) &&
+  (!!indicator.testDate || !!indicator.entryDate);
+
 // Laboratory Task Indicator DTO (Phase 6 - Extended + Workflow Redesign)
 export interface LaboratoryTaskIndicatorDto {
   id: string;

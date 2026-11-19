@@ -18,6 +18,7 @@ import {
 import { TestRequestStatus } from "../../../types/testRequest";
 import { formatDate } from "../../../utils/formatters";
 import StatusTag from "../../../components/common/StatusTag";
+import { isTaskNearDeadline } from "../utils";
 
 const { Text } = Typography;
 
@@ -121,15 +122,12 @@ export const getTaskManagementColumns = (
     render: (date: string, record: LaboratoryTaskDto) => {
       if (!date) return "-";
       const d = dayjs(date);
-      const daysRemaining = d.diff(dayjs(), "day");
-      const isUrgent =
-        daysRemaining < 5 &&
-        record.status !== LaboratoryTaskStatus.Approved &&
-        record.status !== LaboratoryTaskStatus.SentToQuality;
+      // Cùng điều kiện với highlight dòng đỏ (4 trạng thái BA, ≤ 7 ngày)
+      const isUrgent = isTaskNearDeadline(record);
       return (
         <span
           style={{
-            color: isUrgent ? "#ff4d4f" : undefined,
+            color: isUrgent ? "#cf1322" : undefined,
             fontWeight: isUrgent ? "bold" : undefined,
           }}
         >

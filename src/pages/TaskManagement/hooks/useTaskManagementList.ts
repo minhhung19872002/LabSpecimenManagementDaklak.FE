@@ -12,6 +12,7 @@ import {
 import { TestRequestStatus } from "../../../types/testRequest";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../../constants";
 import { getTaskManagementColumns } from "../components/columns";
+import { isTaskNearDeadline } from "../utils";
 import { useActionPermission } from "../../../hooks/useActionPermission";
 
 export const useTaskManagementList = () => {
@@ -208,21 +209,6 @@ export const useTaskManagementList = () => {
     [navigate]
   );
 
-  // Helper to check if task is urgent (< 5 days remaining and not done)
-  const isTaskUrgent = useCallback((record: LaboratoryTaskDto) => {
-    if (!record.requestCompletionDate) return false;
-    if (
-      record.status === LaboratoryTaskStatus.Approved ||
-      record.status === LaboratoryTaskStatus.SentToQuality
-    )
-      return false;
-    const daysRemaining = dayjs(record.requestCompletionDate).diff(
-      dayjs(),
-      "day"
-    );
-    return daysRemaining < 5;
-  }, []);
-
   // Helper to check if task has been waiting too long (>= 2 days since transfer and still UnderEvaluation)
   const isTaskDelayed = useCallback((record: LaboratoryTaskDto) => {
     if (!record.transferDate) return false;
@@ -233,11 +219,12 @@ export const useTaskManagementList = () => {
 
   const getRowClassName = useCallback(
     (record: LaboratoryTaskDto) => {
-      if (isTaskUrgent(record)) return "urgent-row";
+      // Đỏ (sắp/đã trễ hạn YC xong) ưu tiên hơn cam (chờ đánh giá quá lâu)
+      if (isTaskNearDeadline(record)) return "urgent-row";
       if (isTaskDelayed(record)) return "delayed-row";
       return "";
     },
-    [isTaskUrgent, isTaskDelayed]
+    [isTaskDelayed]
   );
 
   const columns = useMemo(
