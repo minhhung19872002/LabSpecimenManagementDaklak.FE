@@ -49,7 +49,7 @@ const ServiceCatalogView: React.FC<ServiceCatalogViewProps> = ({
           <Tag style={{ margin: 0 }}>Level 2</Tag>
         </div>
         <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-          Ghép Chỉ tiêu + Nền mẫu + Phương pháp thành dịch vụ bán cho khách hàng, quy định Giá và TAT.
+          Ghép Chỉ tiêu + Nền mẫu + Phương pháp thành dịch vụ bán cho khách hàng, quy định Giá.
         </Typography.Text>
       </div>
       <Button

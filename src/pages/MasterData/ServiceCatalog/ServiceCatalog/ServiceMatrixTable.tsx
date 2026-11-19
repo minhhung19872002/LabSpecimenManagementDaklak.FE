@@ -15,8 +15,6 @@ export interface ServiceMatrixTableProps {
   rows: ServiceMatrixRow[];
   specimenColumns: SpecimenColumn[];
   loading: boolean;
-  /** YYYY-MM-DD — ngày đang xem giá */
-  viewDate: string;
   /** Chỉ chứa key dòng chỉ tiêu ("r:...") */
   selectedRowKeys: string[];
   pageSize: number;
@@ -67,7 +65,6 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
   rows,
   specimenColumns,
   loading,
-  viewDate,
   selectedRowKeys,
   pageSize,
   stickyOffset,
@@ -185,7 +182,6 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
                 row={r}
                 column={col}
                 service={service}
-                viewDate={viewDate}
                 isEditing={!!service && service.id === editingServiceId}
                 canCreate={canCreate}
                 canEdit={canEdit}
@@ -201,7 +197,6 @@ const ServiceMatrixTable: React.FC<ServiceMatrixTableProps> = ({
     ],
     [
       specimenColumns,
-      viewDate,
       editingServiceId,
       canCreate,
       canEdit,

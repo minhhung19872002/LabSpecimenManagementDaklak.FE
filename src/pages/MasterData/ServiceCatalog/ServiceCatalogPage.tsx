@@ -1,7 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { Modal, message } from "antd";
 import { useNavigate } from "react-router-dom";
-import dayjs, { type Dayjs } from "dayjs";
 import { specimenTypeService, type SpecimenTypeDto } from "../../../services/masterDataService";
 import { serviceCatalogService, type ServiceCatalogItemDto } from "../../../services/serviceCatalogService";
 import { authService } from "../../../services/authService";
@@ -48,7 +47,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   const [showRules, setShowRules] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [testMethodId, setTestMethodId] = useState<string | undefined>();
-  const [priceDate, setPriceDate] = useState<Dayjs>(dayjs());
   const [showInactive, setShowInactive] = useState(false);
   const [specimenCategory, setSpecimenCategory] = useState(ALL_CATEGORY);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
@@ -68,10 +66,11 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
-  const loadServices = useCallback(async (date: Dayjs) => {
+  // Giá đổi là áp dụng ngay (không có ngày hiệu lực) → luôn xem giá hiện hành; lịch sử xem trong "Lịch sử giá"
+  const loadServices = useCallback(async () => {
     setLoading(true);
     try {
-      setServices(await serviceCatalogService.getList({ priceDate: date.format("YYYY-MM-DD") }));
+      setServices(await serviceCatalogService.getList());
     } catch (error) {
       message.error(getApiErrorMessage(error, "Không tải được danh sách dịch vụ"));
     } finally {
@@ -80,8 +79,8 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
   }, []);
 
   useEffect(() => {
-    loadServices(priceDate);
-  }, [loadServices, priceDate]);
+    loadServices();
+  }, [loadServices]);
 
   useEffect(() => {
     specimenTypeService
@@ -156,7 +155,7 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     setServices((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   }, []);
 
-  const reload = useCallback(() => loadServices(priceDate), [loadServices, priceDate]);
+  const reload = loadServices;
 
   const openBuilder = useCallback(
     (prefill: ServiceDeclarePrefill | null) => navigate(buildServiceDeclareUrl(prefill)),
@@ -249,8 +248,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
     [openBuilder]
   );
 
-  const viewDate = priceDate.format("YYYY-MM-DD");
-
   return (
     <>
       <ServiceCatalogView
@@ -264,7 +261,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           keyword,
           testMethodId,
           methodOptions,
-          priceDate,
           showInactive,
           specimenCategories,
           specimenCategory,
@@ -276,7 +272,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           canDelete,
           onKeywordChange: setKeyword,
           onTestMethodChange: setTestMethodId,
-          onPriceDateChange: setPriceDate,
           onShowInactiveChange: setShowInactive,
           onSpecimenCategoryChange: setSpecimenCategory,
           onToggleExpandAll: () => setExpandedRowKeys(allExpanded ? [] : groupKeys),
@@ -289,7 +284,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
           rows: matrixPageRows,
           specimenColumns: visibleSpecimenColumns,
           loading,
-          viewDate,
           selectedRowKeys,
           pageSize: matrixPageSize,
           stickyOffset: headerHeight,
@@ -309,7 +303,6 @@ const ServiceCatalogPage = forwardRef<ServiceCatalogActions>(function ServiceCat
         list={{
           services: filteredServices,
           loading,
-          viewDate,
           canEdit,
           canDelete,
           onAction: handleCellAction,

@@ -10,7 +10,7 @@ import {
 } from "../../../services/serviceCatalogService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 import { UploadOutlined } from "../../../components/common/Icon";
-import { EXCEL_COLUMNS, formatPrice, formatShortDate, parseImportFile } from "./ServiceCatalog/utils";
+import { EXCEL_COLUMNS, formatPrice, parseImportFile } from "./ServiceCatalog/utils";
 
 export interface ImportPricesModalProps {
   open: boolean;
@@ -87,16 +87,6 @@ const ImportPricesModal: React.FC<ImportPricesModalProps> = ({ open, onDone, onC
           : formatPrice(r.newPrice),
     },
     {
-      title: "TAT",
-      key: "tat",
-      width: 90,
-      render: (_, r) =>
-        r.oldTurnaroundDays != null && r.oldTurnaroundDays !== r.newTurnaroundDays
-          ? `${r.oldTurnaroundDays} → ${r.newTurnaroundDays ?? "—"}`
-          : (r.newTurnaroundDays ?? "—"),
-    },
-    { title: "Áp dụng", dataIndex: "effectiveDate", key: "date", width: 100, render: (v) => formatShortDate(v) },
-    {
       title: "Kết quả",
       key: "result",
       width: 220,
@@ -133,7 +123,7 @@ const ImportPricesModal: React.FC<ImportPricesModalProps> = ({ open, onDone, onC
         type="info"
         showIcon
         style={{ marginBottom: 12 }}
-        message={`Cột bắt buộc: ${EXCEL_COLUMNS.join(", ")} — dùng file “Xuất Excel” làm mẫu. Chỉ cập nhật giá / TAT theo Service_ID, không tạo dịch vụ mới. Dòng lỗi bị bỏ qua.`}
+        message={`Cột bắt buộc: ${EXCEL_COLUMNS.join(", ")} — dùng file “Xuất Excel” làm mẫu. Chỉ cập nhật giá theo Service_ID (áp dụng từ hôm nay), không tạo dịch vụ mới. Dòng lỗi bị bỏ qua.`}
       />
       <Space style={{ marginBottom: 12 }}>
         <Upload

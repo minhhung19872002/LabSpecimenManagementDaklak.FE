@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Button, Col, DatePicker, Divider, Input, Modal, Popconfirm, Row, Table, Tag, Typography, message } from "antd";
+import { Button, Col, Divider, Input, Modal, Row, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import dayjs, { type Dayjs } from "dayjs";
 import { NumericFormat } from "react-number-format";
 import {
   serviceCatalogService,
@@ -10,9 +9,8 @@ import {
   type ServicePriceVersionDto,
 } from "../../../services/serviceCatalogService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
-import { DeleteOutlined } from "../../../components/common/Icon";
 import { formatDateTime } from "../../../utils/formatters";
-import { formatPrice, formatShortDate, serviceDisplayName, toApiDate } from "./ServiceCatalog/utils";
+import { formatPrice, formatShortDate, serviceDisplayName } from "./ServiceCatalog/utils";
 
 export interface PriceHistoryModalProps {
   service: ServiceCatalogItemDto | null;
@@ -27,14 +25,12 @@ const STATUS_TAG: Record<ServicePriceVersionStatus, React.ReactNode> = {
   [ServicePriceVersionStatus.Replaced]: <Tag>Đã thay thế</Tag>,
 };
 
-/** Lịch sử phiên bản giá + thêm phiên bản mới (đổi giá / TAT theo ngày áp dụng) */
+/** Lịch sử phiên bản giá + đổi giá (áp dụng ngay hôm nay, giữ lịch sử version) */
 const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({ service, canEdit, onChanged, onClose }) => {
   const [versions, setVersions] = useState<ServicePriceVersionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
-  const [tat, setTat] = useState<number | null>(null);
-  const [effectiveDate, setEffectiveDate] = useState<Dayjs>(dayjs());
   const [note, setNote] = useState("");
 
   const serviceId = service?.id;
@@ -53,8 +49,6 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({ service, canEdit,
   useEffect(() => {
     if (!serviceId || !service) return;
     setPrice(service.unitPrice);
-    setTat(service.turnaroundDays ?? null);
-    setEffectiveDate(dayjs());
     setNote("");
     loadVersions(serviceId);
     // Chỉ reset khi đổi dịch vụ
@@ -71,8 +65,6 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({ service, canEdit,
     try {
       const updated = await serviceCatalogService.setPrice(service.id, {
         unitPrice: price,
-        turnaroundDays: tat,
-        effectiveDate: toApiDate(effectiveDate),
         note: note.trim() || undefined,
       });
       message.success("Đã lưu phiên bản giá");
@@ -85,27 +77,9 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({ service, canEdit,
     }
   };
 
-  const handleDelete = async (version: ServicePriceVersionDto) => {
-    if (!service) return;
-    try {
-      await serviceCatalogService.deletePriceVersion(version.id);
-      message.success("Đã xóa phiên bản giá");
-      await loadVersions(service.id);
-      const list = await serviceCatalogService.getList({
-        testMethodId: service.testMethodId,
-        keyword: service.serviceCode ?? undefined,
-      });
-      const updated = list.find((s) => s.id === service.id);
-      if (updated) onChanged(updated);
-    } catch (error) {
-      message.error(getApiErrorMessage(error, "Không xóa được phiên bản giá"));
-    }
-  };
-
   const columns: ColumnsType<ServicePriceVersionDto> = [
     { title: "Ngày áp dụng", key: "date", width: 120, render: (_, v) => (v.effectiveDate ? formatShortDate(v.effectiveDate) : "Giá gốc") },
     { title: "Đơn giá", dataIndex: "unitPrice", key: "price", width: 120, align: "right", render: (v) => formatPrice(v) },
-    { title: "TAT", dataIndex: "turnaroundDays", key: "tat", width: 70, align: "right", render: (v) => (v != null ? `${v} ngày` : "—") },
     { title: "Trạng thái", dataIndex: "status", key: "status", width: 120, render: (s: ServicePriceVersionStatus) => STATUS_TAG[s] },
     { title: "Ghi chú", dataIndex: "note", key: "note", render: (v) => v || "—" },
     {
@@ -123,18 +97,6 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({ service, canEdit,
       ),
     },
   ];
-  if (canEdit) {
-    columns.push({
-      key: "actions",
-      width: 50,
-      render: (_, v) =>
-        v.status === ServicePriceVersionStatus.Upcoming ? (
-          <Popconfirm title="Xóa phiên bản giá sắp áp dụng?" okText="Xóa" cancelText="Hủy" onConfirm={() => handleDelete(v)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        ) : null,
-    });
-  }
 
   return (
     <Modal
@@ -159,9 +121,9 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({ service, canEdit,
           />
           {canEdit && (
             <>
-              <Divider style={{ margin: "16px 0 12px" }}>Thêm phiên bản giá</Divider>
+              <Divider style={{ margin: "16px 0 12px" }}>Đổi giá (áp dụng từ hôm nay)</Divider>
               <Row gutter={12} align="bottom">
-                <Col span={6}>
+                <Col span={7}>
                   <div>Đơn giá</div>
                   <NumericFormat
                     value={price ?? ""}
@@ -175,34 +137,11 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({ service, canEdit,
                     style={{ width: "100%" }}
                   />
                 </Col>
-                <Col span={4}>
-                  <div>TAT</div>
-                  <NumericFormat
-                    value={tat ?? ""}
-                    onValueChange={(v) => setTat(v.floatValue ?? null)}
-                    allowNegative={false}
-                    decimalScale={0}
-                    customInput={Input}
-                    addonAfter="ngày"
-                    style={{ width: "100%" }}
-                  />
-                </Col>
-                <Col span={5}>
-                  <div>Ngày áp dụng</div>
-                  <DatePicker
-                    value={effectiveDate}
-                    format="DD/MM/YYYY"
-                    allowClear={false}
-                    disabledDate={(d) => d.isBefore(dayjs(), "day")}
-                    onChange={(v) => v && setEffectiveDate(v)}
-                    style={{ width: "100%" }}
-                  />
-                </Col>
-                <Col span={6}>
+                <Col span={13}>
                   <div>Ghi chú</div>
                   <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Lý do đổi giá" />
                 </Col>
-                <Col span={3}>
+                <Col span={4}>
                   <Button type="primary" block loading={saving} onClick={handleSave}>
                     Lưu
                   </Button>

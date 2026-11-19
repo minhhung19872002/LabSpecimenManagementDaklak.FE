@@ -10,13 +10,11 @@ import {
 } from "../../../../components/common/Icon";
 import type { ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
 import type { ServiceCellAction } from "./ServiceMatrixTable";
-import { formatPrice, formatShortDate, hasUpcomingAfter, PENDING_PRICE_LABEL } from "./utils";
+import { formatPrice, PENDING_PRICE_LABEL } from "./utils";
 
 export interface ServiceListTableProps {
   services: ServiceCatalogItemDto[];
   loading: boolean;
-  /** YYYY-MM-DD — ngày đang xem giá */
-  viewDate: string;
   canEdit: boolean;
   canDelete: boolean;
   onAction: (action: ServiceCellAction, service: ServiceCatalogItemDto) => void;
@@ -26,7 +24,6 @@ export interface ServiceListTableProps {
 const ServiceListTable: React.FC<ServiceListTableProps> = ({
   services,
   loading,
-  viewDate,
   canEdit,
   canDelete,
   onAction,
@@ -110,40 +107,10 @@ const ServiceListTable: React.FC<ServiceListTableProps> = ({
         ),
     },
     {
-      title: "TAT",
-      key: "tat",
-      width: 80,
-      align: "right",
-      render: (_, s) => {
-        const tat = s.turnaroundDaysAtDate ?? s.turnaroundDays;
-        return tat != null ? `${tat} ngày` : "—";
-      },
-    },
-    {
-      title: "Hiệu lực từ",
-      dataIndex: "effectiveDateAtDate",
-      key: "effective",
-      width: 110,
-      render: (v) => formatShortDate(v),
-    },
-    {
-      title: "Giá sắp áp dụng",
-      key: "upcoming",
-      width: 170,
-      render: (_, s) =>
-        hasUpcomingAfter(s, viewDate) ? (
-          <Tag color="orange" style={{ margin: 0 }}>
-            ▲ {formatPrice(s.upcomingPrice)} từ {formatShortDate(s.upcomingEffectiveDate)}
-          </Tag>
-        ) : (
-          <Typography.Text type="secondary">—</Typography.Text>
-        ),
-    },
-    {
       title: "Version",
       dataIndex: "versionCount",
       key: "versions",
-      width: 80,
+      width: 90,
       align: "center",
       render: (v, s) => (
         <Button type="link" size="small" onClick={() => onAction("history", s)}>
@@ -201,7 +168,7 @@ const ServiceListTable: React.FC<ServiceListTableProps> = ({
       rowKey="id"
       size="small"
       loading={loading}
-      scroll={{ x: 1740 }}
+      scroll={{ x: 1380 }}
       pagination={{
         defaultPageSize: 20,
         showSizeChanger: true,

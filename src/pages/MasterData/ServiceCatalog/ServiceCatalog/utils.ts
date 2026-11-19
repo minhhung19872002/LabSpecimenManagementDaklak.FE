@@ -37,10 +37,10 @@ export interface ServiceRule {
 
 /** Quy tắc áp dụng (theo BA TIHE_1611) */
 export const SERVICE_RULES: ServiceRule[] = [
-  { code: "Unique", text: "[Chỉ tiêu + Nền mẫu + Phương pháp + Ngày hiệu lực] — không có 2 mức giá trong cùng 1 ngày." },
-  { code: "5.1", text: "Tạo hàng loạt: 1 Phương pháp → chọn nhiều Chỉ tiêu × Nền mẫu → 1 Giá/TAT chung → hệ thống nhân ma trận." },
+  { code: "Unique", text: "[Chỉ tiêu + Nền mẫu + Phương pháp] — mỗi tổ hợp chỉ có 1 dịch vụ." },
+  { code: "5.1", text: "Tạo hàng loạt: 1 Phương pháp → chọn nhiều Chỉ tiêu × Nền mẫu → 1 Giá chung (để trống = Chờ định giá) → hệ thống nhân ma trận." },
   { code: "5.2", text: "Ma trận giá: dòng = Chỉ tiêu + Phương pháp, cột = Nền mẫu, ô = Giá; nhấp đúp sửa, Enter tự lưu." },
-  { code: "5.3", text: "Cập nhật giá hàng loạt theo % hoặc số tiền, bắt buộc Ngày hiệu lực mới → sinh version giá." },
+  { code: "5.3", text: "Cập nhật giá hàng loạt theo % hoặc số tiền, áp dụng ngay → sinh version giá (giữ lịch sử)." },
   { code: "5.4", text: "Xuất bảng giá ra .xlsx, nhập ngược lại; hệ thống kiểm tra Mã dịch vụ rồi cập nhật." },
   { code: "BR-06", text: "Không xóa cứng khi đã phát sinh giao dịch — ngừng sử dụng thay vì xóa. Phiếu / báo giá cũ giữ giá đã lưu." },
 ];
@@ -219,18 +219,17 @@ export const collectSpecimenCategories = (columns: SpecimenColumn[]): string[] =
 export const filterSpecimenColumns = (columns: SpecimenColumn[], category: string): SpecimenColumn[] =>
   category === ALL_CATEGORY ? columns : columns.filter((c) => c.key === ALL_SPECIMEN_KEY || c.categoryName === category);
 
-/** Có giá mới sắp áp dụng sau ngày đang xem */
-export const hasUpcomingAfter = (s: ServiceCatalogItemDto, viewDate: string): boolean =>
-  s.upcomingPrice != null && !!s.upcomingEffectiveDate && dayjs(s.upcomingEffectiveDate).format("YYYY-MM-DD") > viewDate;
-
 export const serviceDisplayName = (s: ServiceCatalogItemDto): string =>
   `${s.indicatorName} · ${s.specimenTypeName || "Mọi nền mẫu"} · ${s.testMethodName}`;
 
-/** Giá gốc để tính hàng loạt tại ngày áp dụng (khớp BE: phiên bản có hiệu lực tại ngày đó) */
-export const basisPriceAt = (s: ServiceCatalogItemDto, effectiveDate: string): number =>
+/**
+ * Giá gốc để tính hàng loạt tại ngày áp dụng (khớp BE: phiên bản có hiệu lực tại ngày đó).
+ * null = Chờ định giá → BE bỏ qua dịch vụ này.
+ */
+export const basisPriceAt = (s: ServiceCatalogItemDto, effectiveDate: string): number | null =>
   s.upcomingPrice != null && s.upcomingEffectiveDate && dayjs(s.upcomingEffectiveDate).format("YYYY-MM-DD") <= effectiveDate
     ? s.upcomingPrice
-    : s.unitPrice ?? 0;
+    : (s.unitPrice ?? null);
 
 /** Giống BE ComputeAdjustedPrice: làm tròn 0 số lẻ (AwayFromZero), không âm */
 export const computeAdjustedPrice = (
@@ -253,8 +252,6 @@ export const EXCEL_COLUMNS = [
   "Matrix",
   "Method",
   "Unit_Price",
-  "TAT_Days",
-  "Effective_Date",
 ] as const;
 
 export const exportServicesToExcel = (services: ServiceCatalogItemDto[]): void => {
@@ -264,11 +261,9 @@ export const exportServicesToExcel = (services: ServiceCatalogItemDto[]): void =
     Matrix: s.specimenTypeName || "Mọi nền mẫu",
     Method: s.testMethodName,
     Unit_Price: s.priceAtDate ?? "",
-    TAT_Days: s.turnaroundDaysAtDate ?? s.turnaroundDays ?? "",
-    Effective_Date: s.effectiveDateAtDate ? dayjs(s.effectiveDateAtDate).format("DD/MM/YYYY") : "",
   }));
   const ws = XLSX.utils.json_to_sheet(rows, { header: [...EXCEL_COLUMNS] });
-  ws["!cols"] = [{ wch: 12 }, { wch: 40 }, { wch: 22 }, { wch: 40 }, { wch: 14 }, { wch: 10 }, { wch: 14 }];
+  ws["!cols"] = [{ wch: 12 }, { wch: 40 }, { wch: 22 }, { wch: 40 }, { wch: 14 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "BangGia");
   XLSX.writeFile(wb, `bang-gia-dich-vu_${dayjs().format("YYYY-MM-DD")}.xlsx`);
@@ -284,22 +279,10 @@ const toNumber = (value: unknown): number | null => {
   return Number.isFinite(n) ? n : NaN;
 };
 
-const toDateString = (value: unknown): string | null => {
-  if (value == null || value === "") return null;
-  if (value instanceof Date) return dayjs(value).format("YYYY-MM-DD");
-  if (typeof value === "number") {
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (!parsed) return null;
-    return dayjs(new Date(parsed.y, parsed.m - 1, parsed.d)).format("YYYY-MM-DD");
-  }
-  const text = String(value).trim();
-  const vn = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(text);
-  if (vn) return dayjs(new Date(+vn[3], +vn[2] - 1, +vn[1])).format("YYYY-MM-DD");
-  const d = dayjs(text);
-  return d.isValid() ? d.format("YYYY-MM-DD") : null;
-};
-
-/** Đọc file Excel bảng giá → dòng gửi BE (dòng = số dòng Excel, tính cả header) */
+/**
+ * Đọc file Excel bảng giá → dòng gửi BE (dòng = số dòng Excel, tính cả header).
+ * Chỉ đọc giá: không gửi TAT / ngày → BE giữ TAT cũ, áp dụng từ hôm nay.
+ */
 export const parseImportFile = async (file: File): Promise<ImportServicePriceRowInput[]> => {
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });
@@ -308,14 +291,11 @@ export const parseImportFile = async (file: File): Promise<ImportServicePriceRow
   return raw
     .map((r, idx) => {
       const price = toNumber(r.Unit_Price);
-      const tat = toNumber(r.TAT_Days);
       return {
         line: idx + 2,
         serviceCode: String(r.Service_ID ?? "").trim(),
         // NaN → null để BE báo lỗi "giá không hợp lệ"
         unitPrice: price == null || Number.isNaN(price) ? null : price,
-        turnaroundDays: tat == null || Number.isNaN(tat) ? null : Math.round(tat),
-        effectiveDate: toDateString(r.Effective_Date),
       };
     })
     .filter((r) => r.serviceCode || r.unitPrice != null);

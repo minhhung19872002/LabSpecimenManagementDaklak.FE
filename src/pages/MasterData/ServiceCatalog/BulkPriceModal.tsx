@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Col, DatePicker, Input, Modal, Radio, Row, Table, Typography, message } from "antd";
+import { Col, Input, Modal, Radio, Row, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { NumericFormat } from "react-number-format";
 import {
   BulkPriceAdjustMode,
@@ -9,7 +9,7 @@ import {
   type ServiceCatalogItemDto,
 } from "../../../services/serviceCatalogService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
-import { basisPriceAt, computeAdjustedPrice, formatPrice, toApiDate } from "./ServiceCatalog/utils";
+import { basisPriceAt, computeAdjustedPrice, formatPrice, PENDING_PRICE_LABEL, toApiDate } from "./ServiceCatalog/utils";
 
 export interface BulkPriceModalProps {
   open: boolean;
@@ -22,17 +22,19 @@ interface PreviewRow {
   id: string;
   serviceCode?: string | null;
   name: string;
-  oldPrice: number;
-  newPrice: number;
+  /** null = Chờ định giá → BE bỏ qua */
+  oldPrice: number | null;
+  newPrice: number | null;
 }
 
-/** Cập nhật giá hàng loạt theo % hoặc số tiền, có xem trước (cùng cách làm tròn với BE) */
+/**
+ * Cập nhật giá hàng loạt theo % hoặc số tiền, áp dụng ngay hôm nay, có xem trước (cùng cách làm tròn với BE).
+ * Dịch vụ Chờ định giá không có giá gốc → bỏ qua.
+ */
 const BulkPriceModal: React.FC<BulkPriceModalProps> = ({ open, services, onDone, onCancel }) => {
   const [mode, setMode] = useState<BulkPriceAdjustMode>(BulkPriceAdjustMode.Percent);
   const [increase, setIncrease] = useState(true);
   const [value, setValue] = useState<number | null>(null);
-  const [effectiveDate, setEffectiveDate] = useState<Dayjs>(dayjs());
-  const [tat, setTat] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -40,26 +42,26 @@ const BulkPriceModal: React.FC<BulkPriceModalProps> = ({ open, services, onDone,
       setMode(BulkPriceAdjustMode.Percent);
       setIncrease(true);
       setValue(null);
-      setEffectiveDate(dayjs());
-      setTat(null);
     }
   }, [open]);
 
   const invalidPercent = mode === BulkPriceAdjustMode.Percent && !increase && (value ?? 0) > 100;
 
   const preview = useMemo<PreviewRow[]>(() => {
-    const date = toApiDate(effectiveDate);
+    const today = toApiDate(dayjs());
     return services.map((s) => {
-      const oldPrice = basisPriceAt(s, date);
+      const oldPrice = basisPriceAt(s, today);
       return {
         id: s.id,
         serviceCode: s.serviceCode,
         name: `${s.indicatorName} · ${s.specimenTypeName || "Mọi nền mẫu"}`,
         oldPrice,
-        newPrice: value == null ? oldPrice : computeAdjustedPrice(oldPrice, mode, increase, value),
+        newPrice: oldPrice == null || value == null ? oldPrice : computeAdjustedPrice(oldPrice, mode, increase, value),
       };
     });
-  }, [services, effectiveDate, mode, increase, value]);
+  }, [services, mode, increase, value]);
+
+  const pendingCount = useMemo(() => preview.filter((r) => r.oldPrice == null).length, [preview]);
 
   const handleOk = async () => {
     if (value == null || value <= 0) {
@@ -77,8 +79,8 @@ const BulkPriceModal: React.FC<BulkPriceModalProps> = ({ open, services, onDone,
         mode,
         increase,
         value,
-        effectiveDate: toApiDate(effectiveDate),
-        turnaroundDays: tat,
+        effectiveDate: toApiDate(dayjs()),
+        turnaroundDays: null,
       });
       message.success(`Đã cập nhật giá ${result.updatedCount} dịch vụ`);
       onDone();
@@ -92,14 +94,33 @@ const BulkPriceModal: React.FC<BulkPriceModalProps> = ({ open, services, onDone,
   const columns: ColumnsType<PreviewRow> = [
     { title: "Mã DV", dataIndex: "serviceCode", key: "code", width: 100 },
     { title: "Dịch vụ", dataIndex: "name", key: "name" },
-    { title: "Giá cũ", dataIndex: "oldPrice", key: "old", width: 120, align: "right", render: (v) => formatPrice(v) },
+    {
+      title: "Giá cũ",
+      dataIndex: "oldPrice",
+      key: "old",
+      width: 120,
+      align: "right",
+      render: (v) =>
+        v == null ? (
+          <Tag color="gold" style={{ margin: 0 }}>
+            {PENDING_PRICE_LABEL}
+          </Tag>
+        ) : (
+          formatPrice(v)
+        ),
+    },
     {
       title: "Giá mới",
       dataIndex: "newPrice",
       key: "new",
       width: 120,
       align: "right",
-      render: (v, r) => <b style={{ color: v !== r.oldPrice ? "#1677ff" : undefined }}>{formatPrice(v)}</b>,
+      render: (v, r) =>
+        v == null ? (
+          <Typography.Text type="secondary">Bỏ qua</Typography.Text>
+        ) : (
+          <b style={{ color: v !== r.oldPrice ? "#1677ff" : undefined }}>{formatPrice(v)}</b>
+        ),
     },
   ];
 
@@ -155,32 +176,10 @@ const BulkPriceModal: React.FC<BulkPriceModalProps> = ({ open, services, onDone,
             style={{ width: "100%" }}
           />
         </Col>
-        <Col span={6}>
-          <div>Ngày áp dụng</div>
-          <DatePicker
-            value={effectiveDate}
-            format="DD/MM/YYYY"
-            allowClear={false}
-            disabledDate={(d) => d.isBefore(dayjs(), "day")}
-            onChange={(v) => v && setEffectiveDate(v)}
-            style={{ width: "100%" }}
-          />
-        </Col>
-        <Col span={7}>
-          <div>TAT mới (bỏ trống = giữ nguyên)</div>
-          <NumericFormat
-            value={tat ?? ""}
-            onValueChange={(v) => setTat(v.floatValue ?? null)}
-            allowNegative={false}
-            decimalScale={0}
-            customInput={Input}
-            addonAfter="ngày"
-            style={{ width: "100%" }}
-          />
-        </Col>
       </Row>
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        Giá mới làm tròn tới đồng, không âm. Mỗi dịch vụ tạo 1 phiên bản giá mới từ ngày áp dụng.
+        Giá mới làm tròn tới đồng, không âm, áp dụng ngay hôm nay. Mỗi dịch vụ tạo 1 phiên bản giá mới (giữ lịch sử).
+        {pendingCount > 0 && ` ${pendingCount} dịch vụ ${PENDING_PRICE_LABEL.toLowerCase()} sẽ bị bỏ qua.`}
       </Typography.Text>
       <Table
         columns={columns}

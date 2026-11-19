@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, message } from "antd";
+import { message } from "antd";
 import dayjs from "dayjs";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -19,7 +19,7 @@ import {
 } from "../../../services/serviceCatalogService";
 import { subcontractorService, type SubcontractorDto } from "../../../services/subcontractorService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
-import { useHeaderHeight } from "../../../hooks";
+import { useHeaderHeight, useLeaveConfirm } from "../../../hooks";
 import { specimenKeyOf } from "../ServiceCatalog/ServiceCatalog/utils";
 import ServiceDeclareView from "./ServiceDeclare/ServiceDeclareView";
 import type { IndicatorTreeGroupView } from "./ServiceDeclare/IndicatorTreePanel";
@@ -317,20 +317,14 @@ const ServiceDeclarePage = () => {
 
   // ---------- Hủy / Tạo ----------
   const dirty = selectedIndicatorIds.size > 0 || specimenIds.length > 0 || allSpecimens;
-  const handleCancel = () => {
-    if (!dirty) {
-      navigate(SERVICE_CATALOG_URL);
-      return;
-    }
-    Modal.confirm({
-      title: "Hủy phiếu khai báo?",
-      content: "Các lựa chọn và giá đã nhập trên phiếu sẽ không được lưu.",
-      okText: "Hủy phiếu",
-      okButtonProps: { danger: true },
-      cancelText: "Tiếp tục khai báo",
-      onOk: () => navigate(SERVICE_CATALOG_URL),
-    });
-  };
+  // Rời phiếu bằng mọi đường (nút quay lại, Hủy, menu sang trang khác, đóng tab) đều hỏi lại
+  const allowLeave = useLeaveConfirm(dirty, {
+    title: "Hủy phiếu khai báo?",
+    content: "Các lựa chọn và giá đã nhập trên phiếu sẽ không được lưu.",
+    okText: "Hủy phiếu",
+    cancelText: "Tiếp tục khai báo",
+  });
+  const handleCancel = () => navigate(SERVICE_CATALOG_URL);
 
   const canSubmit = !!testMethodId && columns.length > 0 && selectedIndicators.length > 0 && newCount > 0;
   const handleSubmit = async () => {
@@ -347,6 +341,7 @@ const ServiceDeclarePage = () => {
       message.success(
         `Đã tạo ${result.createdCount} dịch vụ${result.skippedCount ? `, bỏ qua ${result.skippedCount} đã có` : ""}`
       );
+      allowLeave();
       navigate(SERVICE_CATALOG_URL);
     } catch (error) {
       message.error(getApiErrorMessage(error, "Không tạo được dịch vụ"));

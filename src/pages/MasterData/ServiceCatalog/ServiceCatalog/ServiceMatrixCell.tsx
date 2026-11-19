@@ -2,22 +2,13 @@ import React, { useRef, useState } from "react";
 import { Input } from "antd";
 import { NumericFormat } from "react-number-format";
 import type { ServiceCatalogItemDto } from "../../../../services/serviceCatalogService";
-import {
-  formatPrice,
-  PENDING_PRICE_LABEL,
-  formatShortDate,
-  hasUpcomingAfter,
-  type ServiceMatrixRow,
-  type SpecimenColumn,
-} from "./utils";
+import { formatPrice, PENDING_PRICE_LABEL, type ServiceMatrixRow, type SpecimenColumn } from "./utils";
 import "./ServiceMatrixCell.css";
 
 export interface ServiceMatrixCellProps {
   row: ServiceMatrixRow;
   column: SpecimenColumn;
   service?: ServiceCatalogItemDto;
-  /** YYYY-MM-DD — ngày đang xem giá */
-  viewDate: string;
   isEditing: boolean;
   canCreate: boolean;
   canEdit: boolean;
@@ -51,7 +42,6 @@ const inactiveBoxStyle: React.CSSProperties = { ...cellBoxStyle, background: "#F
 const activePriceStyle: React.CSSProperties = { fontWeight: 500, color: "#262626" };
 const inactivePriceStyle: React.CSSProperties = { fontWeight: 500, color: "#8c8c8c", textDecoration: "line-through" };
 const subStyle: React.CSSProperties = { fontSize: 11, whiteSpace: "nowrap", color: "#8c8c8c" };
-const subUpcomingStyle: React.CSSProperties = { ...subStyle, color: "#AD4E00" };
 // Chờ định giá (giá null) — vàng như Phiếu khai báo
 const pendingBoxStyle: React.CSSProperties = { ...cellBoxStyle, background: "#FFFBE6", border: "1px dashed #FFD591" };
 const pendingPriceStyle: React.CSSProperties = { fontWeight: 500, fontSize: 12, color: "#AD4E00", whiteSpace: "nowrap" };
@@ -117,7 +107,6 @@ const ServiceMatrixCell = React.memo<ServiceMatrixCellProps>(function ServiceMat
   row,
   column,
   service,
-  viewDate,
   isEditing,
   canCreate,
   canEdit,
@@ -143,13 +132,7 @@ const ServiceMatrixCell = React.memo<ServiceMatrixCellProps>(function ServiceMat
     return <PriceEditInput service={service} onCommit={onEditCommit} onCancel={onEditCancel} />;
   }
 
-  const tat = service.turnaroundDaysAtDate ?? service.turnaroundDays;
-  const upcoming = hasUpcomingAfter(service, viewDate);
-  const sub = !service.isActive
-    ? `Đã ngừng · ${service.serviceCode ?? ""}`
-    : upcoming
-      ? `▲ ${formatPrice(service.upcomingPrice)} từ ${formatShortDate(service.upcomingEffectiveDate)}`
-      : `${service.serviceCode ?? ""}${tat != null ? ` · ${tat} ngày` : ""}`;
+  const sub = service.isActive ? (service.serviceCode ?? "") : `Đã ngừng · ${service.serviceCode ?? ""}`;
 
   const pending = service.priceAtDate == null;
   return (
@@ -157,9 +140,7 @@ const ServiceMatrixCell = React.memo<ServiceMatrixCellProps>(function ServiceMat
       data-service-id={service.id}
       className={ACTION_CLASS}
       style={!service.isActive ? inactiveBoxStyle : pending ? pendingBoxStyle : activeBoxStyle}
-      title={`${service.serviceCode ?? ""} · hiệu lực từ ${formatShortDate(service.effectiveDateAtDate)}${
-        canEdit ? " · nhấp đúp để sửa, chuột phải để xem thêm" : ""
-      }`}
+      title={`${service.serviceCode ?? ""}${canEdit ? " · nhấp đúp để sửa, chuột phải để xem thêm" : ""}`}
       onDoubleClick={canEdit && service.isActive ? () => onCellDoubleClick(service) : undefined}
     >
       {pending ? (
@@ -167,7 +148,7 @@ const ServiceMatrixCell = React.memo<ServiceMatrixCellProps>(function ServiceMat
       ) : (
         <span style={service.isActive ? activePriceStyle : inactivePriceStyle}>{formatPrice(service.priceAtDate)}</span>
       )}
-      <span style={upcoming && service.isActive ? subUpcomingStyle : subStyle}>{sub}</span>
+      <span style={subStyle}>{sub}</span>
     </div>
   );
 });

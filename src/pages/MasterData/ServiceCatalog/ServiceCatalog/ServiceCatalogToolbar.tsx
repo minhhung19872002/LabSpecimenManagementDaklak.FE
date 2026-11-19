@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { Button, Checkbox, DatePicker, Input, Popconfirm, Select, Space, Typography } from "antd";
-import type { Dayjs } from "dayjs";
+import { Button, Checkbox, Input, Popconfirm, Select, Space, Typography } from "antd";
 import { DeleteOutlined, ReloadOutlined, SearchOutlined } from "../../../../components/common/Icon";
 import SpecimenCategoryChips from "./SpecimenCategoryChips";
 
@@ -10,7 +9,6 @@ export interface ServiceCatalogToolbarProps {
   keyword: string;
   testMethodId?: string;
   methodOptions: { value: string; label: string }[];
-  priceDate: Dayjs;
   showInactive: boolean;
   /** Nhóm nền mẫu cho chip "Cột nền mẫu" */
   specimenCategories: string[];
@@ -25,7 +23,6 @@ export interface ServiceCatalogToolbarProps {
   canDelete: boolean;
   onKeywordChange: (value: string) => void;
   onTestMethodChange: (value?: string) => void;
-  onPriceDateChange: (value: Dayjs) => void;
   onShowInactiveChange: (value: boolean) => void;
   onSpecimenCategoryChange: (value: string) => void;
   onToggleExpandAll: () => void;
@@ -78,7 +75,6 @@ const ServiceCatalogToolbar: React.FC<ServiceCatalogToolbarProps> = ({
   keyword,
   testMethodId,
   methodOptions,
-  priceDate,
   showInactive,
   specimenCategories,
   specimenCategory,
@@ -91,7 +87,6 @@ const ServiceCatalogToolbar: React.FC<ServiceCatalogToolbarProps> = ({
   canDelete,
   onKeywordChange,
   onTestMethodChange,
-  onPriceDateChange,
   onShowInactiveChange,
   onSpecimenCategoryChange,
   onToggleExpandAll,
@@ -123,15 +118,6 @@ const ServiceCatalogToolbar: React.FC<ServiceCatalogToolbarProps> = ({
             options={methodOptions}
             style={{ width: 260 }}
           />
-          <Space size={6}>
-            <Typography.Text type="secondary">Giá tại ngày</Typography.Text>
-            <DatePicker
-              value={priceDate}
-              format="DD/MM/YYYY"
-              allowClear={false}
-              onChange={(v) => v && onPriceDateChange(v)}
-            />
-          </Space>
           <Checkbox checked={showInactive} onChange={(e) => onShowInactiveChange(e.target.checked)}>
             Hiện dịch vụ ngừng
           </Checkbox>
