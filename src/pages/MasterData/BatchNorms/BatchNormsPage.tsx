@@ -13,7 +13,7 @@ import BatchNormsView from "./BatchNorms/BatchNormsView";
 import type { DeleteNormTarget } from "./BatchNorms/DeleteNormConfirm";
 import type { UndoToastData } from "./BatchNorms/UndoToast";
 import { ALL_SPECIMEN_NAME, specimenKeyOf, type FoldState } from "../ServiceCatalog/ServiceCatalog/utils";
-import { BATCH_NORM_CREATE_PATH, type BatchNormCreatedState } from "./BatchNormCreate/utils";
+import { BATCH_NORM_CREATE_PATH, BATCH_NORM_EDIT_URL, type BatchNormCreatedState } from "./BatchNormCreate/utils";
 import {
   NO_CATEGORY_NAME,
   applyAddMethodTab,
@@ -263,6 +263,7 @@ const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_pr
   }, [deleteTarget, load, showToast]);
 
   // ===== Thêm phương pháp =====
+  const handleEdit = useCallback((id: string) => navigate(BATCH_NORM_EDIT_URL(id)), [navigate]);
   const handleAddMethod = useCallback((block: NormIndicatorBlock) => {
     const first = block.norms[0];
     if (!first) return;
@@ -406,6 +407,7 @@ const BatchNormsPage = forwardRef<BatchNormsActions>(function BatchNormsPage(_pr
       onExpandAll={handleExpandAll}
       onCollapseAll={handleCollapseAll}
       onAddMethod={handleAddMethod}
+      onEdit={handleEdit}
       onToggleActive={handleToggleActive}
       onDelete={handleDelete}
       loadMaterials={loadMaterials}

@@ -3,8 +3,7 @@ import { Input, Select } from "antd";
 import { NumericFormat } from "react-number-format";
 import type { ProductType } from "../../../../services/productService";
 import type { BatchNormProductOptionDto } from "../../../../services/serviceCatalogService";
-import ItemGroup from "./ItemGroup";
-import ProductAddSelect from "./ProductAddSelect";
+import ItemGroup, { AddItemButton } from "./ItemGroup";
 import {
   MATERIAL_TYPES,
   isPositive,
@@ -18,8 +17,6 @@ export interface MaterialSectionProps {
   /** Vật tư đã thêm, theo thứ tự thêm */
   picked: PickedMaterial[];
   productById: ReadonlyMap<string, BatchNormProductOptionDto>;
-  /** Gợi ý cho ô thêm (đã lọc mục đã thêm + loại đang lọc) */
-  addOptions: BatchNormProductOptionDto[];
   typeFilter: ProductType | null;
   /** Số vật tư đã thêm theo từng loại */
   typeCounts: ReadonlyMap<ProductType, number>;
@@ -29,7 +26,7 @@ export interface MaterialSectionProps {
   tried: boolean;
   onToggleOpen: () => void;
   onTypeFilter: (type: ProductType | null) => void;
-  onAdd: (productId: string) => void;
+  onOpenAdd: () => void;
   onQuantity: (productId: string, quantity: number | null) => void;
   onUnit: (productId: string, unitId: string | null) => void;
   onRemove: (productId: string) => void;
@@ -71,11 +68,10 @@ export const RemoveButton: React.FC<{ label: string; onClick: () => void }> = ({
   </button>
 );
 
-/** Nhóm Vật tư: chip lọc loại, ô thêm, bảng lượng tiêu hao gốc + đơn vị */
+/** Nhóm Vật tư: chip lọc loại, nút thêm, bảng lượng tiêu hao / mẫu + đơn vị */
 const MaterialSection: React.FC<MaterialSectionProps> = ({
   picked,
   productById,
-  addOptions,
   typeFilter,
   typeCounts,
   missingCount,
@@ -83,7 +79,7 @@ const MaterialSection: React.FC<MaterialSectionProps> = ({
   tried,
   onToggleOpen,
   onTypeFilter,
-  onAdd,
+  onOpenAdd,
   onQuantity,
   onUnit,
   onRemove,
@@ -101,18 +97,7 @@ const MaterialSection: React.FC<MaterialSectionProps> = ({
       theme={{ border: "#adc6ff", headBg: "linear-gradient(90deg, #f0f5ff, #ffffff)", fg: "#10239e", countBg: "#2f54eb" }}
       missingText={missingCount > 0 ? `${missingCount} thiếu lượng` : undefined}
       onToggle={onToggleOpen}
-      addBox={
-        <ProductAddSelect
-          ariaLabel="Thêm vật tư"
-          placeholder="Thêm vật tư…"
-          products={addOptions}
-          typeNameOf={(p) => materialTypeName(p.productType)}
-          typeStyleOf={(p) => typeTagStyle(p.productType)}
-          extraOf={(p) => p.units.find((u) => u.id === p.defaultUnitId)?.name ?? ""}
-          emptyText="Không tìm thấy vật tư phù hợp"
-          onAdd={onAdd}
-        />
-      }
+      addBox={<AddItemButton label="Thêm vật tư" color="#2f54eb" onClick={onOpenAdd} />}
     >
       <div role="group" aria-label="Lọc vật tư theo loại" style={{ padding: "10px 12px 6px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
         <span style={{ fontSize: 12, color: "#595959", marginRight: 2 }}>Lọc vật tư:</span>
@@ -132,13 +117,13 @@ const MaterialSection: React.FC<MaterialSectionProps> = ({
           style={{ display: "grid", gridTemplateColumns: GRID, gap: 10, alignItems: "center", padding: "8px 10px", background: "#f5f8ff", borderRadius: 8 }}
         >
           <span role="columnheader" style={headCell}>
-            Loại
+            Loại vật tư
           </span>
           <span role="columnheader" style={headCell}>
             Tên vật tư
           </span>
           <span role="columnheader" style={{ ...headCell, textAlign: "right" }}>
-            Lượng tiêu hao gốc <span style={{ color: "#cf1322" }}>*</span>
+            Lượng tiêu hao / mẫu <span style={{ color: "#cf1322" }}>*</span>
           </span>
           <span role="columnheader" style={headCell}>
             Đơn vị tiêu hao <span style={{ color: "#cf1322" }}>*</span>
@@ -179,7 +164,7 @@ const MaterialSection: React.FC<MaterialSectionProps> = ({
                 className={`bnc-qty${m.quantity == null ? " bnc-input-empty" : ""}`}
                 status={qtyBad ? "error" : undefined}
                 placeholder="0"
-                aria-label={`Lượng tiêu hao gốc – ${name}`}
+                aria-label={`Lượng tiêu hao / mẫu – ${name}`}
                 style={{ width: "100%" }}
               />
               <Select
@@ -199,7 +184,7 @@ const MaterialSection: React.FC<MaterialSectionProps> = ({
         })}
         {rows.length === 0 && (
           <p style={{ margin: 0, padding: "18px 10px", textAlign: "center", fontSize: 13, color: "#595959" }}>
-            {picked.length === 0 ? "Chưa có vật tư. Tìm ở ô phía trên để thêm." : "Không có vật tư thuộc loại này."}
+            {picked.length === 0 ? "Chưa có vật tư. Bấm “+ Thêm vật tư” hoặc “Sao chép định mức từ bộ khác”." : "Không có vật tư thuộc loại này."}
           </p>
         )}
       </div>

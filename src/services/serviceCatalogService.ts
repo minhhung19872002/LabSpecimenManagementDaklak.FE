@@ -363,6 +363,38 @@ export interface BatchNormComboDto {
   testMethodName?: string | null;
   /** Đã có định mức → không chọn được */
   existingNormCode?: string | null;
+  /** Tên dịch vụ (NDV) của bộ — null = chưa đặt tên */
+  serviceGroupId?: string | null;
+  serviceGroupName?: string | null;
+  /** Số vật tư / thiết bị trong định mức hiện có */
+  materialCount: number;
+  equipmentCount: number;
+}
+
+export interface BatchNormMaterialLineInput {
+  productId: string;
+  quantity: number;
+  unitId: string;
+}
+
+export interface BatchNormEquipmentLineInput {
+  productId: string;
+  capacity: number;
+  capacityUnit: string;
+}
+
+/** Định mức hiện có của 1 bộ — dùng cho màn Sửa định mức / Sao chép */
+export interface BatchNormDetailDto {
+  combo: BatchNormComboDto;
+  materials: BatchNormMaterialLineInput[];
+  equipments: BatchNormEquipmentLineInput[];
+}
+
+export interface UpdateBatchNormInput {
+  materials: BatchNormMaterialLineInput[];
+  equipments: BatchNormEquipmentLineInput[];
+  /** Bộ khác được áp dụng cùng nội dung (ghi đè định mức đã có) */
+  applyToTestMethodIndicatorIds: string[];
 }
 
 export interface BatchNormUnitOptionDto {
@@ -399,8 +431,8 @@ export interface BatchNormCreateOptionsDto {
 
 export interface BulkCreateBatchNormsInput {
   testMethodIndicatorIds: string[];
-  materials: { productId: string; quantity: number; unitId: string }[];
-  equipments: { productId: string; capacity: number; capacityUnit: string }[];
+  materials: BatchNormMaterialLineInput[];
+  equipments: BatchNormEquipmentLineInput[];
 }
 
 export interface ServiceBatchNormEquipmentDto {
@@ -473,6 +505,18 @@ export const batchNormService = {
   bulkCreate: async (input: BulkCreateBatchNormsInput): Promise<ServiceBatchNormDto[]> => {
     const response = await api.post<ServiceBatchNormDto[] | { items: ServiceBatchNormDto[] }>(
       `${NORM_URL}/bulk-create`,
+      input
+    );
+    return toList(response.data);
+  },
+  getDetail: async (testMethodIndicatorId: string): Promise<BatchNormDetailDto> => {
+    const response = await api.get<BatchNormDetailDto>(`${NORM_URL}/by-service/${testMethodIndicatorId}/detail`);
+    const d = response.data;
+    return { combo: d.combo, materials: d?.materials ?? [], equipments: d?.equipments ?? [] };
+  },
+  updateNorm: async (testMethodIndicatorId: string, input: UpdateBatchNormInput): Promise<ServiceBatchNormDto[]> => {
+    const response = await api.put<ServiceBatchNormDto[] | { items: ServiceBatchNormDto[] }>(
+      `${NORM_URL}/by-service/${testMethodIndicatorId}`,
       input
     );
     return toList(response.data);

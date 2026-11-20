@@ -33,6 +33,7 @@ export interface BatchNormsViewProps {
   onExpandAll: () => void;
   onCollapseAll: () => void;
   onAddMethod: (block: IndicatorBlockData) => void;
+  onEdit: (testMethodIndicatorId: string) => void;
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
@@ -64,6 +65,7 @@ const BatchNormsView: React.FC<BatchNormsViewProps> = ({
   onExpandAll,
   onCollapseAll,
   onAddMethod,
+  onEdit,
   onToggleActive,
   onDelete,
   loadMaterials,
@@ -104,6 +106,7 @@ const BatchNormsView: React.FC<BatchNormsViewProps> = ({
               onToggle={onToggle}
               onToggleMore={onToggleMore}
               onAddMethod={onAddMethod}
+              onEdit={onEdit}
               onToggleActive={onToggleActive}
               onDelete={onDelete}
               loadMaterials={loadMaterials}

@@ -3,21 +3,19 @@ import { Input, Select } from "antd";
 import { NumericFormat } from "react-number-format";
 import { ProductType } from "../../../../services/productService";
 import type { BatchNormProductOptionDto } from "../../../../services/serviceCatalogService";
-import ItemGroup from "./ItemGroup";
+import ItemGroup, { AddItemButton } from "./ItemGroup";
 import { RemoveButton } from "./MaterialSection";
-import ProductAddSelect from "./ProductAddSelect";
 import { equipmentTypeName, isPositive, productNameOf, typeTagStyle, type PickedEquipment } from "./utils";
 
 export interface EquipmentSectionProps {
   picked: PickedEquipment[];
   productById: ReadonlyMap<string, BatchNormProductOptionDto>;
-  addOptions: BatchNormProductOptionDto[];
   capacityUnits: string[];
   missingCount: number;
   open: boolean;
   tried: boolean;
   onToggleOpen: () => void;
-  onAdd: (productId: string) => void;
+  onOpenAdd: () => void;
   onCapacity: (productId: string, capacity: number | null) => void;
   onCapacityUnit: (productId: string, unit: string) => void;
   onRemove: (productId: string) => void;
@@ -27,17 +25,16 @@ const GRID = "130px minmax(0, 1fr) 290px 40px";
 const headCell: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: "#006d75" };
 const EQUIPMENT_TAG = typeTagStyle(ProductType.Equipment);
 
-/** Nhóm Thiết bị: ô thêm + bảng công suất sử dụng */
+/** Nhóm Thiết bị: nút thêm + bảng công suất sử dụng */
 const EquipmentSection: React.FC<EquipmentSectionProps> = ({
   picked,
   productById,
-  addOptions,
   capacityUnits,
   missingCount,
   open,
   tried,
   onToggleOpen,
-  onAdd,
+  onOpenAdd,
   onCapacity,
   onCapacityUnit,
   onRemove,
@@ -49,17 +46,7 @@ const EquipmentSection: React.FC<EquipmentSectionProps> = ({
     theme={{ border: "#87e8de", headBg: "linear-gradient(90deg, #e6fffb, #ffffff)", fg: "#006d75", countBg: "#13a8a8" }}
     missingText={missingCount > 0 ? `${missingCount} thiếu công suất` : undefined}
     onToggle={onToggleOpen}
-    addBox={
-      <ProductAddSelect
-        ariaLabel="Thêm thiết bị"
-        placeholder="Thêm thiết bị…"
-        products={addOptions}
-        typeNameOf={equipmentTypeName}
-        typeStyleOf={() => EQUIPMENT_TAG}
-        emptyText="Không tìm thấy thiết bị phù hợp"
-        onAdd={onAdd}
-      />
-    }
+    addBox={<AddItemButton label="Thêm thiết bị" color="#13a8a8" onClick={onOpenAdd} />}
   >
     <div role="table" aria-label="Thiết bị sử dụng" style={{ padding: 12 }}>
       <div
@@ -67,7 +54,7 @@ const EquipmentSection: React.FC<EquipmentSectionProps> = ({
         style={{ display: "grid", gridTemplateColumns: GRID, gap: 10, alignItems: "center", padding: "8px 10px", background: "#f0fffd", borderRadius: 8 }}
       >
         <span role="columnheader" style={headCell}>
-          Loại
+          Loại thiết bị
         </span>
         <span role="columnheader" style={headCell}>
           Tên thiết bị
@@ -128,7 +115,7 @@ const EquipmentSection: React.FC<EquipmentSectionProps> = ({
       })}
       {picked.length === 0 && (
         <p style={{ margin: 0, padding: "18px 10px", textAlign: "center", fontSize: 13, color: "#595959" }}>
-          Chưa có thiết bị. Tìm ở ô phía trên để thêm (không bắt buộc).
+          Chưa có thiết bị. Bấm “+ Thêm thiết bị” hoặc “Sao chép định mức từ bộ khác”.
         </p>
       )}
     </div>

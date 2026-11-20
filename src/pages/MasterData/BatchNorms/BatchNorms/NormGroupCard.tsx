@@ -23,6 +23,7 @@ export interface NormGroupCardProps {
   onToggle: (foldKey: string, open: boolean) => void;
   onToggleMore: (blockKey: string, expanded: boolean) => void;
   onAddMethod: (block: IndicatorBlockData) => void;
+  onEdit: (testMethodIndicatorId: string) => void;
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
@@ -43,6 +44,7 @@ const NormGroupCard: React.FC<NormGroupCardProps> = ({
   onToggle,
   onToggleMore,
   onAddMethod,
+  onEdit,
   onToggleActive,
   onDelete,
   loadMaterials,
@@ -96,6 +98,7 @@ const NormGroupCard: React.FC<NormGroupCardProps> = ({
               onToggle={onToggle}
               onToggleMore={onToggleMore}
               onAddMethod={onAddMethod}
+              onEdit={onEdit}
               onToggleActive={onToggleActive}
               onDelete={onDelete}
               loadMaterials={loadMaterials}

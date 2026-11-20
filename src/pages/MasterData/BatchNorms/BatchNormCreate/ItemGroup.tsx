@@ -14,11 +14,42 @@ export interface ItemGroupProps {
   theme: ItemGroupTheme;
   /** "2 thiếu lượng" — rỗng thì ẩn */
   missingText?: string;
-  /** Ô thêm mục (luôn hiện cạnh tiêu đề) */
+  /** Nút thêm mục — chỉ hiện khi nhóm đang mở */
   addBox: React.ReactNode;
   onToggle: () => void;
   children: React.ReactNode;
 }
+
+/** Nút "+ Thêm vật tư / thiết bị" nét đứt ở đầu nhóm */
+export const AddItemButton: React.FC<{ label: string; color: string; onClick: () => void }> = ({ label, color, onClick }) => (
+  <button
+    type="button"
+    aria-haspopup="dialog"
+    onClick={onClick}
+    style={{
+      marginLeft: "auto",
+      height: 30,
+      padding: "0 12px",
+      border: `1px dashed ${color}`,
+      borderRadius: 8,
+      background: "#fff",
+      color,
+      font: "inherit",
+      fontSize: 13,
+      fontWeight: 500,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+    }}
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+    {label}
+  </button>
+);
 
 /** Khung nhóm Vật tư / Thiết bị: tiêu đề thu gọn được + ô thêm + bảng */
 const ItemGroup: React.FC<ItemGroupProps> = ({ title, count, open, theme, missingText, addBox, onToggle, children }) => (
@@ -105,7 +136,7 @@ const ItemGroup: React.FC<ItemGroupProps> = ({ title, count, open, theme, missin
           {missingText}
         </span>
       )}
-      {addBox}
+      {open && addBox}
     </div>
     {open && children}
   </section>

@@ -11,10 +11,13 @@ export interface SummaryChip {
 
 export interface CreateFooterProps {
   chips: SummaryChip[];
-  createCount: number;
-  /** Chỉ hiện sau khi đã bấm Tạo */
+  saveLabel: string;
+  /** Chỉ hiện sau khi đã bấm Tạo / Lưu */
   problems: string[];
+  /** Còn lỗi hoặc (sửa) chưa thay đổi gì → nút xám */
   invalid: boolean;
+  /** "Đã thêm 2 vật tư" — rỗng thì ẩn */
+  toast: string;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
 }
@@ -35,8 +38,8 @@ const chipStyle = ([bg, fg, border]: SummaryChip["colors"]): React.CSSProperties
   border: `1px solid ${border}`,
 });
 
-/** Chân phiếu: TÓM TẮT + lỗi + Hủy / Tạo N định mức */
-const CreateFooter: React.FC<CreateFooterProps> = ({ chips, createCount, problems, invalid, onCancel, onSubmit }) => (
+/** Chân phiếu: TÓM TẮT + lỗi / thông báo + Hủy / Tạo – Lưu */
+const CreateFooter: React.FC<CreateFooterProps> = ({ chips, saveLabel, problems, invalid, toast, onCancel, onSubmit }) => (
   <div
     style={{
       padding: "12px 20px",
@@ -75,12 +78,17 @@ const CreateFooter: React.FC<CreateFooterProps> = ({ chips, createCount, problem
           {problems.join(" · ")}
         </span>
       )}
+      {toast && (
+        <span role="status" style={{ fontSize: 13, color: "#237804" }}>
+          {toast}
+        </span>
+      )}
     </div>
     <span style={{ display: "inline-flex", gap: 8 }}>
       <Button onClick={onCancel} style={{ height: 38, padding: "0 16px", borderRadius: 8 }}>
         Hủy
       </Button>
-      <SaveNormsButton count={createCount} invalid={invalid} onSubmit={onSubmit} />
+      <SaveNormsButton label={saveLabel} invalid={invalid} onSubmit={onSubmit} />
     </span>
   </div>
 );

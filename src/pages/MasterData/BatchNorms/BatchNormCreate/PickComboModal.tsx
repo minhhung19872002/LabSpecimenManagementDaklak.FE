@@ -9,6 +9,8 @@ import {
   comboIndicatorNameOf,
   comboMethodNameOf,
   comboSpecimenNameOf,
+  pickStatusOf,
+  type NormFormMode,
   type PickFilter,
   type PickFilterOptions,
   type PickTab,
@@ -16,6 +18,8 @@ import {
 
 export interface PickComboModalProps {
   open: boolean;
+  mode: NormFormMode;
+  /** Tên dịch vụ đang lọc — rỗng = tất cả */
   serviceGroupName: string;
   filter: PickFilter;
   filterOptions: PickFilterOptions;
@@ -23,12 +27,12 @@ export interface PickComboModalProps {
   tabCounts: Readonly<Record<PickTab, number>>;
   /** Đã lọc + theo tab, đã sắp xếp */
   rows: BatchNormComboDto[];
-  /** Bộ chưa có định mức đang hiển thị (cho "Chọn tất cả") */
+  /** Bộ chọn được đang hiển thị (cho "Chọn tất cả") */
   visibleFreeIds: string[];
   selected: ReadonlySet<string>;
-  /** Mã định mức sẽ tạo cho từng bộ đã chọn */
-  codeById: ReadonlyMap<string, string>;
-  codeRange: string;
+  /** Bộ không tích được: tạo mới = đã có định mức, sửa = bộ đang sửa */
+  lockedIds: ReadonlySet<string>;
+  selectedCount: number;
   onFilterChange: (patch: Partial<PickFilter>) => void;
   onClearFilter: () => void;
   onTabChange: (tab: PickTab) => void;
@@ -67,16 +71,6 @@ const tabStyle = (on: boolean): React.CSSProperties => ({
     : { background: "transparent", color: "#595959" }),
 });
 
-const statusOf = (
-  c: BatchNormComboDto,
-  isSelected: boolean,
-  code: string | undefined
-): { text: string; style: React.CSSProperties } => {
-  if (c.existingNormCode) return { text: `Đã có ${c.existingNormCode}`, style: { color: "#8c8c8c" } };
-  if (isSelected) return { text: `Sẽ tạo ${code ?? ""}`.trim(), style: { color: "#237804", fontWeight: 500 } };
-  return { text: "Chưa có định mức", style: { color: "#ad4e00" } };
-};
-
 const FilterSelect: React.FC<{
   label: string;
   value?: string;
@@ -103,6 +97,7 @@ const FilterSelect: React.FC<{
 /** Popup chọn các bộ Nền mẫu × Chỉ tiêu × Phương pháp (đã khai báo trong tên dịch vụ) */
 const PickComboModal: React.FC<PickComboModalProps> = ({
   open,
+  mode,
   serviceGroupName,
   filter,
   filterOptions,
@@ -111,8 +106,8 @@ const PickComboModal: React.FC<PickComboModalProps> = ({
   rows,
   visibleFreeIds,
   selected,
-  codeById,
-  codeRange,
+  lockedIds,
+  selectedCount,
   onFilterChange,
   onClearFilter,
   onTabChange,
@@ -154,7 +149,8 @@ const PickComboModal: React.FC<PickComboModalProps> = ({
           }}
         >
           <h2 id="bnc-pick-title" className="bnc-ellipsis" style={{ margin: 0, flex: 1, fontSize: 16, lineHeight: "24px", fontWeight: 500, color: "#fff" }}>
-            Chọn nền mẫu · chỉ tiêu · phương pháp <span style={{ fontWeight: 400, opacity: 0.9 }}>· {serviceGroupName}</span>
+            {mode === "edit" ? "Áp dụng định mức cho bộ khác" : "Chọn nền mẫu · chỉ tiêu · phương pháp"}
+            {serviceGroupName && <span style={{ fontWeight: 400, opacity: 0.9 }}> · {serviceGroupName}</span>}
           </h2>
           <button
             type="button"
@@ -269,9 +265,9 @@ const PickComboModal: React.FC<PickComboModalProps> = ({
           </div>
           {rows.map((c) => {
             const id = c.testMethodIndicatorId;
-            const has = Boolean(c.existingNormCode);
-            const isSelected = !has && selected.has(id);
-            const status = statusOf(c, isSelected, codeById.get(id));
+            const locked = lockedIds.has(id);
+            const isSelected = !locked && selected.has(id);
+            const status = pickStatusOf(c, mode, locked, isSelected);
             const specimen = comboSpecimenNameOf(c);
             const indicator = comboIndicatorNameOf(c);
             const method = comboMethodNameOf(c);
@@ -279,12 +275,12 @@ const PickComboModal: React.FC<PickComboModalProps> = ({
               <label
                 key={id}
                 role="row"
-                className={`bnc-pick-row${has ? " is-has" : isSelected ? " is-selected" : " bnc-row"}`}
+                className={`bnc-pick-row${locked ? " is-has" : isSelected ? " is-selected" : " bnc-row"}`}
               >
                 <span style={{ display: "flex", justifyContent: "center" }}>
                   <Checkbox
-                    checked={isSelected || has}
-                    disabled={has}
+                    checked={isSelected || locked}
+                    disabled={locked}
                     aria-label={`${specimen} – ${indicator} – ${method}`}
                     onChange={() => onToggle(id)}
                   />
@@ -324,9 +320,9 @@ const PickComboModal: React.FC<PickComboModalProps> = ({
           }}
         >
           <span style={{ fontSize: 13, color: "#595959" }}>
-            Đã chọn <strong style={{ color: "#096dd9", fontWeight: 500 }}>{selected.size}</strong> bộ · {codeRange}
+            Đã chọn <strong style={{ color: "#096dd9", fontWeight: 500 }}>{selectedCount}</strong> bộ
           </span>
-          {selected.size > 0 && (
+          {selectedCount > 0 && (
             <button type="button" className="bnc-btn-link" style={{ fontSize: 13, color: "#cf1322" }} onClick={onClearSelected}>
               Bỏ chọn tất cả
             </button>

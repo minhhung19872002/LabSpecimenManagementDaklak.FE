@@ -20,6 +20,7 @@ export interface NormSpecimenBlockProps {
   onToggle: (foldKey: string, open: boolean) => void;
   onToggleMore: (blockKey: string, expanded: boolean) => void;
   onAddMethod: (block: IndicatorBlockData) => void;
+  onEdit: (testMethodIndicatorId: string) => void;
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
@@ -38,6 +39,7 @@ const NormSpecimenBlock: React.FC<NormSpecimenBlockProps> = ({
   onToggle,
   onToggleMore,
   onAddMethod,
+  onEdit,
   onToggleActive,
   onDelete,
   loadMaterials,
@@ -76,6 +78,7 @@ const NormSpecimenBlock: React.FC<NormSpecimenBlockProps> = ({
           canDelete={canDelete}
           onToggleMore={onToggleMore}
           onAddMethod={onAddMethod}
+              onEdit={onEdit}
           onToggleActive={onToggleActive}
           onDelete={onDelete}
           loadMaterials={loadMaterials}

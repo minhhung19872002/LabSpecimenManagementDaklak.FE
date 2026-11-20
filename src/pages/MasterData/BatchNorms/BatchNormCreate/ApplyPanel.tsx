@@ -1,11 +1,22 @@
 import React from "react";
 import { Select } from "antd";
 import StepLabel, { type StepState } from "../../ServiceDeclare/ServiceDeclare/StepLabel";
-import { isSelOpen, type FilterOption, type FoldState, type SelectedCategoryNode } from "./utils";
+import { isSelOpen, type FilterOption, type FoldState, type NormFormMode, type SelectedCategoryNode } from "./utils";
+
+/** Bộ đang sửa (chế độ sửa) */
+export interface EditingCombo {
+  specimenName: string;
+  indicatorName: string;
+  methodName: string;
+}
 
 export interface ApplyPanelProps {
+  mode: NormFormMode;
   step: StepState;
-  serviceGroupKey?: string;
+  /** Chỉ có ở chế độ sửa */
+  editing: EditingCombo | null;
+  /** "" = Tất cả dịch vụ (chỉ chế độ tạo) */
+  serviceGroupKey: string;
   serviceGroupOptions: FilterOption[];
   tree: SelectedCategoryNode[];
   selectedCount: number;
@@ -42,6 +53,9 @@ const RemoveIcon: React.FC = () => (
   </svg>
 );
 
+const editGridLabel: React.CSSProperties = { color: "#8c8c8c" };
+const editGridValue: React.CSSProperties = { fontWeight: 600, minWidth: 0, overflowWrap: "anywhere" };
+
 const methodPillStyle: React.CSSProperties = {
   maxWidth: "100%",
   boxSizing: "border-box",
@@ -60,7 +74,9 @@ const methodPillStyle: React.CSSProperties = {
 
 /** ① Áp dụng cho: tên dịch vụ + cây bộ Nền mẫu × Chỉ tiêu × Phương pháp đã chọn */
 const ApplyPanel: React.FC<ApplyPanelProps> = ({
+  mode,
   step,
+  editing,
   serviceGroupKey,
   serviceGroupOptions,
   tree,
@@ -91,38 +107,74 @@ const ApplyPanel: React.FC<ApplyPanelProps> = ({
       <StepLabel
         index={1}
         state={step}
-        title="Áp dụng cho"
-        required
+        title={mode === "edit" ? "Bộ đang sửa" : "Áp dụng cho"}
+        required={mode === "create"}
         extra={
-          <span style={{ fontSize: 12, color: "#595959" }}>
-            Đã chọn <strong style={{ color: "#096dd9", fontWeight: 500 }}>{selectedCount}</strong> bộ
-          </span>
+          mode === "edit" ? (
+            selectedCount > 0 ? (
+              <span style={{ fontSize: 12, color: "#595959" }}>
+                Áp dụng thêm <strong style={{ color: "#096dd9", fontWeight: 500 }}>{selectedCount}</strong> bộ
+              </span>
+            ) : undefined
+          ) : (
+            <span style={{ fontSize: 12, color: "#595959" }}>
+              Đã chọn <strong style={{ color: "#096dd9", fontWeight: 500 }}>{selectedCount}</strong> bộ
+            </span>
+          )
         }
       />
-      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 13, color: "#595959" }}>Tên dịch vụ</span>
-        <Select
-          aria-label="Tên dịch vụ"
-          value={serviceGroupKey}
-          options={serviceGroupOptions}
-          onChange={onServiceGroupChange}
-          placeholder={serviceGroupOptions.length ? "Chọn tên dịch vụ" : "Chưa có dịch vụ nào"}
-          showSearch={{ optionFilterProp: "label" }}
-          style={{ width: "100%", height: 36 }}
-          notFoundContent="Không có tên dịch vụ"
-        />
-      </label>
+      {mode === "edit" && editing && (
+        <div
+          style={{
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "#fff",
+            border: "1px solid #91caff",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#0958d9" }}>Đang sửa định mức của</span>
+          <div style={{ display: "grid", gridTemplateColumns: "90px minmax(0, 1fr)", gap: "2px 8px", fontSize: 13, lineHeight: "20px" }}>
+            <span style={editGridLabel}>Nền mẫu</span>
+            <strong style={editGridValue}>{editing.specimenName}</strong>
+            <span style={editGridLabel}>Chỉ tiêu</span>
+            <strong style={editGridValue}>{editing.indicatorName}</strong>
+            <span style={editGridLabel}>Phương pháp</span>
+            <strong style={editGridValue}>{editing.methodName}</strong>
+          </div>
+          <span style={{ fontSize: 11, lineHeight: "16px", color: "#8c8c8c" }}>
+            Dữ liệu kỹ thuật liên kết cố định từ Dịch vụ &amp; Bảng giá (không thay đổi khi điều chỉnh giá bán).
+          </span>
+        </div>
+      )}
+      {mode === "create" && (
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 13, color: "#595959" }}>
+            Lọc theo dịch vụ <span style={{ color: "#8c8c8c" }}>(không bắt buộc)</span>
+          </span>
+          <Select
+            aria-label="Lọc theo dịch vụ"
+            value={serviceGroupKey}
+            options={serviceGroupOptions}
+            onChange={onServiceGroupChange}
+            showSearch={{ optionFilterProp: "label" }}
+            style={{ width: "100%", height: 36 }}
+            notFoundContent="Không có tên dịch vụ"
+          />
+        </label>
+      )}
       <button
         type="button"
         className={`bnc-pick-btn${showError ? " is-error" : ""}`}
         onClick={onOpenPick}
         aria-haspopup="dialog"
-        disabled={!serviceGroupKey}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
         </svg>
-        Chọn nền mẫu · chỉ tiêu · phương pháp
+        {mode === "edit" ? "Áp dụng thay đổi cho bộ khác" : "Chọn nền mẫu · chỉ tiêu · phương pháp"}
       </button>
     </div>
 
@@ -260,9 +312,6 @@ const ApplyPanel: React.FC<ApplyPanelProps> = ({
                                   <span title={r.methodName} style={methodPillStyle}>
                                     {r.methodName}
                                   </span>
-                                  <span style={{ fontSize: 12, color: "#237804" }} title="Mã định mức sẽ tạo">
-                                    {r.code}
-                                  </span>
                                 </span>
                               </span>
                               <button
@@ -300,7 +349,9 @@ const ApplyPanel: React.FC<ApplyPanelProps> = ({
             <path d="M9 11l3 3 8-8" />
             <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" />
           </svg>
-          Chưa chọn bộ nào. Bấm “Chọn nền mẫu · chỉ tiêu · phương pháp” ở trên.
+          {mode === "edit"
+            ? "Định mức đang sửa chỉ áp dụng cho bộ ở trên. Bấm “Áp dụng thay đổi cho bộ khác” nếu muốn dùng chung cho bộ khác."
+            : "Chưa chọn bộ nào. Bấm “Chọn nền mẫu · chỉ tiêu · phương pháp” ở trên."}
         </div>
       )}
     </div>

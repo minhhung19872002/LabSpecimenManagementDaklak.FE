@@ -15,6 +15,8 @@ export interface NormIndicatorBlockProps {
   canDelete: boolean;
   onToggleMore: (blockKey: string, expanded: boolean) => void;
   onAddMethod: (block: IndicatorBlockData) => void;
+  /** Mở phiếu sửa định mức của bộ */
+  onEdit: (testMethodIndicatorId: string) => void;
   onToggleActive: (normId: string) => Promise<void>;
   onDelete: (norm: ServiceBatchNormDto) => void;
   loadMaterials: (testMethodIndicatorId: string) => Promise<MethodBatchNormDto[]>;
@@ -64,6 +66,7 @@ const NormIndicatorBlock: React.FC<NormIndicatorBlockProps> = ({
   canDelete,
   onToggleMore,
   onAddMethod,
+  onEdit,
   onToggleActive,
   onDelete,
   loadMaterials,
@@ -133,7 +136,11 @@ const NormIndicatorBlock: React.FC<NormIndicatorBlockProps> = ({
             </div>
             <div className={cellClass("bn-actions", i, n.isActive)} style={{ gridRow: row, gridColumn: 6 }}>
               {canEdit && (
-                <button type="button" className="bn-icon-btn" title="Sửa" aria-label={`Sửa định mức ${label}`}>
+                <button type="button" className="bn-icon-btn"
+                  title="Sửa"
+                  aria-label={`Sửa định mức ${label}`}
+                  onClick={() => onEdit(n.testMethodIndicatorId)}
+                >
                   <EditOutlined style={{ fontSize: 14 }} />
                 </button>
               )}

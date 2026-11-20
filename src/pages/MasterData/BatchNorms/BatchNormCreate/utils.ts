@@ -20,8 +20,14 @@ export type { FilterOption, FoldState };
 export const BATCH_NORM_LIST_URL = "/master-data?tab=batchNorms";
 export const BATCH_NORM_CREATE_PATH = "/master-data/batch-norms/create";
 export const SERVICE_DECLARE_URL = "/master-data/services/declare";
+/** Sửa định mức của 1 bộ: dùng chung màn phiếu khai báo */
+export const BATCH_NORM_EDIT_URL = (testMethodIndicatorId: string): string =>
+  `${BATCH_NORM_CREATE_PATH}?edit=${encodeURIComponent(testMethodIndicatorId)}`;
 
-/** Trạng thái truyền về L3 sau khi tạo xong */
+/** Phiếu đang tạo mới hay sửa định mức của 1 bộ */
+export type NormFormMode = "create" | "edit";
+
+/** Trạng thái truyền về L3 sau khi tạo / sửa xong */
 export interface BatchNormCreatedState {
   createdToast: string;
   createdIds: string[];
@@ -29,33 +35,27 @@ export interface BatchNormCreatedState {
 
 const compareVi = (a: string, b: string): number => a.localeCompare(b, "vi", { sensitivity: "base" });
 
-// ===================== Mã định mức =====================
+// ===================== Tên dịch vụ (lọc, không bắt buộc) =====================
 
-/** Mã thứ `offset` tính từ mã kế tiếp: DM-2026-0005 + 2 → DM-2026-0007 */
-export const codeAt = (nextCode: string, offset: number): string => {
-  const match = /^(.*?)(\d+)$/.exec(nextCode);
-  if (!match) return nextCode;
-  const [, prefix, digits] = match;
-  return prefix + String(Number(digits) + offset).padStart(digits.length, "0");
-};
-
-export const codeRangeText = (nextCode: string, count: number): string => {
-  if (count <= 0 || !nextCode) return "—";
-  if (count === 1) return codeAt(nextCode, 0);
-  return `${codeAt(nextCode, 0)} → ${codeAt(nextCode, count - 1)}`;
-};
-
-// ===================== Tên dịch vụ =====================
-
+/** "" = Tất cả dịch vụ */
+export const ALL_SERVICES_KEY = "";
 export const UNGROUPED_KEY = "__ungrouped__";
 
 export const serviceGroupKeyOf = (g: Pick<BatchNormServiceGroupOptionDto, "id">): string => g.id || UNGROUPED_KEY;
 
-export const buildServiceGroupOptions = (groups: readonly BatchNormServiceGroupOptionDto[]): FilterOption[] =>
-  groups.map((g) => ({
+export const buildServiceGroupOptions = (groups: readonly BatchNormServiceGroupOptionDto[]): FilterOption[] => [
+  { value: ALL_SERVICES_KEY, label: "Tất cả dịch vụ" },
+  ...groups.map((g) => ({
     value: serviceGroupKeyOf(g),
     label: g.freeCount > 0 ? `${g.name} · ${g.freeCount} chưa có định mức` : g.name,
-  }));
+  })),
+];
+
+export const filterCombosByService = (combos: readonly BatchNormComboDto[], serviceKey: string): BatchNormComboDto[] => {
+  if (serviceKey === ALL_SERVICES_KEY) return [...combos];
+  if (serviceKey === UNGROUPED_KEY) return combos.filter((c) => !c.serviceGroupId);
+  return combos.filter((c) => c.serviceGroupId === serviceKey);
+};
 
 // ===================== Bộ Nền mẫu × Chỉ tiêu × Phương pháp =====================
 
@@ -115,7 +115,6 @@ export interface SelectedComboRow {
   testMethodIndicatorId: string;
   indicatorName: string;
   methodName: string;
-  code: string;
 }
 
 export interface SelectedSpecimenNode {
@@ -133,15 +132,12 @@ export interface SelectedCategoryNode {
   specimens: SelectedSpecimenNode[];
 }
 
-/**
- * Cây bộ đã chọn: Nhóm nền mẫu › Nền mẫu › (Chỉ tiêu + PP). `chosen` đã sắp xếp → mã định mức
- * gán theo đúng thứ tự hiển thị (giống thứ tự BE tạo).
- */
-export const buildSelectedTree = (chosen: readonly BatchNormComboDto[], nextCode: string): SelectedCategoryNode[] => {
+/** Cây bộ đã chọn: Nhóm nền mẫu › Nền mẫu › (Chỉ tiêu + PP), `chosen` đã sắp xếp */
+export const buildSelectedTree = (chosen: readonly BatchNormComboDto[]): SelectedCategoryNode[] => {
   const nodes: SelectedCategoryNode[] = [];
   const byCategory = new Map<string, SelectedCategoryNode>();
   const indicatorSets = new Map<string, Set<string>>();
-  chosen.forEach((c, index) => {
+  chosen.forEach((c) => {
     const catKey = comboCategoryKeyOf(c);
     let cat = byCategory.get(catKey);
     if (!cat) {
@@ -167,7 +163,6 @@ export const buildSelectedTree = (chosen: readonly BatchNormComboDto[], nextCode
       testMethodIndicatorId: c.testMethodIndicatorId,
       indicatorName: comboIndicatorNameOf(c),
       methodName: comboMethodNameOf(c),
-      code: codeAt(nextCode, index),
     });
     cat.count += 1;
     indicatorSets.get(catKey)?.add(c.indicatorId);
@@ -244,14 +239,66 @@ export const buildPickFilterOptions = (combos: readonly BatchNormComboDto[], f: 
   };
 };
 
+/**
+ * Bộ không tích được trong popup:
+ * - Tạo mới: bộ đã có định mức.
+ * - Sửa: chỉ bộ đang sửa (bộ khác đã có định mức vẫn chọn được → ghi đè).
+ */
+export const isComboLocked = (c: BatchNormComboDto, mode: NormFormMode, editId?: string): boolean =>
+  mode === "edit" ? c.testMethodIndicatorId === editId : Boolean(c.existingNormCode);
+
 export const applyPickTab = (
   combos: readonly BatchNormComboDto[],
   tab: PickTab,
-  selected: ReadonlySet<string>
+  selected: ReadonlySet<string>,
+  isLocked: (c: BatchNormComboDto) => boolean
 ): BatchNormComboDto[] => {
-  if (tab === "sel") return combos.filter((c) => selected.has(c.testMethodIndicatorId));
-  if (tab === "free") return combos.filter((c) => !c.existingNormCode && !selected.has(c.testMethodIndicatorId));
+  const isSel = (c: BatchNormComboDto) => !isLocked(c) && selected.has(c.testMethodIndicatorId);
+  if (tab === "sel") return combos.filter(isSel);
+  if (tab === "free") return combos.filter((c) => !isLocked(c) && !isSel(c));
   return [...combos];
+};
+
+export interface PickStatus {
+  text: string;
+  style: React.CSSProperties;
+}
+
+/** Cột Trạng thái của popup chọn bộ theo chế độ phiếu */
+export const pickStatusOf = (c: BatchNormComboDto, mode: NormFormMode, locked: boolean, isSelected: boolean): PickStatus => {
+  const has = Boolean(c.existingNormCode);
+  if (mode === "edit") {
+    if (locked) return { text: "Đang sửa", style: { color: "#8c8c8c" } };
+    if (isSelected)
+      return has
+        ? { text: "Sẽ ghi đè định mức", style: { color: "#d46b08", fontWeight: 500 } }
+        : { text: "Sẽ áp dụng", style: { color: "#237804", fontWeight: 500 } };
+    return has ? { text: "Đã có định mức", style: { color: "#8c8c8c" } } : { text: "Chưa có định mức", style: { color: "#ad4e00" } };
+  }
+  if (has) return { text: "Đã có định mức", style: { color: "#8c8c8c" } };
+  if (isSelected) return { text: "Sẽ tạo định mức", style: { color: "#237804", fontWeight: 500 } };
+  return { text: "Chưa có định mức", style: { color: "#ad4e00" } };
+};
+
+/** "Nền mẫu › Chỉ tiêu › Phương pháp" */
+export const comboPathOf = (c: BatchNormComboDto): string =>
+  `${comboSpecimenNameOf(c)} › ${comboIndicatorNameOf(c)} › ${comboMethodNameOf(c)}`;
+
+// ===================== Popup sao chép định mức =====================
+
+/** Bộ đã có định mức (trừ bộ đang sửa), lọc theo Nền mẫu / Chỉ tiêu / Phương pháp */
+export const filterCopySources = (
+  combos: readonly BatchNormComboDto[],
+  query: string,
+  excludeId?: string
+): BatchNormComboDto[] => {
+  const q = foldText(query.trim());
+  return combos.filter(
+    (c) =>
+      Boolean(c.existingNormCode) &&
+      c.testMethodIndicatorId !== excludeId &&
+      (!q || foldText(`${comboSpecimenNameOf(c)} ${comboIndicatorNameOf(c)} ${comboMethodNameOf(c)}`).includes(q))
+  );
 };
 
 // ===================== Vật tư & thiết bị =====================
