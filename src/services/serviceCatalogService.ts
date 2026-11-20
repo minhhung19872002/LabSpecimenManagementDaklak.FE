@@ -512,6 +512,10 @@ export interface YearlyForecastRowDto {
   indicatorFormattedName?: string | null;
   specimenTypeId?: string | null;
   specimenTypeName?: string | null;
+  specimenTypeSortOrder: number;
+  /** Nhóm nền mẫu (thẻ cấp 1 trên L4) */
+  sampleTypeCategoryId?: string | null;
+  sampleTypeCategoryName?: string | null;
   previousYearSamples?: number | null;
   estimatedSamples?: number | null;
   normLines: ForecastNormLineDto[];
@@ -525,6 +529,8 @@ export interface YearlyForecastListDto {
   canClone: boolean;
   totalCount: number;
   missingCount: number;
+  /** Tổng số mẫu dự toán năm trước — KPI "So với năm trước" */
+  previousYearTotal: number;
   items: YearlyForecastRowDto[];
 }
 

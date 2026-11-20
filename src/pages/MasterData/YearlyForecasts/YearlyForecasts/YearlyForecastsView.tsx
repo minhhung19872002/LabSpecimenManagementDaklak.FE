@@ -1,62 +1,84 @@
 import React from "react";
-import ForecastHeader, { type ForecastHeaderProps } from "./ForecastHeader";
+import { Spin } from "antd";
+import type { YearlyForecastRowDto } from "../../../../services/serviceCatalogService";
+import ForecastYearBar, { type ForecastYearBarProps } from "./ForecastYearBar";
 import ForecastToolbar, { type ForecastToolbarProps } from "./ForecastToolbar";
-import ForecastTable, { type ForecastTableProps } from "./ForecastTable";
-import ForecastCalculationModal, { type ForecastCalculationModalProps } from "./ForecastCalculationModal";
+import ForecastGroupCard from "./ForecastGroupCard";
+import DeleteForecastConfirm, { type DeleteForecastConfirmProps } from "./DeleteForecastConfirm";
+import UndoToast, { type UndoToastProps } from "../../BatchNorms/BatchNorms/UndoToast";
+import type { FoldState, ForecastGroupCard as GroupCardData } from "./utils";
+import "../../ServiceCatalog/ServiceCatalog/ServiceCatalog.css";
+import "../../BatchNorms/BatchNorms/BatchNorms.css";
+import "./YearlyForecasts.css";
 
 export interface YearlyForecastsViewProps {
-  isLocked: boolean;
-  canEdit: boolean;
-  header: ForecastHeaderProps;
+  loading: boolean;
+  yearBar: ForecastYearBarProps;
   toolbar: ForecastToolbarProps;
-  table: ForecastTableProps;
-  calculation: ForecastCalculationModalProps;
+  cards: GroupCardData[];
+  /** Năm chưa có dòng nào trong phạm vi đang xem (khác với lọc không ra) */
+  emptyText: string;
+  fold: FoldState;
+  more: FoldState;
+  allOpen: boolean;
+  filtered: boolean;
+  showAll: boolean;
+  editable: boolean;
+  onToggle: (foldKey: string, open: boolean) => void;
+  onToggleMore: (blockKey: string, expanded: boolean) => void;
+  onDelete: (row: YearlyForecastRowDto) => void;
+  deleteConfirm: DeleteForecastConfirmProps;
+  toast: UndoToastProps;
 }
 
-const hintStyle = (locked: boolean): React.CSSProperties => ({
-  marginBottom: 10,
-  padding: "6px 12px",
-  borderRadius: 6,
-  fontSize: 13,
-  border: `1px solid ${locked ? "#d9d9d9" : "#b7eb8f"}`,
-  background: locked ? "#fafafa" : "#f6ffed",
-  color: locked ? "#595959" : "#389e0d",
-});
-
-/** L4 — Dự toán mẫu hàng năm */
+/** L4 — Dự toán mẫu năm: Nhóm nền mẫu → Nền mẫu → Chỉ tiêu × Phương pháp */
 const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({
-  isLocked,
-  canEdit,
-  header,
+  loading,
+  yearBar,
   toolbar,
-  table,
-  calculation,
-}) => {
-  const { year } = toolbar;
-  return (
-    <div style={{ padding: "4px 16px 16px" }}>
-      <ForecastHeader {...header} />
-      <ForecastToolbar {...toolbar} />
-
-      <div style={hintStyle(isLocked || !canEdit)}>
-        {isLocked ? (
-          <>
-            <b>Đã khóa:</b> Năm {year} chỉ xem — sau 31/12, bản ghi năm cũ chuyển Read-Only (BR-07).
-          </>
-        ) : canEdit ? (
-          <>
-            <b>Đang mở:</b> Nhập số mẫu trực tiếp vào bảng rồi bấm “Lưu dự toán” phía trên. Không ảnh hưởng Định mức
-            Level 3 (BR-05).
-          </>
-        ) : (
-          <>Bạn chỉ có quyền xem dự toán.</>
-        )}
-      </div>
-
-      <ForecastTable {...table} />
-      <ForecastCalculationModal {...calculation} />
+  cards,
+  emptyText,
+  fold,
+  more,
+  allOpen,
+  filtered,
+  showAll,
+  editable,
+  onToggle,
+  onToggleMore,
+  onDelete,
+  deleteConfirm,
+  toast,
+}) => (
+  <Spin spinning={loading}>
+    <ForecastYearBar {...yearBar} />
+    <ForecastToolbar {...toolbar} />
+    <div className="svc-scroll">
+      {cards.length === 0 ? (
+        <p className="svc-empty">{loading ? "Đang tải…" : emptyText}</p>
+      ) : (
+        <div className="svc-list yf-list">
+          {cards.map((card) => (
+            <ForecastGroupCard
+              key={card.foldKey}
+              card={card}
+              fold={fold}
+              more={more}
+              allOpen={allOpen}
+              filtered={filtered}
+              showAll={showAll}
+              editable={editable}
+              onToggle={onToggle}
+              onToggleMore={onToggleMore}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
     </div>
-  );
-};
+    <DeleteForecastConfirm {...deleteConfirm} />
+    <UndoToast {...toast} />
+  </Spin>
+);
 
 export default YearlyForecastsView;

@@ -39,9 +39,6 @@ import ProductCatalogTab, { type ProductCatalogActions } from "../ProductCatalog
 import ServiceCatalogPage, { type ServiceCatalogActions } from "../ServiceCatalog/ServiceCatalogPage";
 import BatchNormsPage, { type BatchNormsActions } from "../BatchNorms/BatchNormsPage";
 import YearlyForecastsPage, { type YearlyForecastActions } from "../YearlyForecasts/YearlyForecastsPage";
-import ForecastCardActions, {
-  type YearlyForecastActionState,
-} from "../YearlyForecasts/YearlyForecasts/ForecastCardActions";
 import ImportProductMasterDataModal from "./components/ImportProductMasterDataModal";
 import { useMasterDataState, useMasterDataSidebar } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
@@ -379,11 +376,6 @@ const MasterDataList: React.FC = () => {
   const servicesRef = useRef<ServiceCatalogActions>(null);
   const batchNormsRef = useRef<BatchNormsActions>(null);
   const forecastsRef = useRef<YearlyForecastActions>(null);
-  const [forecastActionState, setForecastActionState] = useState<YearlyForecastActionState | null>(null);
-  const handleForecastClone = useCallback(() => forecastsRef.current?.clone(), []);
-  const handleForecastSave = useCallback(async () => {
-    await forecastsRef.current?.save();
-  }, []);
   const [productMasterImportOpen, setProductMasterImportOpen] = useState(false);
   const [exportingProductMaster, setExportingProductMaster] = useState(false);
 
@@ -513,7 +505,7 @@ const MasterDataList: React.FC = () => {
           </Space>
         }
         extra={
-          // L4 chỉ cần quyền Sửa (nút tự ẩn khi không có quyền / năm đã khóa)
+          // L4: Xuất Excel cho mọi người xem; Nhập Excel / Thêm dự toán tự ẩn theo quyền
           (canCreate || activeCategory === "yearlyForecasts") &&
           hasVisibleCategories && (
             <Space>
@@ -833,11 +825,20 @@ const MasterDataList: React.FC = () => {
 
               {/* Yearly Forecasts Tab (L4) */}
               {activeCategory === "yearlyForecasts" && (
-                <ForecastCardActions
-                  state={forecastActionState}
-                  onClone={handleForecastClone}
-                  onSave={handleForecastSave}
-                />
+                <>
+                  {/* Nhập Excel / Thêm dự toán: giữ chỗ, làm ở task sau */}
+                  {authService.hasPermission(PERMISSIONS.MasterData.Import) && (
+                    <Button icon={<UploadOutlined />}>Nhập Excel</Button>
+                  )}
+                  <Button icon={<DownloadOutlined />} onClick={() => forecastsRef.current?.exportExcel()}>
+                    Xuất Excel
+                  </Button>
+                  {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
+                    <Button type="primary" icon={<PlusOutlined />}>
+                      Thêm dự toán
+                    </Button>
+                  )}
+                </>
               )}
 
               {/* Notes Tab */}
@@ -1021,7 +1022,7 @@ const MasterDataList: React.FC = () => {
                   activeCategory === "batchNorms" && <BatchNormsPage ref={batchNormsRef} />
                 ) : key === "yearlyForecasts" ? (
                   activeCategory === "yearlyForecasts" && (
-                    <YearlyForecastsPage ref={forecastsRef} onActionStateChange={setForecastActionState} />
+                    <YearlyForecastsPage ref={forecastsRef} />
                   )
                 ) : (
                   <MasterDataTable
