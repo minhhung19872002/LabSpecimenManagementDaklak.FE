@@ -826,15 +826,17 @@ const MasterDataList: React.FC = () => {
               {/* Yearly Forecasts Tab (L4) */}
               {activeCategory === "yearlyForecasts" && (
                 <>
-                  {/* Nhập Excel / Thêm dự toán: giữ chỗ, làm ở task sau */}
+                  {/* Nhập Excel chỉ ghi số mẫu; Thêm dự toán mở phiếu tạo (năm T / T+1) */}
                   {authService.hasPermission(PERMISSIONS.MasterData.Import) && (
-                    <Button icon={<UploadOutlined />}>Nhập Excel</Button>
+                    <Button icon={<UploadOutlined />} onClick={() => forecastsRef.current?.importExcel()}>
+                      Nhập Excel
+                    </Button>
                   )}
                   <Button icon={<DownloadOutlined />} onClick={() => forecastsRef.current?.exportExcel()}>
                     Xuất Excel
                   </Button>
                   {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-                    <Button type="primary" icon={<PlusOutlined />}>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => forecastsRef.current?.openCreate()}>
                       Thêm dự toán
                     </Button>
                   )}

@@ -344,3 +344,118 @@ export const exportForecastsToExcel = (cards: readonly ForecastGroupCard[], year
   XLSX.utils.book_append_sheet(wb, ws, `DuToan${year}`);
   XLSX.writeFile(wb, `du-toan-mau-nam-${year}_${dayjs().format("YYYY-MM-DD")}.xlsx`);
 };
+
+// ===================== Nhập Excel (chỉ số mẫu năm) =====================
+
+export type ImportLineStatus = "changed" | "same" | "skip" | "error";
+
+export interface ImportLineView {
+  /** Số dòng trong file (tính cả dòng tiêu đề) */
+  line: number;
+  testMethodIndicatorId: string | null;
+  specimenName: string;
+  indicatorName: string;
+  methodName: string;
+  serviceCode: string;
+  oldSamples: number;
+  newSamples: number | null;
+  status: ImportLineStatus;
+  note: string;
+}
+
+export interface ImportPreview {
+  lines: ImportLineView[];
+  /** Lỗi cả file (thiếu cột…) — có thì không nhập */
+  fileError: string | null;
+  counts: Record<ImportLineStatus, number>;
+}
+
+const cellText = (v: unknown): string => (v == null ? "" : String(v).trim());
+
+/** "1.234" / "1 234" / 1234 → 1234; số lẻ, âm, chữ → NaN */
+const parseSamples = (v: unknown): number => {
+  if (typeof v === "number") return v;
+  const s = cellText(v).replace(/[\s.]/g, "").replace(",", ".");
+  return s && /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
+};
+
+const nameKey = (specimen: string, indicator: string, method: string): string =>
+  [specimen, indicator, method].map((x) => foldText(x)).join("|");
+
+/**
+ * Đọc sheet theo đúng cột của file Xuất Excel: khớp dịch vụ theo "Mã dịch vụ", không có mã thì theo
+ * Nền mẫu + Chỉ tiêu + Phương pháp. Ô số mẫu trống = bỏ qua; nhập Excel không xóa dự toán.
+ */
+export const parseForecastImport = (
+  sheet: readonly Record<string, unknown>[],
+  rows: readonly YearlyForecastRowDto[],
+  year: number
+): ImportPreview => {
+  const column = `Số mẫu năm ${year}`;
+  const counts: Record<ImportLineStatus, number> = { changed: 0, same: 0, skip: 0, error: 0 };
+  if (!sheet.length) return { lines: [], fileError: "File không có dòng dữ liệu nào", counts };
+  if (!sheet.some((r) => column in r)) {
+    return { lines: [], fileError: `File không có cột “${column}” — hãy dùng file mẫu của năm ${year}`, counts };
+  }
+
+  const byCode = new Map<string, YearlyForecastRowDto[]>();
+  const byName = new Map<string, YearlyForecastRowDto[]>();
+  for (const r of rows) {
+    const code = foldText(r.serviceCode);
+    if (code) byCode.set(code, [...(byCode.get(code) ?? []), r]);
+    const key = nameKey(specimenNameOf(r), indicatorNameOf(r), methodNameOf(r));
+    byName.set(key, [...(byName.get(key) ?? []), r]);
+  }
+
+  const seen = new Map<string, number>();
+  const lines = sheet.map((raw, index): ImportLineView => {
+    const line = index + 2;
+    const specimenName = cellText(raw["Nền mẫu"]);
+    const indicatorName = cellText(raw["Chỉ tiêu"]);
+    const methodName = cellText(raw["Phương pháp"]);
+    const serviceCode = cellText(raw["Mã dịch vụ"]);
+    const base = { line, specimenName, indicatorName, methodName, serviceCode };
+    const fail = (note: string, found?: YearlyForecastRowDto): ImportLineView => ({
+      ...base,
+      testMethodIndicatorId: found?.testMethodIndicatorId ?? null,
+      oldSamples: found ? samplesOf(found) : 0,
+      newSamples: null,
+      status: "error",
+      note,
+    });
+
+    const rawSamples = raw[column];
+    const empty = cellText(rawSamples) === "";
+    const candidates = serviceCode
+      ? byCode.get(foldText(serviceCode)) ?? []
+      : byName.get(nameKey(specimenName, indicatorName, methodName)) ?? [];
+    if (candidates.length === 0) {
+      if (empty) return { ...fail(""), status: "skip", note: "Không có số mẫu" };
+      return fail(serviceCode ? `Không tìm thấy mã dịch vụ ${serviceCode}` : "Không tìm thấy Nền mẫu · Chỉ tiêu · Phương pháp");
+    }
+    if (candidates.length > 1) return fail("Khớp nhiều dịch vụ — hãy điền Mã dịch vụ");
+    const found = candidates[0];
+    const view = { ...base, specimenName: specimenNameOf(found), indicatorName: indicatorNameOf(found), methodName: methodNameOf(found) };
+    const oldSamples = samplesOf(found);
+    if (empty) {
+      return { ...view, testMethodIndicatorId: found.testMethodIndicatorId, oldSamples, newSamples: null, status: "skip", note: "Ô số mẫu trống — giữ nguyên" };
+    }
+    const n = parseSamples(rawSamples);
+    if (!Number.isInteger(n) || n <= 0) {
+      return { ...fail("Số mẫu phải là số nguyên > 0", found), ...view };
+    }
+    const dup = seen.get(found.testMethodIndicatorId);
+    if (dup) return { ...fail(`Trùng dịch vụ với dòng ${dup}`, found), ...view };
+    seen.set(found.testMethodIndicatorId, line);
+    return {
+      ...view,
+      testMethodIndicatorId: found.testMethodIndicatorId,
+      oldSamples,
+      newSamples: n,
+      status: n === oldSamples ? "same" : "changed",
+      note: n === oldSamples ? "Không đổi" : oldSamples > 0 ? "Cập nhật" : "Tạo mới",
+    };
+  });
+  for (const l of lines) counts[l.status] += 1;
+  return { lines, fileError: null, counts };
+};

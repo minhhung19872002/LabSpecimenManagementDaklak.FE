@@ -16,6 +16,7 @@ export interface ForecastGroupCardProps {
   onToggle: (foldKey: string, open: boolean) => void;
   onToggleMore: (blockKey: string, expanded: boolean) => void;
   onDelete: (row: YearlyForecastRowDto) => void;
+  onEdit: (row: YearlyForecastRowDto) => void;
 }
 
 /** Cấp 1: thẻ nhóm nền mẫu (màu theo nhóm) — số liệu + tổng mẫu/năm */
@@ -30,6 +31,7 @@ const ForecastGroupCard: React.FC<ForecastGroupCardProps> = ({
   onToggle,
   onToggleMore,
   onDelete,
+  onEdit,
 }) => {
   const open = isFoldOpen(fold, card.foldKey, allOpen, filtered);
   const style = {
@@ -74,6 +76,7 @@ const ForecastGroupCard: React.FC<ForecastGroupCardProps> = ({
               onToggle={onToggle}
               onToggleMore={onToggleMore}
               onDelete={onDelete}
+              onEdit={onEdit}
             />
           ))}
         </>

@@ -381,6 +381,11 @@ export interface BatchNormProductOptionDto {
   /** Đơn vị tiêu hao hợp lệ (ĐV thể tích, ĐV cơ sở, ĐV quy đổi) */
   units: BatchNormUnitOptionDto[];
   defaultUnitId?: string | null;
+  /** Quy cách đóng gói: 1 ĐV cơ sở = VolumePerUnit ĐV thể tích (null = chưa khai báo) */
+  volumePerUnit?: number | null;
+  volumeUnitId?: string | null;
+  volumeUnitName?: string | null;
+  baseUnitName?: string | null;
 }
 
 export interface BatchNormCreateOptionsDto {
@@ -541,6 +546,62 @@ export interface GetYearlyForecastsParams {
   onlyMissing?: boolean;
 }
 
+// ---------- Phiếu tạo / sửa dự toán ----------
+
+export enum ForecastQuantityMode {
+  PerSample = 0,
+  PerYear = 1,
+}
+
+/** 1 vật tư trong định mức theo mẻ của bộ (lượng cho 1 mẫu) */
+export interface ForecastNormMaterialDto {
+  productId: string;
+  unitId?: string | null;
+  unitName?: string | null;
+  quantity: number;
+}
+
+export interface ForecastExtraMaterialDto {
+  productId: string;
+  unitId: string;
+  /** null = chưa nhập */
+  quantity?: number | null;
+  mode: ForecastQuantityMode;
+}
+
+export interface ForecastConfigDto {
+  estimatedSamples?: number | null;
+  /** Áp dụng tiêu hao theo bộ này */
+  sourceTestMethodIndicatorId?: string | null;
+  extraMaterials: ForecastExtraMaterialDto[];
+  extraEquipmentIds: string[];
+  hiddenMaterialIds: string[];
+  hiddenEquipmentIds: string[];
+}
+
+export interface ForecastComboDto extends BatchNormComboDto {
+  normMaterials: ForecastNormMaterialDto[];
+  normEquipmentIds: string[];
+  /** Dự toán năm đang chọn (null = chưa từng lưu) */
+  forecast?: ForecastConfigDto | null;
+}
+
+export interface ForecastCreateOptionsDto {
+  year: number;
+  combos: ForecastComboDto[];
+  materials: BatchNormProductOptionDto[];
+  equipments: BatchNormProductOptionDto[];
+}
+
+export interface SaveForecastDetailItemInput extends ForecastConfigDto {
+  testMethodIndicatorId: string;
+}
+
+export interface SaveForecastDetailsResultDto {
+  count: number;
+  totalSamples: number;
+}
+
 const FORECAST_URL = "/api/v1/yearly-forecasts";
 
 export const yearlyForecastService = {
@@ -557,6 +618,38 @@ export const yearlyForecastService = {
   },
   clone: async (year: number): Promise<{ clonedCount: number }> => {
     const response = await api.post<{ clonedCount: number }>(`${FORECAST_URL}/clone`, { year });
+    return response.data;
+  },
+  getCreateOptions: async (year: number): Promise<ForecastCreateOptionsDto> => {
+    const response = await api.get<ForecastCreateOptionsDto>(`${FORECAST_URL}/create-options`, { params: { year } });
+    const d = response.data;
+    return {
+      year: d?.year ?? year,
+      combos: (d?.combos ?? []).map((c) => ({
+        ...c,
+        normMaterials: c.normMaterials ?? [],
+        normEquipmentIds: c.normEquipmentIds ?? [],
+      })),
+      materials: d?.materials ?? [],
+      equipments: d?.equipments ?? [],
+    };
+  },
+  /** Phiếu tạo mới — chặn bộ đã có dự toán năm này */
+  createDetails: async (year: number, items: SaveForecastDetailItemInput[]): Promise<SaveForecastDetailsResultDto> => {
+    const response = await api.post<SaveForecastDetailsResultDto>(`${FORECAST_URL}/details`, { year, items });
+    return response.data;
+  },
+  /** Phiếu sửa */
+  updateDetails: async (year: number, items: SaveForecastDetailItemInput[]): Promise<SaveForecastDetailsResultDto> => {
+    const response = await api.put<SaveForecastDetailsResultDto>(`${FORECAST_URL}/details`, { year, items });
+    return response.data;
+  },
+  /** Nhập Excel: chỉ cập nhật số mẫu / năm */
+  importSamples: async (
+    year: number,
+    items: { testMethodIndicatorId: string; estimatedSamples: number | null }[]
+  ): Promise<number> => {
+    const response = await api.put<number>(`${FORECAST_URL}/import`, { year, items });
     return response.data;
   },
 };

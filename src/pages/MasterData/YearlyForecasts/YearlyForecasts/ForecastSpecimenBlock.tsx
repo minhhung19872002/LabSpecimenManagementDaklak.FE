@@ -14,6 +14,7 @@ export interface ForecastSpecimenBlockProps {
   onToggle: (foldKey: string, open: boolean) => void;
   onToggleMore: (blockKey: string, expanded: boolean) => void;
   onDelete: (row: YearlyForecastRowDto) => void;
+  onEdit: (row: YearlyForecastRowDto) => void;
 }
 
 /** Cấp 2: tiêu đề nền mẫu (gập/mở) + các khối chỉ tiêu */
@@ -26,6 +27,7 @@ const ForecastSpecimenBlock: React.FC<ForecastSpecimenBlockProps> = ({
   onToggle,
   onToggleMore,
   onDelete,
+  onEdit,
 }) => (
   <>
     <button
@@ -54,6 +56,7 @@ const ForecastSpecimenBlock: React.FC<ForecastSpecimenBlockProps> = ({
           editable={editable}
           onToggleMore={onToggleMore}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       ))}
   </>

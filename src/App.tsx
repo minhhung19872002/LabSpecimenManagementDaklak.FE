@@ -235,6 +235,10 @@ const BatchNormCreatePage = Loadable(
   lazy(() => import("./pages/MasterData/BatchNorms/BatchNormCreatePage")),
 );
 
+const YearlyForecastCreatePage = Loadable(
+  lazy(() => import("./pages/MasterData/YearlyForecasts/YearlyForecastCreatePage")),
+);
+
 // Organization
 const OrganizationList = Loadable(
   lazy(() => import("./pages/Organization/OrganizationList")),
@@ -468,6 +472,7 @@ function App() {
           <Route path="master-data" element={<MasterDataList />} />
           <Route path="master-data/services/declare" element={<ServiceDeclarePage />} />
           <Route path="master-data/batch-norms/create" element={<BatchNormCreatePage />} />
+          <Route path="master-data/yearly-forecasts/create" element={<YearlyForecastCreatePage />} />
 
           {/* Organization - Cơ sở/Doanh nghiệp */}
           <Route path="organizations" element={<OrganizationList />} />

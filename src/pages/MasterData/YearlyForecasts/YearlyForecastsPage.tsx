@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import { message } from "antd";
+import * as XLSX from "xlsx";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   yearlyForecastService,
   type YearlyForecastListDto,
@@ -20,6 +22,7 @@ import { getApiErrorMessage } from "../../../utils/errorHandler";
 import YearlyForecastsView from "./YearlyForecasts/YearlyForecastsView";
 import type { DeleteForecastTarget } from "./YearlyForecasts/DeleteForecastConfirm";
 import type { UndoToastData } from "../BatchNorms/BatchNorms/UndoToast";
+import { forecastCreateUrl, isForecastSavedState } from "./YearlyForecastCreate/utils";
 import { specimenKeyOf } from "../ServiceCatalog/ServiceCatalog/utils";
 import {
   applyScope,
@@ -33,6 +36,8 @@ import {
   exportForecastsToExcel,
   filterForecasts,
   getForecastYears,
+  parseForecastImport,
+  type ImportPreview,
   hasForecast,
   indicatorBlockKeyOf,
   indicatorNameOf,
@@ -50,7 +55,12 @@ const TOAST_MS = 6000;
 /** Nút trên header trang Danh mục gọi vào L4 */
 export interface YearlyForecastActions {
   exportExcel: () => void;
+  importExcel: () => void;
+  openCreate: () => void;
 }
+
+/** Phiếu tạo chỉ cho năm T và T+1 */
+const createYearOf = (viewYear: number): number => (viewYear === CURRENT_YEAR + 1 ? viewYear : CURRENT_YEAR);
 
 /** Hoàn tác xóa = ghi lại số mẫu cũ */
 interface UndoAction {
@@ -61,7 +71,12 @@ interface UndoAction {
 
 /** Container L4 — Dự toán mẫu năm */
 const YearlyForecastsPage = forwardRef<YearlyForecastActions>(function YearlyForecastsPage(_props, ref) {
-  const [year, setYear] = useState(CURRENT_YEAR);
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Quay về từ phiếu tạo / sửa: mở đúng năm vừa lưu
+  const [year, setYear] = useState(() =>
+    isForecastSavedState(location.state) ? location.state.forecastYear : CURRENT_YEAR
+  );
   const [data, setData] = useState<YearlyForecastListDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -78,6 +93,10 @@ const YearlyForecastsPage = forwardRef<YearlyForecastActions>(function YearlyFor
   const [deleteTarget, setDeleteTarget] = useState<DeleteForecastTarget | null>(null);
   const [toast, setToast] = useState<UndoToastData | null>(null);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFileName, setImportFileName] = useState("");
+  const [importParsing, setImportParsing] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
 
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   // Đang tải năm mới thì data vẫn là năm cũ → chỉ tin isLocked của đúng năm đang xem
@@ -242,6 +261,75 @@ const YearlyForecastsPage = forwardRef<YearlyForecastActions>(function YearlyFor
   const closeToast = useCallback(() => setToast(null), []);
   const closeDelete = useCallback(() => setDeleteTarget(null), []);
 
+  // Quay về từ phiếu tạo / sửa: hiện toast rồi xóa state khỏi history
+  useEffect(() => {
+    const state: unknown = location.state;
+    if (!isForecastSavedState(state)) return;
+    setYear(state.forecastYear);
+    showToast(state.savedToast, null);
+    navigate(location.pathname + location.search, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ xử lý khi state điều hướng đổi
+  }, [location.state]);
+
+  // ===== Sửa (bút chì) =====
+  const handleEdit = useCallback(
+    (row: YearlyForecastRowDto) =>
+      navigate(
+        hasForecast(row)
+          ? forecastCreateUrl(year, { edit: row.testMethodIndicatorId })
+          : forecastCreateUrl(year, { add: row.testMethodIndicatorId })
+      ),
+    [navigate, year]
+  );
+
+  // ===== Nhập Excel =====
+  const handlePickImportFile = useCallback(
+    async (file: File) => {
+      setImportFileName(file.name);
+      setImportParsing(true);
+      try {
+        const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const sheet = ws ? XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" }) : [];
+        setImportPreview(parseForecastImport(sheet, rows, year));
+      } catch {
+        setImportPreview({ lines: [], fileError: "Không đọc được file — hãy chọn file .xlsx", counts: { changed: 0, same: 0, skip: 0, error: 0 } });
+      } finally {
+        setImportParsing(false);
+      }
+    },
+    [rows, year]
+  );
+
+  const closeImport = useCallback(() => {
+    setImportOpen(false);
+    setImportPreview(null);
+    setImportFileName("");
+  }, []);
+
+  const handleConfirmImport = useCallback(async () => {
+    const items = (importPreview?.lines ?? [])
+      .filter((l) => l.status === "changed" && l.testMethodIndicatorId)
+      .map((l) => ({ testMethodIndicatorId: l.testMethodIndicatorId!, estimatedSamples: l.newSamples }));
+    if (!items.length) return;
+    try {
+      const changed = await yearlyForecastService.importSamples(year, items);
+      closeImport();
+      showToast(`Đã nhập ${changed} dự toán năm ${year} từ Excel`, null);
+      await load(yearRef.current, true);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không nhập được dự toán"));
+    }
+  }, [importPreview, year, closeImport, showToast, load]);
+
+  const downloadTemplate = useCallback(() => {
+    if (rows.length === 0) {
+      message.info(`Chưa có dịch vụ nào để lập dự toán năm ${year}`);
+      return;
+    }
+    exportForecastsToExcel(buildForecastGroups(rows, palettes), year);
+  }, [rows, palettes, year]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -252,8 +340,18 @@ const YearlyForecastsPage = forwardRef<YearlyForecastActions>(function YearlyFor
         }
         exportForecastsToExcel(cards, year);
       },
+      importExcel: () => {
+        if (isLocked) {
+          message.warning(`Dự toán năm ${year} đã khóa, không nhập được`);
+          return;
+        }
+        setImportPreview(null);
+        setImportFileName("");
+        setImportOpen(true);
+      },
+      openCreate: () => navigate(forecastCreateUrl(createYearOf(year))),
     }),
-    [cards, year]
+    [cards, year, isLocked, navigate]
   );
 
   return (
@@ -291,8 +389,20 @@ const YearlyForecastsPage = forwardRef<YearlyForecastActions>(function YearlyFor
       onToggle={handleToggle}
       onToggleMore={handleToggleMore}
       onDelete={handleDelete}
+      onEdit={handleEdit}
       deleteConfirm={{ target: deleteTarget, onConfirm: handleConfirmDelete, onCancel: closeDelete }}
       toast={{ toast, onUndo: handleUndo, onClose: closeToast }}
+      importModal={{
+        open: importOpen,
+        year,
+        fileName: importFileName,
+        parsing: importParsing,
+        preview: importPreview,
+        onPickFile: handlePickImportFile,
+        onDownloadTemplate: downloadTemplate,
+        onClose: closeImport,
+        onConfirm: handleConfirmImport,
+      }}
     />
   );
 });

@@ -1,0 +1,129 @@
+.yfc-row:hover {
+  background: #f5faff !important;
+}
+
+.yfc-btn:hover {
+  border-color: #40a9ff !important;
+  color: #096dd9 !important;
+}
+
+.yfc-del:hover {
+  background: #fff1f0 !important;
+  border-color: #ff7875 !important;
+}
+
+.yfc-tg:hover {
+  background: #e6f4ff !important;
+  color: #096dd9 !important;
+}
+
+.yfc-num:focus-within {
+  border-color: #096dd9 !important;
+  box-shadow: 0 0 0 2px rgba(9, 109, 217, 0.2);
+}
+
+.yfc-num input.ant-input {
+  width: 90px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  box-shadow: none !important;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.yfc-qty.ant-input {
+  width: 64px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.yfc-qty.is-empty.ant-input {
+  border-style: dashed;
+  border-color: #ffc53d;
+  background: #fffbe6;
+}
+
+.yfc-mat-grid {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 200px 130px 170px 24px;
+  gap: 8px;
+  align-items: center;
+}
+
+.yfc-eq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  gap: 8px;
+  align-items: center;
+}
+
+.yfc-apply-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 210px;
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.yfc-apply-row.is-head {
+  height: 36px;
+  min-height: 36px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #595959;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  cursor: default;
+}
+
+.yfc-apply-row.is-selected {
+  background: #f0f5ff;
+}
+
+.yfc-apply-row.is-disabled {
+  cursor: not-allowed;
+  background: #fafafa;
+  color: #8c8c8c;
+}
+
+.yfc-add-row {
+  display: grid;
+  grid-template-columns: 44px 150px minmax(0, 1fr) 90px;
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.yfc-add-row.is-head {
+  height: 36px;
+  min-height: 36px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #595959;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  cursor: default;
+}

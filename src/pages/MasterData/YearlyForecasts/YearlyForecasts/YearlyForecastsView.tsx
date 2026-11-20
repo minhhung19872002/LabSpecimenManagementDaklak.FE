@@ -5,6 +5,7 @@ import ForecastYearBar, { type ForecastYearBarProps } from "./ForecastYearBar";
 import ForecastToolbar, { type ForecastToolbarProps } from "./ForecastToolbar";
 import ForecastGroupCard from "./ForecastGroupCard";
 import DeleteForecastConfirm, { type DeleteForecastConfirmProps } from "./DeleteForecastConfirm";
+import ImportForecastModal, { type ImportForecastModalProps } from "./ImportForecastModal";
 import UndoToast, { type UndoToastProps } from "../../BatchNorms/BatchNorms/UndoToast";
 import type { FoldState, ForecastGroupCard as GroupCardData } from "./utils";
 import "../../ServiceCatalog/ServiceCatalog/ServiceCatalog.css";
@@ -27,8 +28,10 @@ export interface YearlyForecastsViewProps {
   onToggle: (foldKey: string, open: boolean) => void;
   onToggleMore: (blockKey: string, expanded: boolean) => void;
   onDelete: (row: YearlyForecastRowDto) => void;
+  onEdit: (row: YearlyForecastRowDto) => void;
   deleteConfirm: DeleteForecastConfirmProps;
   toast: UndoToastProps;
+  importModal: ImportForecastModalProps;
 }
 
 /** L4 — Dự toán mẫu năm: Nhóm nền mẫu → Nền mẫu → Chỉ tiêu × Phương pháp */
@@ -47,8 +50,10 @@ const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({
   onToggle,
   onToggleMore,
   onDelete,
+  onEdit,
   deleteConfirm,
   toast,
+  importModal,
 }) => (
   <Spin spinning={loading}>
     <ForecastYearBar {...yearBar} />
@@ -71,6 +76,7 @@ const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({
               onToggle={onToggle}
               onToggleMore={onToggleMore}
               onDelete={onDelete}
+              onEdit={onEdit}
             />
           ))}
         </div>
@@ -78,6 +84,7 @@ const YearlyForecastsView: React.FC<YearlyForecastsViewProps> = ({
     </div>
     <DeleteForecastConfirm {...deleteConfirm} />
     <UndoToast {...toast} />
+    <ImportForecastModal {...importModal} />
   </Spin>
 );
 

@@ -23,6 +23,7 @@ export interface ForecastIndicatorBlockProps {
   editable: boolean;
   onToggleMore: (blockKey: string, expanded: boolean) => void;
   onDelete: (row: YearlyForecastRowDto) => void;
+  onEdit: (row: YearlyForecastRowDto) => void;
 }
 
 const TREND_CLASS = { new: "yf-new", up: "yf-up", down: "yf-down", flat: "yf-flat" } as const;
@@ -32,7 +33,8 @@ const ForecastRow: React.FC<{
   separated: boolean;
   editable: boolean;
   onDelete: (row: YearlyForecastRowDto) => void;
-}> = ({ row, separated, editable, onDelete }) => {
+  onEdit: (row: YearlyForecastRowDto) => void;
+}> = ({ row, separated, editable, onDelete, onEdit }) => {
   const has = hasForecast(row);
   const method = methodNameOf(row);
   const trend = trendOf(percentChange(samplesOf(row), row.previousYearSamples));
@@ -68,8 +70,14 @@ const ForecastRow: React.FC<{
       <span className="yf-actions">
         {editable && (
           <>
-            {/* Giữ chỗ — sửa số mẫu làm ở task sau */}
-            <button type="button" className="bn-icon-btn" title="Sửa" aria-label={`Sửa dự toán ${method}`}>
+            {/* Có dự toán → phiếu sửa; chưa có → phiếu tạo chọn sẵn bộ này */}
+            <button
+              type="button"
+              className="bn-icon-btn"
+              title="Sửa"
+              aria-label={`Sửa dự toán ${method}`}
+              onClick={() => onEdit(row)}
+            >
               <EditOutlined style={{ fontSize: 14 }} />
             </button>
             {has && (
@@ -98,6 +106,7 @@ const ForecastIndicatorBlock: React.FC<ForecastIndicatorBlockProps> = ({
   editable,
   onToggleMore,
   onDelete,
+  onEdit,
 }) => {
   const hidden = block.rows.length - FORECAST_PREVIEW_LIMIT;
   const rows = expanded || hidden <= 0 ? block.rows : block.rows.slice(0, FORECAST_PREVIEW_LIMIT);
@@ -119,6 +128,7 @@ const ForecastIndicatorBlock: React.FC<ForecastIndicatorBlockProps> = ({
             separated={i > 0}
             editable={editable}
             onDelete={onDelete}
+            onEdit={onEdit}
           />
         ))}
         {collapsible && hidden > 0 && (
