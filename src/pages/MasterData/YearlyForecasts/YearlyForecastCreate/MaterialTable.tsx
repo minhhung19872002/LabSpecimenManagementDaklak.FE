@@ -59,7 +59,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ comboId, methodName, rows
       <span>Tên vật tư</span>
       <span style={{ textAlign: "right" }}>Tiêu hao / mẫu</span>
       <span title={`Tiêu hao / mẫu ÷ Số mẫu / năm của ${methodName}`} style={{ textAlign: "right", cursor: "help" }}>
-        Tiêu hao TB / mẫu ⓘ
+        Tiêu hao TB / mẫu
       </span>
       <span style={{ textAlign: "right" }}>Ước tính tiêu hao trong năm</span>
       <span />

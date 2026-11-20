@@ -10,6 +10,8 @@ export interface LeftPanelProps {
   yearOptions: { value: number; label: string }[];
   /** Phiếu sửa: năm cố định */
   yearLocked: boolean;
+  /** "Năm tài chính hiện tại · Đang mở · …" */
+  yearNote: string;
   tree: CategoryNodeView[];
   selectedCount: number;
   currentKey: string;
@@ -30,6 +32,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   year,
   yearOptions,
   yearLocked,
+  yearNote,
   tree,
   selectedCount,
   currentKey,
@@ -78,6 +81,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           style={{ flex: 1, height: 34 }}
         />
       </label>
+      <span style={{ marginTop: -4, fontSize: 12, color: "#8c8c8c" }}>{yearNote}</span>
       <button
         type="button"
         className={`bnc-pick-btn${showError ? " is-error" : ""}`}

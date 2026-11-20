@@ -107,6 +107,15 @@ const YearlyForecastCreatePage = () => {
   const [currentKey, setCurrentKey] = useState("");
   const [touched, setTouched] = useState(false);
   const [tried, setTried] = useState(false);
+  /** Phiếu sửa: các bộ mở sẵn (không bị khóa trong popup chọn bộ) */
+  const [editGroup, setEditGroup] = useState<ReadonlySet<string>>(new Set());
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   // ---------- Thu gọn ----------
   const [treeFold, setTreeFold] = useState<FoldState>({});
@@ -147,7 +156,11 @@ const YearlyForecastCreatePage = () => {
             message.warning(`Không tìm thấy dự toán năm ${year} của bộ cần sửa`);
             return;
           }
-          const group = savedLinkGroupOf(editId, map);
+          // Phiếu sửa theo Nền mẫu × Chỉ tiêu: mọi phương pháp đã có dự toán năm này (+ nhóm áp dụng tiêu hao)
+          const key = comboKeyOf(combo);
+          const sameCt = data.combos.filter((c) => comboKeyOf(c) === key && hasSavedForecast(c)).map((c) => c.testMethodIndicatorId);
+          const group = [...new Set(sameCt.flatMap((id) => savedLinkGroupOf(id, map)))];
+          setEditGroup(new Set(group));
           setSelected(group);
           setConfigs(Object.fromEntries(group.map((id) => [id, configFromSaved(map.get(id)?.forecast)])));
           const saved: Record<string, string> = {};
@@ -282,7 +295,7 @@ const YearlyForecastCreatePage = () => {
       setLinks((prev) => without(prev, (k) => k === id));
       setTouched(true);
       const c = comboById.get(id);
-      message.success(`Đã ngắt áp dụng – ${c ? comboMethodNameOf(c) : "phương pháp"} dùng lại định mức riêng`);
+      setToast(`Đã ngắt áp dụng – ${c ? comboMethodNameOf(c) : "phương pháp"} dùng lại định mức riêng`);
     },
     onAddMaterial: (id) => {
       setAdd({ id, kind: "material" });
@@ -359,9 +372,13 @@ const YearlyForecastCreatePage = () => {
   const currentFirst = currentCombos[0];
 
   // ---------- Popup chọn bộ ----------
+  /** Bộ đã có dự toán năm này bị khóa (phiếu sửa: trừ các bộ của Nền mẫu × Chỉ tiêu đang sửa) */
   const lockedIds = useMemo<ReadonlySet<string>>(
-    () => (isEdit ? new Set() : new Set(combos.filter(hasSavedForecast).map((c) => c.testMethodIndicatorId))),
-    [isEdit, combos]
+    () =>
+      new Set(
+        combos.filter((c) => hasSavedForecast(c) && !editGroup.has(c.testMethodIndicatorId)).map((c) => c.testMethodIndicatorId)
+      ),
+    [combos, editGroup]
   );
   const isLocked = useCallback((c: ForecastComboDto) => lockedIds.has(c.testMethodIndicatorId), [lockedIds]);
   const pickBase = useMemo(() => filterForecastPick(sortedCombos, pickFilter), [sortedCombos, pickFilter]);
@@ -452,7 +469,7 @@ const YearlyForecastCreatePage = () => {
       updateConfig(add.id, (c) => ({ ...c, extraEquipmentIds: [...new Set([...c.extraEquipmentIds, ...ids])] }));
       setSubFold((p) => ({ ...p, [`${add.id}#tb`]: false }));
     }
-    message.success(
+    setToast(
       `Đã thêm ${ids.length} ${add.kind === "material" ? "vật tư" : "thiết bị"} cho ${addCombo ? comboMethodNameOf(addCombo) : ""}`.trim()
     );
     setAdd(null);
@@ -484,7 +501,7 @@ const YearlyForecastCreatePage = () => {
       .filter(
         (c) =>
           c.testMethodIndicatorId !== srcId &&
-          (isEdit || inSheet.has(c.testMethodIndicatorId) || !hasSavedForecast(c)) &&
+          (inSheet.has(c.testMethodIndicatorId) || !isLocked(c)) &&
           (!applySameMethod || c.testMethodId === applySource.testMethodId) &&
           (!q || comboSearchText(c).includes(q))
       )
@@ -531,7 +548,7 @@ const YearlyForecastCreatePage = () => {
     applySameMethod,
     applySelected,
     sortedCombos,
-    isEdit,
+    isLocked,
     inSheet,
     links,
     savedTargetsOutside,
@@ -553,7 +570,7 @@ const YearlyForecastCreatePage = () => {
       return next;
     });
     setTouched(true);
-    message.success(
+    setToast(
       targets.length
         ? `Đã áp dụng tiêu hao của ${comboMethodNameOf(applySource)} (${comboSpecimenNameOf(applySource)} · ${comboIndicatorNameOf(applySource)}) cho ${targets.length} bộ`
         : "Đã gỡ áp dụng"
@@ -613,7 +630,9 @@ const YearlyForecastCreatePage = () => {
         : await yearlyForecastService.createDetails(year, items);
       const state: ForecastSavedState = {
         forecastYear: year,
-        savedToast: `Đã ${isEdit ? "cập nhật" : "tạo"} ${result.count} dự toán năm ${year} · ${fmt(result.totalSamples)} mẫu`,
+        savedToast: isEdit
+          ? `Đã tự động lưu thay đổi dự toán năm ${year} · ${fmt(result.totalSamples)} mẫu`
+          : `Đã tạo ${result.count} dự toán năm ${year} · ${fmt(result.totalSamples)} mẫu`,
       };
       allowLeave();
       navigate(YEARLY_FORECAST_LIST_URL, { state });
@@ -623,15 +642,22 @@ const YearlyForecastCreatePage = () => {
     }
   };
 
+  // Chỉ năm chưa khóa sổ (năm hiện tại và năm sau)
   const yearOptions = isEdit
     ? [{ value: year, label: `Năm ${year}` }]
     : [thisYear, thisYear + 1].map((y) => ({ value: y, label: `Năm ${y}` }));
+  const yearNote = `${year === thisYear ? "Năm tài chính hiện tại · " : ""}Đang mở · năm đã khóa sổ không chọn được`;
 
   return (
     <YearlyForecastCreateView
       headerHeight={headerHeight}
       loading={loading}
-      isEdit={isEdit}
+      pageTitle={isEdit ? `Sửa dự toán mẫu năm ${year}` : "Phiếu tạo dự toán mẫu năm"}
+      pageSub={
+        isEdit
+          ? `Sửa số mẫu / năm và vật tư, thiết bị theo từng phương pháp · năm tài chính ${year} đang mở`
+          : "Tạo 1 hoặc nhiều dự toán cùng lúc · chọn nền mẫu × chỉ tiêu × phương pháp và nhập số mẫu · vật tư, thiết bị tự tính theo Định mức theo mẻ"
+      }
       headerSummary={`${chosen.length} dự toán · ${fmt(totalSamples)} mẫu / năm`}
       onBack={handleBack}
       left={{
@@ -639,6 +665,7 @@ const YearlyForecastCreatePage = () => {
         year,
         yearOptions,
         yearLocked: isEdit,
+        yearNote,
         tree,
         selectedCount: chosen.length,
         currentKey: activeKey,
@@ -670,7 +697,8 @@ const YearlyForecastCreatePage = () => {
         chips,
         problems: tried ? problems : [],
         invalid,
-        submitLabel: isEdit ? "Lưu dự toán" : chosen.length > 1 ? `Tạo ${chosen.length} dự toán` : "Tạo dự toán",
+        toast,
+        submitLabel: isEdit ? "Lưu thay đổi" : chosen.length > 1 ? `Tạo ${chosen.length} dự toán` : "Tạo dự toán",
         onCancel: handleBack,
         onSubmit: handleSubmit,
       }}

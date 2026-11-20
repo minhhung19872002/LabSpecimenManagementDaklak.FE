@@ -34,7 +34,8 @@ const countPillStyle: React.CSSProperties = {
 export interface YearlyForecastCreateViewProps {
   headerHeight: number;
   loading: boolean;
-  isEdit: boolean;
+  pageTitle: string;
+  pageSub: string;
   headerSummary: string;
   onBack: () => void;
   left: LeftPanelProps;
@@ -49,7 +50,8 @@ export interface YearlyForecastCreateViewProps {
 const YearlyForecastCreateView: React.FC<YearlyForecastCreateViewProps> = ({
   headerHeight,
   loading,
-  isEdit,
+  pageTitle,
+  pageSub,
   headerSummary,
   onBack,
   left,
@@ -80,12 +82,9 @@ const YearlyForecastCreateView: React.FC<YearlyForecastCreateViewProps> = ({
         ‹ Dự toán mẫu năm
       </button>
       <h1 style={{ margin: 0, fontSize: 24, fontWeight: 500, lineHeight: "32px" }}>
-        {isEdit ? "Phiếu sửa dự toán mẫu năm" : "Phiếu tạo dự toán mẫu năm"}
+        {pageTitle}
       </h1>
-      <div style={{ fontSize: 13, color: "#595959" }}>
-        Tạo 1 hoặc nhiều dự toán cùng lúc · tích chọn từng bộ Nền mẫu × Chỉ tiêu × Phương pháp và nhập số mẫu · vật tư, thiết bị
-        tự tính theo Định mức theo mẻ
-      </div>
+      <p style={{ margin: 0, fontSize: 13, color: "#595959" }}>{pageSub}</p>
     </div>
     <Spin spinning={loading} wrapperClassName="bnc-spin">
       <div

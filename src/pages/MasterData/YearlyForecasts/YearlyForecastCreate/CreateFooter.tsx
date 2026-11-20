@@ -10,6 +10,8 @@ export interface CreateFooterProps {
   /** Chỉ hiện sau khi đã bấm lưu */
   problems: string[];
   invalid: boolean;
+  /** Thông báo thao tác gần nhất (tự ẩn) */
+  toast: string;
   submitLabel: string;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
@@ -32,7 +34,7 @@ const chipStyle = ([bg, fg, border]: SummaryChip["colors"]): React.CSSProperties
 });
 
 /** Chân phiếu: TÓM TẮT + lỗi + Hủy / Tạo dự toán */
-const CreateFooter: React.FC<CreateFooterProps> = ({ chips, problems, invalid, submitLabel, onCancel, onSubmit }) => (
+const CreateFooter: React.FC<CreateFooterProps> = ({ chips, problems, invalid, toast, submitLabel, onCancel, onSubmit }) => (
   <div
     style={{
       padding: "12px 20px",
@@ -72,7 +74,12 @@ const CreateFooter: React.FC<CreateFooterProps> = ({ chips, problems, invalid, s
         </span>
       )}
     </div>
-    <span style={{ display: "inline-flex", gap: 8 }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      {toast && (
+        <span role="status" style={{ fontSize: 13, color: "#237804" }}>
+          {toast}
+        </span>
+      )}
       <Button onClick={onCancel} style={{ height: 38, padding: "0 16px", borderRadius: 8 }}>
         Hủy
       </Button>
