@@ -10,6 +10,10 @@ import "./i18n/config";
 import App from "./App.tsx";
 import theme from "./theme";
 import { registerSW } from "virtual:pwa-register";
+import { registerOfflineIcons } from "./utils/offlineIcons";
+
+// Nạp sẵn icon Iconify vào bộ nhớ để offline vẫn hiển thị (OF-14)
+registerOfflineIcons();
 
 // Register service worker for PWA offline support
 registerSW({

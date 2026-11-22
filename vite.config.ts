@@ -71,9 +71,14 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        // Exclude very large files from precache (will be cached on first use via runtime caching)
-        globIgnores: ['**/vietnamLocations*.js'],
+        globPatterns: [
+          '**/*.{js,css,html,ico,png,svg,woff,woff2}',
+          // File ngôn ngữ i18next (OF-12): thiếu file này app treo ở Suspense → offline ra trang trắng.
+          // Chỉ lấy locales/*.json, KHÔNG precache version.json (cần luôn lấy từ mạng để phát hiện bản mới).
+          'locales/*.json',
+        ],
+        // OF-13: không loại vietnamLocations khỏi precache nữa (chunk chỉ vài KB) — form tạo phiếu
+        // phụ thuộc chunk này, máy chưa mở form lúc online sẽ không mở được form khi offline.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit for precache
         // Navigate fallback for SPA - serves index.html for all navigation requests when offline
         navigateFallback: 'index.html',
@@ -85,7 +90,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            // Cache JS chunks that weren't precached (large files like vietnamLocations)
+            // Cache JS chunks that weren't precached
             // StaleWhileRevalidate: serve cache ngay lập tức, đồng thời fetch bản mới cho lần sau
             urlPattern: /\.js$/,
             handler: 'StaleWhileRevalidate',
