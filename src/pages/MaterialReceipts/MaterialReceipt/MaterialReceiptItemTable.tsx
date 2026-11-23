@@ -116,7 +116,12 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
       render: (_, record) => {
         if (isReadonly) return record.quantity ?? "—";
         const exceeded = exceededKeys.has(record.key);
-        const error = itemErrors[record.key]?.quantity;
+        // Nhận cả số lẻ để không âm thầm biến "1,5" thành 15; số lẻ báo lỗi ngay tại dòng.
+        const notInteger =
+          record.quantity != null && !Number.isInteger(record.quantity);
+        const error =
+          itemErrors[record.key]?.quantity ??
+          (notInteger ? "Vui lòng nhập số lượng nguyên lớn hơn 0" : undefined);
         const hasError = !!error || exceeded;
         return (
           <>
@@ -126,9 +131,10 @@ const MaterialReceiptItemTable: React.FC<MaterialReceiptItemTableProps> = ({
                 onItemChange(record.key, "quantity", values.floatValue ?? null)
               }
               allowNegative={false}
-              decimalScale={0}
+              decimalScale={3}
               thousandSeparator="."
               decimalSeparator=","
+              allowedDecimalSeparators={[",", "."]}
               customInput={Input}
               status={hasError ? "error" : undefined}
               style={{

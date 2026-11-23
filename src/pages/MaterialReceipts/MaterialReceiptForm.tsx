@@ -47,6 +47,7 @@ const MaterialReceiptForm: React.FC = () => {
     CentralWarehouseProductDto[]
   >([]);
   const [items, setItems] = useState<MaterialReceiptLineItem[]>([]);
+  const [receiptLoadedAt, setReceiptLoadedAt] = useState(0);
   const [itemErrors, setItemErrors] = useState<
     Record<string, { quantity?: string; receivingWarehouseId?: string }>
   >({});
@@ -103,22 +104,27 @@ const MaterialReceiptForm: React.FC = () => {
     });
   }, []);
 
+  // Ghép tồn KTT theo lô vào dòng phiếu. Chạy lại cả khi phiếu (màn sửa) tải xong SAU danh sách
+  // vật tư KTT — trước đây chỉ chạy khi centralProducts đổi nên màn sửa hiện tồn KTT = 0.
   useEffect(() => {
     if (centralProducts.length === 0) return;
     setItems((currentItems) =>
       currentItems.map((item) => {
+        const lotProduct = centralProducts.find(
+          (p) =>
+            p.productId === item.productId &&
+            (p.lotNumber ?? "") === (item.lotNumber ?? ""),
+        );
         const product =
-          centralProducts.find(
-            (p) =>
-              p.productId === item.productId &&
-              (p.lotNumber ?? "") === (item.lotNumber ?? ""),
-          ) ??
+          lotProduct ??
           centralProducts.find((p) => p.productId === item.productId);
         if (!product) return item;
         return {
           ...item,
           availableUnits: product.availableUnits,
-          centralStockBaseQty: product.centralStockBaseQty,
+          // Dòng đã chọn lô mà lô không còn ở KTT → tồn lô = 0 (không lấy tồn của lô khác).
+          centralStockBaseQty:
+            lotProduct || !item.lotNumber ? product.centralStockBaseQty : 0,
           storageUnitName: product.storageUnitName,
           consumableUnitName: product.consumableUnitName,
           volumePerUnit: product.volumePerUnit,
@@ -126,7 +132,7 @@ const MaterialReceiptForm: React.FC = () => {
         };
       }),
     );
-  }, [centralProducts]);
+  }, [centralProducts, receiptLoadedAt]);
 
   const applyWarehouseStock = useCallback(
     (key: string, warehouseId: string, detail: ReceivingWarehouseStockDto) => {
@@ -226,6 +232,7 @@ const MaterialReceiptForm: React.FC = () => {
             skus: [],
           }));
         setItems(mappedItems);
+        setReceiptLoadedAt(Date.now());
         mappedItems.forEach((item) => {
           if (item.receivingWarehouseId) {
             void loadWarehouseStock(

@@ -143,7 +143,7 @@ const ImportWarehouseModal: React.FC<ImportWarehouseModalProps> = ({
       render: (text: string, record: WarehouseImportPreviewItem) => (
         <Space>
           <span>{text}</span>
-          {record.isNew ? (
+          {!text ? null : record.isNew ? (
             <Tag color="green">Mới</Tag>
           ) : (
             <Tag color="blue">Cập nhật</Tag>

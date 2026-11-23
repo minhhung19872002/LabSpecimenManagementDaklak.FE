@@ -9,7 +9,7 @@ import {
   GoodsReceiptItemDto,
 } from "../../../services/goodsReceiptService";
 import { productService, ProductDto, ProductSkuDto } from "../../../services/productService";
-import { WarehouseImportReceiptDto, EquipmentReceiveStatus } from "../../../services/warehouseImportReceiptService";
+import { WarehouseImportReceiptDto, EquipmentReceiveStatus, WarehouseImportLineStatus } from "../../../services/warehouseImportReceiptService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 interface WarehouseImportModalProps {
@@ -175,6 +175,8 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
       const importItemsMap = new Map<string, ImportItem[]>();
       if (importReceipt?.items?.length) {
         for (const importItem of importReceipt.items) {
+          // Dòng "Hàng lỗi" không nhập kho → không sinh mã vạch.
+          if (importItem.status === WarehouseImportLineStatus.Defective) continue;
           const existing = importItemsMap.get(importItem.goodsReceiptItemId) ?? [];
           existing.push(importItem);
           importItemsMap.set(importItem.goodsReceiptItemId, existing);

@@ -124,6 +124,19 @@ export const getProductColumns = (
       sorter: true,
       render: (qty: number, record: ProductDto) => {
         const storageUnit = record.packagingUnitName || "";
+
+        // Cùng công thức với "Tồn kho cuối kỳ (Dự kiến)": quy từ tổng thể tích / thể tích mỗi ĐV,
+        // để 2 cột không lệch nhau khi chưa có tiêu hao (HT-08).
+        if (record.volumePerUnit && record.volumePerUnit > 0 && record.volumeUnitName
+          && record.consumableImportedQuantity > 0
+          && !(record.stockByUnits && record.stockByUnits.length >= 2)) {
+          const base = record.consumableImportedQuantity / record.volumePerUnit;
+          const whole = Math.floor(base);
+          const rest = Math.round((base - whole) * record.volumePerUnit);
+          if (rest === 0) return `${whole.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${storageUnit}`.trim();
+          return `${whole.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${storageUnit} - ${rest.toLocaleString("vi-VN", QUANTITY_FORMAT)} ${record.volumeUnitName}`;
+        }
+
         const intPart = Math.floor(qty);
         const decPart = qty - intPart;
 

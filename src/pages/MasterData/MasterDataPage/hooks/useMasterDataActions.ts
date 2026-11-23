@@ -146,7 +146,10 @@ export const useMasterDataActions = ({
         errorMsg = err.message;
       }
 
-      setError(errorMsg);
+      // Giống lưu: kho / hãng chỉ báo 1 lần bằng toast (không thêm Alert trên trang).
+      if (activeCategory !== "warehouses" && activeCategory !== "manufacturers") {
+        setError(errorMsg);
+      }
       message.error(errorMsg);
     }
   };

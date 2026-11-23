@@ -461,7 +461,7 @@ const MasterDataList: React.FC = () => {
     <div className="master-data-page">
       {error && (
         <Alert
-          message="Error"
+          message="Lỗi"
           description={error}
           type="error"
           closable

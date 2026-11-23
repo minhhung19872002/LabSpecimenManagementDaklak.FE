@@ -14,6 +14,7 @@ import {
 import {
   warehouseImportReceiptService,
   WarehouseImportReceiptListDto,
+  WarehouseImportReceiptStatus,
   WarehouseImportReceiptStatusLabels,
   WarehouseImportReceiptStatusColors,
 } from "../../services/warehouseImportReceiptService";
@@ -135,11 +136,15 @@ const SupplierDetail: React.FC = () => {
       dataIndex: "status",
       key: "status",
       width: 140,
-      render: (v: number) => (
-        <Tag color={WarehouseImportReceiptStatusColors[v]}>
-          {WarehouseImportReceiptStatusLabels[v]}
-        </Tag>
-      ),
+      // Giống danh sách phiếu nhập: phiếu hoàn thành có dòng lỗi hiện "Hàng lỗi".
+      render: (v: number, record) =>
+        v === WarehouseImportReceiptStatus.Completed && record.hasDefectiveItem ? (
+          <Tag color="red">Hàng lỗi</Tag>
+        ) : (
+          <Tag color={WarehouseImportReceiptStatusColors[v]}>
+            {WarehouseImportReceiptStatusLabels[v]}
+          </Tag>
+        ),
     },
     {
       title: "Kho",
