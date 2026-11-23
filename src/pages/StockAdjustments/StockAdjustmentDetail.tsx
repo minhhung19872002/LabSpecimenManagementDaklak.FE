@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  Card, Button, Space, Row, Col, Table, Tag, Spin, Popconfirm, message,
+  Alert, Card, Button, Space, Row, Col, Table, Tag, Spin, Popconfirm, message,
 } from "antd";
 import {
   ArrowLeftOutlined, EditOutlined, CheckCircleOutlined, DeleteOutlined,
@@ -119,6 +119,7 @@ const StockAdjustmentDetail: React.FC = () => {
   }
 
   const isDraft = adjustment.status === StockAdjustmentStatus.Draft;
+  const stockChanged = isDraft && !!adjustment.stockChangedSinceSaved;
 
   const warehouseGroups = new Map<string, StockAdjustmentItemDto[]>();
   for (const item of adjustment.items) {
@@ -289,7 +290,9 @@ const StockAdjustmentDetail: React.FC = () => {
               {isDraft && canConfirm && (
                 <Popconfirm
                   title="Xác nhận kiểm kê?"
-                  description="Sau khi xác nhận, tồn kho sẽ được cập nhật và không thể hoàn tác."
+                  description={stockChanged
+                    ? "Tồn kho đã thay đổi kể từ khi lưu nháp. Chênh lệch sẽ được tính theo sổ sách hiện tại. Sau khi xác nhận, tồn kho sẽ được cập nhật và không thể hoàn tác."
+                    : "Sau khi xác nhận, tồn kho sẽ được cập nhật và không thể hoàn tác."}
                   onConfirm={handleConfirm}
                   okText="Xác nhận"
                   cancelText="Hủy"
@@ -318,6 +321,15 @@ const StockAdjustmentDetail: React.FC = () => {
           </div>
         }
       >
+        {stockChanged && (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="Tồn kho đã thay đổi kể từ khi lưu nháp"
+            description="Đã có nhập kho, lĩnh hoặc tiêu hao mới sau khi lưu phiếu. Sổ sách và tồn dự kiến bên dưới là số liệu hiện tại; chênh lệch sẽ được tính theo số liệu này khi xác nhận."
+          />
+        )}
         <div className="detail-section">
           <div className="detail-section-title">Thông tin phiếu</div>
           <Row gutter={16}>

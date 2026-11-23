@@ -157,7 +157,7 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     {
       key: "inventory-history",
       label: "Lịch sử kiểm kê kho",
-      children: <InventoryHistoryTab warehouseId={warehouseId} />,
+      children: <InventoryHistoryTab warehouseId={warehouseId} productId={productId} />,
     },
   ];
 

@@ -28,6 +28,13 @@ export interface StockAdjustmentListDto {
   creationTime: string;
   inventoryDate: string;
   inventoryUserName?: string;
+  /** Chỉ có khi lọc theo productId: thực tế − sổ sách của vật tư đó (đơn vị lưu kho) */
+  adjustmentDiffBase?: number | null;
+  adjustmentDiffVolume?: number | null;
+  storageUnitName?: string | null;
+  volumeUnitName?: string | null;
+  /** Lượng điều chỉnh tách theo ĐV lưu kho của từng lô (vật tư nhiều SKU) */
+  adjustmentDiffByUnit?: { quantity: number; unitName?: string | null }[] | null;
 }
 
 export interface StockAdjustmentItemDto {
@@ -59,6 +66,8 @@ export interface StockAdjustmentDto extends StockAdjustmentListDto {
   notes?: string;
   inventoryUserId?: string;
   items: StockAdjustmentItemDto[];
+  /** Phiếu nháp: sổ sách / tồn dự kiến đã thay đổi kể từ lúc lưu nháp */
+  stockChangedSinceSaved?: boolean;
 }
 
 export interface CreateUpdateStockAdjustmentDto {
@@ -124,6 +133,7 @@ export interface GetStockAdjustmentListInput {
   fromDate?: string;
   toDate?: string;
   warehouseId?: string;
+  productId?: string;
 }
 
 interface PagedResult<T> {
@@ -143,6 +153,7 @@ export const stockAdjustmentService = {
     if (params.fromDate) apiParams.FromDate = params.fromDate;
     if (params.toDate) apiParams.ToDate = params.toDate;
     if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
+    if (params.productId) apiParams.ProductId = params.productId;
     const response = await api.get<PagedResult<StockAdjustmentListDto>>(BASE_URL, { params: apiParams });
     return response.data;
   },

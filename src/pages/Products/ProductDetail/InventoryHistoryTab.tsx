@@ -5,18 +5,43 @@ import dayjs from "dayjs";
 import {
   stockAdjustmentService,
   StockAdjustmentListDto,
+  StockAdjustmentStatus,
   StockAdjustmentStatusColors,
   StockAdjustmentStatusLabels,
 } from "../../../services/stockAdjustmentService";
 import { PATH_ROUTES } from "../../../constants/routes";
+import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 const { Link } = Typography;
 
-interface InventoryHistoryTabProps {
+export interface InventoryHistoryTabProps {
   warehouseId?: string;
+  productId?: string;
 }
 
-const InventoryHistoryTab: React.FC<InventoryHistoryTabProps> = ({ warehouseId }) => {
+const formatSigned = (value: number, unit?: string | null) => {
+  const text = Math.abs(value).toLocaleString("vi-VN", QUANTITY_FORMAT);
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${sign}${text}${unit ? ` ${unit}` : ""}`;
+};
+
+const renderAdjustment = (record: StockAdjustmentListDto) => {
+  if (record.status !== StockAdjustmentStatus.Confirmed || record.adjustmentDiffBase == null) return "—";
+  const volume = record.adjustmentDiffVolume;
+  const sign = volume ?? record.adjustmentDiffBase;
+  const color = sign > 0 ? "#389e0d" : sign < 0 ? "#cf1322" : undefined;
+  const parts = record.adjustmentDiffByUnit?.length
+    ? record.adjustmentDiffByUnit
+    : [{ quantity: record.adjustmentDiffBase, unitName: record.storageUnitName }];
+  return (
+    <span style={{ color }}>
+      {parts.map((part) => formatSigned(part.quantity, part.unitName)).join(", ")}
+      {volume != null && record.volumeUnitName ? ` / ${formatSigned(volume, record.volumeUnitName)}` : ""}
+    </span>
+  );
+};
+
+const InventoryHistoryTab: React.FC<InventoryHistoryTabProps> = ({ warehouseId, productId }) => {
   const navigate = useNavigate();
   const [data, setData] = useState<StockAdjustmentListDto[]>([]);
   const [total, setTotal] = useState(0);
@@ -32,6 +57,7 @@ const InventoryHistoryTab: React.FC<InventoryHistoryTabProps> = ({ warehouseId }
         page,
         limit: pageSize,
         warehouseId,
+        productId,
       });
       setData(result.items || []);
       setTotal(result.totalCount || 0);
@@ -40,7 +66,7 @@ const InventoryHistoryTab: React.FC<InventoryHistoryTabProps> = ({ warehouseId }
     } finally {
       setLoading(false);
     }
-  }, [warehouseId, page, pageSize]);
+  }, [warehouseId, productId, page, pageSize]);
 
   useEffect(() => {
     fetchData();
@@ -74,6 +100,14 @@ const InventoryHistoryTab: React.FC<InventoryHistoryTabProps> = ({ warehouseId }
       width: 130,
       render: (val: string) => (val ? dayjs(val).format("DD/MM/YYYY") : "—"),
     },
+    ...(productId
+      ? [{
+          title: "Lượng điều chỉnh",
+          key: "adjustment",
+          width: 200,
+          render: (_: unknown, record: StockAdjustmentListDto) => renderAdjustment(record),
+        }]
+      : []),
     {
       title: "Nhân viên kiểm kê",
       dataIndex: "inventoryUserName",

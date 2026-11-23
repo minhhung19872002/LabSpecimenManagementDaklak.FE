@@ -286,28 +286,31 @@ const StockInventoryForm: React.FC = () => {
   };
 
   const buildPayload = (): CreateUpdateStockAdjustmentDto => {
+    // Dòng để trống số lượng thực tế = không kiểm kê lô đó (BA Q3) → không gửi lên,
+    // tránh việc tự lấy tồn dự kiến làm thực tế (K5).
     const allItems = sections.flatMap(s =>
-      s.items.map(item => {
+      s.items.flatMap(item => {
         const lot = s.lots.find(l =>
           l.productId === item.productId && (l.lotNumber ?? "") === (item.lotNumber ?? "")
         );
-        const hasVolume = lot && lot.volumePerUnit && lot.volumePerUnit > 0 && lot.volumeUnitId;
+        if (!lot) return [];
+        const actualQuantity = combineActualQuantity(lot, item);
+        if (actualQuantity === null) return [];
 
-        const combined = lot ? combineActualQuantity(lot, item) : null;
-        const expectedStock = lot ? lot.consumableQuantity - (lot.theoreticalConsumption || 0) : 0;
-        const actualQuantity = combined ?? expectedStock;
-        const actualUnitId = hasVolume ? lot.volumeUnitId : lot?.baseUnitId || undefined;
+        const hasVolume = lot.volumePerUnit && lot.volumePerUnit > 0 && lot.volumeUnitId;
+        const expectedStock = lot.consumableQuantity - (lot.theoreticalConsumption || 0);
+        const actualUnitId = hasVolume ? lot.volumeUnitId : lot.baseUnitId || undefined;
 
-        return {
+        return [{
           productId: item.productId,
           actualQuantity,
           warehouseId: s.warehouseId,
           actualUnitId: actualUnitId || undefined,
           reason: item.reason || undefined,
-          expectedStock: lot ? expectedStock : undefined,
+          expectedStock,
           lotNumber: item.lotNumber || undefined,
           manufacturerName: item.manufacturerName || undefined,
-        };
+        }];
       })
     );
 
@@ -318,10 +321,16 @@ const StockInventoryForm: React.FC = () => {
     };
   };
 
+  const NO_ACTUAL_MESSAGE = "Vui lòng nhập số lượng thực tế cho ít nhất một vật tư.";
+
   const handleSaveDraft = async () => {
     const payload = buildPayload();
     if (sections.length === 0) {
       message.warning("Vui lòng thêm ít nhất một kho để kiểm kê");
+      return;
+    }
+    if (payload.items.length === 0) {
+      message.warning(NO_ACTUAL_MESSAGE);
       return;
     }
 
@@ -349,6 +358,10 @@ const StockInventoryForm: React.FC = () => {
       return;
     }
     const payload = buildPayload();
+    if (payload.items.length === 0) {
+      message.warning(NO_ACTUAL_MESSAGE);
+      return;
+    }
 
     setConfirming(true);
     try {
@@ -473,7 +486,7 @@ const StockInventoryForm: React.FC = () => {
                   onValueChange={(values) => {
                     updateItem(section.warehouseId, record.productId, record.lotNumber, "actualQuantityStorage", values.floatValue ?? null);
                   }}
-                  allowNegative
+                  allowNegative={false}
                   thousandSeparator="."
                   decimalSeparator=","
                   customInput={Input}
@@ -494,7 +507,7 @@ const StockInventoryForm: React.FC = () => {
                     onValueChange={(values) => {
                       updateItem(section.warehouseId, record.productId, record.lotNumber, "actualQuantityConsumable", values.floatValue ?? null);
                     }}
-                    allowNegative
+                    allowNegative={false}
                     thousandSeparator="."
                     decimalSeparator=","
                     customInput={Input}
