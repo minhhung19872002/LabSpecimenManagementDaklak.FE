@@ -171,7 +171,7 @@ const PreparedSolutionTable: React.FC<PreparedSolutionTableProps> = ({
         if (
           !bg &&
           row.expiryDate &&
-          row.daysRemaining < 30 &&
+          row.daysRemaining < 14 &&
           row.computedStatus !== PreparedSolutionStatus.Empty &&
           row.computedStatus !== PreparedSolutionStatus.Processed
         ) {

@@ -23,7 +23,7 @@ const DaysRemainingText: React.FC<DaysRemainingTextProps> = ({ expiryDate, daysR
       </Typography.Text>
     );
   }
-  const textType = daysRemaining < 30 ? "warning" : "secondary";
+  const textType = daysRemaining < 14 ? "warning" : "secondary";
   return (
     <Typography.Text type={textType} style={{ fontSize: 11 }}>
       còn {daysRemaining} ngày

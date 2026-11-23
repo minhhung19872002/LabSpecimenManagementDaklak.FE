@@ -14,6 +14,7 @@ export interface LotStockTabProps {
   lotsLoading: boolean;
   productId: string;
   warehouseId?: string;
+  nearExpiryDays?: number;
 }
 
 const LotStockTab: React.FC<LotStockTabProps> = ({
@@ -21,6 +22,7 @@ const LotStockTab: React.FC<LotStockTabProps> = ({
   lotsLoading,
   productId,
   warehouseId,
+  nearExpiryDays,
 }) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("fefo");
@@ -29,14 +31,14 @@ const LotStockTab: React.FC<LotStockTabProps> = ({
   const filtered = useMemo(() => {
     let result = lots;
     if (statusFilter !== "all") {
-      result = result.filter((l) => getLotStatus(l) === statusFilter);
+      result = result.filter((l) => getLotStatus(l, nearExpiryDays) === statusFilter);
     }
     result = [...result];
     if (sortOrder === "most-stock") {
       result.sort((a, b) => getLotVolumeQty(b) - getLotVolumeQty(a));
     }
     return result;
-  }, [lots, statusFilter, sortOrder]);
+  }, [lots, statusFilter, sortOrder, nearExpiryDays]);
 
   // "Lô tiếp theo" theo quy tắc BA (cùng logic với StockSummaryPanel, xem getNextFefoLot)
   const firstUsableLotNumber = useMemo(() => getNextFefoLot(lots)?.lotNumber, [lots]);
@@ -63,6 +65,7 @@ const LotStockTab: React.FC<LotStockTabProps> = ({
         onStatusFilterChange={setStatusFilter}
         onSortOrderChange={setSortOrder}
         onTimeRangeChange={setTimeRange}
+        nearExpiryDays={nearExpiryDays}
       />
 
       <Alert
@@ -85,6 +88,7 @@ const LotStockTab: React.FC<LotStockTabProps> = ({
               warehouseId={warehouseId}
               timeRange={timeRange}
               isNextFEFO={lot.lotNumber === firstUsableLotNumber}
+              nearExpiryDays={nearExpiryDays}
             />
           ))}
         </div>

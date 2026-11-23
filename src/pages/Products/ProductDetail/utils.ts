@@ -4,13 +4,16 @@ import { QUANTITY_FORMAT } from "../../../utils/formatters";
 
 export type LotStatus = "ok" | "near" | "expired" | "empty";
 
-export function getLotStatus(lot: ProductLotStockDto, nearExpiryDays = 30): LotStatus {
+/** Ngưỡng "Sắp hết hạn" (số ngày còn lại ≤ ngưỡng). Dung dịch pha khớp trang Pha dung dịch: còn < 14 ngày (K90). */
+export const LOT_NEAR_EXPIRY_DAYS = 30;
+export const PREPARED_SOLUTION_NEAR_EXPIRY_DAYS = 13;
+
+export function getLotStatus(lot: ProductLotStockDto, nearExpiryDays = LOT_NEAR_EXPIRY_DAYS): LotStatus {
   if (lot.remainingBaseQuantity <= 0) return "empty";
   if (!lot.lotExpiryDate) return "ok";
-  const now = dayjs();
-  const expiry = dayjs(lot.lotExpiryDate);
-  if (expiry.isBefore(now, "day")) return "expired";
-  if (expiry.diff(now, "day") <= nearExpiryDays) return "near";
+  const daysLeft = dayjs(lot.lotExpiryDate).startOf("day").diff(dayjs().startOf("day"), "day");
+  if (daysLeft < 0) return "expired";
+  if (daysLeft <= nearExpiryDays) return "near";
   return "ok";
 }
 

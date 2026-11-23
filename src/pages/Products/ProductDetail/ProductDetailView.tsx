@@ -7,7 +7,9 @@ import {
   ProductMaterialReceiptHistoryDto,
   ProductLotStockDto,
   BarcodeLotGroupDto,
+  ProductType,
 } from "../../../services/productService";
+import { LOT_NEAR_EXPIRY_DAYS, PREPARED_SOLUTION_NEAR_EXPIRY_DAYS } from "./utils";
 import ProductInfoPanel from "./ProductInfoPanel";
 import StockSummaryPanel from "./StockSummaryPanel";
 import ImportHistoryToolbar from "./ImportHistoryToolbar";
@@ -93,6 +95,9 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onOpenLotHistory,
   onCloseLotHistory,
 }) => {
+  const nearExpiryDays = detail?.productType === ProductType.PreparedSolution
+    ? PREPARED_SOLUTION_NEAR_EXPIRY_DAYS
+    : LOT_NEAR_EXPIRY_DAYS;
   const tabItems = [
     {
       key: "lot-stock",
@@ -103,6 +108,7 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           lotsLoading={lotStocksLoading}
           productId={productId}
           warehouseId={warehouseId}
+          nearExpiryDays={nearExpiryDays}
         />
       ),
     },
@@ -165,7 +171,7 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     <Card className="list-card" title={pageTitle}>
       <Row gutter={20}>
         <Col xs={24} md={8} lg={7} className="detail-left-col">
-          <StockSummaryPanel lots={lotStocks} loading={lotStocksLoading} warehouseId={warehouseId} />
+          <StockSummaryPanel lots={lotStocks} loading={lotStocksLoading} warehouseId={warehouseId} nearExpiryDays={nearExpiryDays} />
           <ProductInfoPanel detail={detail} loading={detailLoading} onOpenLotHistory={onOpenLotHistory} />
         </Col>
         <Col xs={24} md={16} lg={17}>

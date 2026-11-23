@@ -15,12 +15,14 @@ export interface StockSummaryPanelProps {
   lots: ProductLotStockDto[];
   loading: boolean;
   warehouseId?: string;
+  nearExpiryDays?: number;
 }
 
 const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
   lots,
   loading,
   warehouseId,
+  nearExpiryDays,
 }) => {
   const stats = useMemo(() => {
     let totalAvailable = 0;
@@ -35,7 +37,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
 
     let segIdx = 0;
     lots.forEach((l) => {
-      const status = getLotStatus(l);
+      const status = getLotStatus(l, nearExpiryDays);
       const vol = getLotVolumeQty(l);
       if (!unit) unit = getLotVolumeUnit(l);
 
@@ -80,7 +82,7 @@ const StockSummaryPanel: React.FC<StockSummaryPanelProps> = ({
       segments: segmentsWithPct,
       totalLots: lots.length,
     };
-  }, [lots]);
+  }, [lots, nearExpiryDays]);
 
   if (!warehouseId) {
     return (

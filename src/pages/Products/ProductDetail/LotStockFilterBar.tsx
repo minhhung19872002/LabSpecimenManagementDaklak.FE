@@ -16,6 +16,7 @@ export interface LotStockFilterBarProps {
   onStatusFilterChange: (v: StatusFilter) => void;
   onSortOrderChange: (v: SortOrder) => void;
   onTimeRangeChange: (v: TimeRange) => void;
+  nearExpiryDays?: number;
 }
 
 const LotStockFilterBar: React.FC<LotStockFilterBarProps> = ({
@@ -26,9 +27,10 @@ const LotStockFilterBar: React.FC<LotStockFilterBarProps> = ({
   onStatusFilterChange,
   onSortOrderChange,
   onTimeRangeChange,
+  nearExpiryDays,
 }) => {
   const counts: Record<StatusFilter, number> = { all: lots.length, ok: 0, near: 0, expired: 0, empty: 0 };
-  lots.forEach((l) => { counts[getLotStatus(l)]++; });
+  lots.forEach((l) => { counts[getLotStatus(l, nearExpiryDays)]++; });
 
   const statusOptions: { value: StatusFilter; label: string }[] = [
     { value: "all", label: `Tất cả (${counts.all})` },

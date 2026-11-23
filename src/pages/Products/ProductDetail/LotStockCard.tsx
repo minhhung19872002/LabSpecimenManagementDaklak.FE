@@ -28,6 +28,7 @@ export interface LotStockCardProps {
   warehouseId?: string;
   timeRange: TimeRange;
   isNextFEFO: boolean;
+  nearExpiryDays?: number;
 }
 
 function buildDateRange(range: TimeRange): [Dayjs, Dayjs] | null {
@@ -42,6 +43,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   warehouseId,
   timeRange,
   isNextFEFO,
+  nearExpiryDays,
 }) => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [items, setItems] = useState<ProductUsageLogItemDto[]>([]);
@@ -50,7 +52,7 @@ const LotStockCard: React.FC<LotStockCardProps> = ({
   const [loading, setLoading] = useState(false);
   const pageSize = 20;
 
-  const status = getLotStatus(lot);
+  const status = getLotStatus(lot, nearExpiryDays);
   const statusCfg = LOT_STATUS_CONFIG[status];
   const barColor = LOT_BAR_COLORS[status];
   const volumeUnit = getLotVolumeUnit(lot);

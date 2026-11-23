@@ -66,6 +66,13 @@ interface FormValues {
 
 type IngredientRow = { key: string; index: number };
 
+interface IngredientShortage {
+  productName: string;
+  unitName?: string;
+  needed: number;
+  available: number;
+}
+
 const INGREDIENT_TYPE_OPTIONS = [
   { value: ProductType.Chemical, label: ProductTypeLabels[ProductType.Chemical] },
   { value: ProductType.Biological, label: ProductTypeLabels[ProductType.Biological] },
@@ -239,6 +246,55 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
     [warehouseProducts]
   );
 
+  // PC-05: vượt tồn dự kiến → cảnh báo nhưng vẫn cho pha (quyết định nghiệp vụ).
+  // Khi sửa phiếu, lượng phiếu này đã dùng nằm sẵn trong tiêu hao → cộng lại vào tồn.
+  const findIngredientShortages = (ingredients: FormIngredient[]): IngredientShortage[] => {
+    const neededByProduct = new Map<string, number>();
+    ingredients.forEach((i) => {
+      neededByProduct.set(i.productId!, (neededByProduct.get(i.productId!) ?? 0) + i.quantityUsed!);
+    });
+    const shortages: IngredientShortage[] = [];
+    neededByProduct.forEach((needed, productId) => {
+      const info = getProductInfo(productId);
+      const saved = isEdit && editingItem
+        ? editingItem.ingredients.filter((i) => i.productId === productId)
+        : [];
+      const addBack = saved.reduce((sum, i) => sum + (i.quantityUsed ?? 0), 0);
+      const available = (info?.availableQuantity ?? 0) + addBack;
+      if (needed > available + 1e-8) {
+        shortages.push({
+          productName: info?.productName ?? saved[0]?.productName ?? "",
+          unitName: info?.unitName ?? saved[0]?.unitName ?? undefined,
+          needed,
+          available: Math.max(0, available),
+        });
+      }
+    });
+    return shortages;
+  };
+
+  const confirmShortages = (shortages: IngredientShortage[]) =>
+    new Promise<boolean>((resolve) => {
+      Modal.confirm({
+        title: "Nguyên liệu không đủ tồn dự kiến",
+        content: (
+          <div>
+            {shortages.map((s) => (
+              <div key={s.productName}>
+                Nguyên liệu {s.productName} không đủ: cần {formatVolume(s.needed, s.unitName)}, tồn dự kiến{" "}
+                {formatVolume(s.available, s.unitName)}, thiếu {formatVolume(s.needed - s.available, s.unitName)}.
+              </div>
+            ))}
+            <div style={{ marginTop: 8 }}>Vẫn pha?</div>
+          </div>
+        ),
+        okText: "Vẫn pha",
+        cancelText: "Hủy",
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
+
   const onSubmit = async (values: FormValues) => {
     if (!values.solutionProductId || !values.preparationDate || !values.totalVolume) return;
     const validIngredients = values.ingredients.filter(
@@ -249,6 +305,9 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
       return;
     }
     setIngredientsError(undefined);
+
+    const shortages = findIngredientShortages(validIngredients);
+    if (shortages.length > 0 && !(await confirmShortages(shortages))) return;
 
     const payload: CreateUpdatePreparedSolutionBatchDto = {
       solutionProductId: values.solutionProductId,
