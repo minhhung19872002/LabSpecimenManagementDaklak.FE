@@ -71,6 +71,18 @@ const handleForbidden = () => {
   }
 };
 
+const isRefreshRejected = (error: unknown): boolean => {
+  if (!axios.isAxiosError(error)) return true; // 200 nhưng không có access token
+  const status = error.response?.status;
+  return status !== undefined && status >= 400 && status < 500;
+};
+
+const clearSessionTokens = () => {
+  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+};
+
 // Try to refresh token and retry the request
 const tryRefreshTokenAndRetry = async (originalConfig: InternalAxiosRequestConfig): Promise<AxiosResponse | null> => {
   // Check if another tab already refreshed the token
@@ -125,6 +137,12 @@ const tryRefreshTokenAndRetry = async (originalConfig: InternalAxiosRequestConfi
       throw new Error('No access token in refresh response');
     }
   } catch (refreshError) {
+    // Server từ chối refresh token (200 không có token hoặc 4xx) → phiên đã chết, xóa token
+    // để trang 401 / "Về trang chủ" đưa về login thay vì lặp vòng với token hỏng.
+    // Lỗi mạng / 5xx thì giữ token (offline hoặc BE tạm lỗi, RT có thể vẫn còn hiệu lực).
+    if (isRefreshRejected(refreshError)) {
+      clearSessionTokens();
+    }
     // Process queued requests with error
     processQueue(refreshError, null);
     isRefreshing = false;
