@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Row, Col, Form, Select, InputNumber, Button, Popconfirm } from "antd";
+import { Row, Col, Form, Select, InputNumber, Button, Popconfirm, message } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { Controller, useFormContext, useFieldArray } from "react-hook-form";
 import { ProductType } from "../../../../services/productService";
@@ -12,6 +12,8 @@ const isChemOrBioOrStdOrSupplyOrSolventType = (type: number) =>
   type === ProductType.Chemical || type === ProductType.Biological ||
   type === ProductType.Standard || type === ProductType.Supply ||
   type === ProductType.Solvent;
+
+const SKU_USED_MESSAGE = "Không thể xóa quy cách này vì đã được dùng trong phiếu nhập kho.";
 
 const isPreparedSolutionType = (type: number) => type === ProductType.PreparedSolution;
 
@@ -130,20 +132,32 @@ const SkuSection: React.FC<SkuSectionProps> = ({
             key={field.id}
             style={{ marginBottom: 16, padding: "12px 16px", border: "1px solid #f0f0f0", borderRadius: 8, background: "#fafafa", position: "relative" }}
           >
-            <Popconfirm
-              title="Xóa quy cách này?"
-              onConfirm={() => removeSku(index)}
-              okText="Xóa"
-              cancelText="Hủy"
-            >
+            {watchedSkus[index]?.isUsed ? (
+              // VT-11: quy cách đã dùng trên phiếu nhập kho → chặn ngay khi bấm xóa
               <Button
                 type="text"
                 danger
                 size="small"
                 icon={<DeleteOutlined />}
                 style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
+                onClick={() => message.error(SKU_USED_MESSAGE)}
               />
-            </Popconfirm>
+            ) : (
+              <Popconfirm
+                title="Xóa quy cách này?"
+                onConfirm={() => removeSku(index)}
+                okText="Xóa"
+                cancelText="Hủy"
+              >
+                <Button
+                  type="text"
+                  danger
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
+                />
+              </Popconfirm>
+            )}
             <Row gutter={[12, 0]}>
               <Col xs={24} md={5}>
                 <Form.Item

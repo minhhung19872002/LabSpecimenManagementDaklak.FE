@@ -139,7 +139,7 @@ const ImportManufacturerModal: React.FC<ImportManufacturerModalProps> = ({
       render: (text: string, record: ManufacturerImportPreviewItem) => (
         <Space>
           <span>{text}</span>
-          {record.isNew ? (
+          {!record.isValid ? null : record.isNew ? (
             <Tag color="green">Mới</Tag>
           ) : (
             <Tag color="blue">Cập nhật</Tag>

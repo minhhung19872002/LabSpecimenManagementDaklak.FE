@@ -129,6 +129,8 @@ export interface ProductSkuDto {
   volumeUnitId?: string;
   volumeUnitName?: string;
   creationTime: string;
+  /** Đã dùng trên phiếu nhập kho → không được xóa (VT-11) */
+  isUsed?: boolean;
 }
 
 export interface CreateUpdateProductSkuDto {

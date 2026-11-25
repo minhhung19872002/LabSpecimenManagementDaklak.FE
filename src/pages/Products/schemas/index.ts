@@ -3,6 +3,7 @@ import { ProductType } from "../../../services/productService";
 
 export const skuSchema = yup.object({
   id: yup.string().nullable().optional(),
+  isUsed: yup.boolean().optional(),
   manufacturerId: yup.string().required("Vui lòng chọn hãng sản xuất"),
   baseUnitId: yup.string().nullable().optional(),
   packagingQuantity: yup

@@ -304,6 +304,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
         isActive: editingProduct.isActive,
         skus: (editingProduct.skus || []).map((s) => ({
           id: s.id,
+          isUsed: s.isUsed ?? false,
           manufacturerId: s.manufacturerId,
           baseUnitId: s.baseUnitId || undefined,
           packagingQuantity: s.packagingQuantity ?? undefined,
