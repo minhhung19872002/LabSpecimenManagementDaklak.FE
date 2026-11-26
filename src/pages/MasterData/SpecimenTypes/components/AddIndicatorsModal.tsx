@@ -3,6 +3,7 @@ import { Modal, Select, Button, Typography, Space } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
+import { withUngroupedGroup } from "../../../../utils/indicatorGroups";
 
 const { Text } = Typography;
 
@@ -36,7 +37,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
   // Build grouped options for Select
   const buildGroupedOptions = (currentIndex: number) => {
-    return indicatorGroups
+    return withUngroupedGroup(indicatorGroups)
       .filter((group) => group.isActive && indicatorsByGroup[group.id]?.length > 0)
       .map((group) => {
         const availableIndicators = (indicatorsByGroup[group.id] || []).filter(
@@ -97,7 +98,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   // Check if we can add more rows
   const totalAvailable = useMemo(() => {
     let count = 0;
-    indicatorGroups.forEach((group) => {
+    withUngroupedGroup(indicatorGroups).forEach((group) => {
       if (group.isActive && indicatorsByGroup[group.id]) {
         indicatorsByGroup[group.id].forEach((ind) => {
           if (!existingIndicatorIds.includes(ind.id)) {

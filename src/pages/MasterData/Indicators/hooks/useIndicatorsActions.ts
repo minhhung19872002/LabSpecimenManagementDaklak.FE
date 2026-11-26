@@ -4,9 +4,7 @@ import type { FormInstance } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import type { UseFormReturn } from "react-hook-form";
 import {
-  indicatorGroupService,
   indicatorService,
-  CreateUpdateIndicatorGroupDto,
   CreateIndicatorDto,
   CreateBulkIndicatorsDto,
   UpdateIndicatorWithSubsDto,
@@ -17,19 +15,15 @@ import type {
   AdminIndicatorNamePreviewDto,
 } from "../../../../services/importService";
 import {
-  IndicatorGroupDto,
   IndicatorDto,
   ImportIndicatorsResultDto,
-  ImportIndicatorGroupsResultDto,
 } from "../types";
 import {
   IndicatorFormData,
-  IndicatorGroupFormData,
 } from "../schemas/indicatorSchema";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseIndicatorsActionsParams {
-  indicators: IndicatorDto[];
   selectedRowKeys: string[];
   setSelectedRowKeys: (keys: string[]) => void;
   setBatchLoading: (loading: boolean) => void;
@@ -38,7 +32,6 @@ interface UseIndicatorsActionsParams {
 }
 
 export const useIndicatorsActions = ({
-  indicators,
   selectedRowKeys,
   setSelectedRowKeys,
   setBatchLoading,
@@ -46,24 +39,16 @@ export const useIndicatorsActions = ({
   onDataChange,
 }: UseIndicatorsActionsParams) => {
   // Modal states
-  const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [indicatorModalOpen, setIndicatorModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importGroupModalOpen, setImportGroupModalOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<IndicatorGroupDto | null>(
-    null
-  );
   const [editingIndicator, setEditingIndicator] = useState<IndicatorDto | null>(
     null
   );
   const [modalLoading, setModalLoading] = useState(false);
   const [importResult, setImportResult] =
     useState<ImportIndicatorsResultDto | null>(null);
-  const [importGroupResult, setImportGroupResult] =
-    useState<ImportIndicatorGroupsResultDto | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [groupFileList, setGroupFileList] = useState<UploadFile[]>([]);
 
   // State cho import nhóm chỉ tiêu mới (với preview)
   const [importIndicatorGroupModalOpen, setImportIndicatorGroupModalOpen] = useState(false);
@@ -76,72 +61,6 @@ export const useIndicatorsActions = ({
   const [adminImportFileList, setAdminImportFileList] = useState<UploadFile[]>([]);
   const [adminImportPreview, setAdminImportPreview] =
     useState<AdminIndicatorNamePreviewDto | null>(null);
-
-  // Handle Group CRUD
-  const handleCreateGroup = (groupForm: UseFormReturn<IndicatorGroupFormData>) => {
-    setEditingGroup(null);
-    groupForm.reset({ name: "", isActive: true });
-    setGroupModalOpen(true);
-  };
-
-  const handleEditGroup = (
-    group: IndicatorGroupDto,
-    groupForm: UseFormReturn<IndicatorGroupFormData>
-  ) => {
-    setEditingGroup(group);
-    groupForm.reset({
-      name: group.name,
-      isActive: group.isActive,
-    });
-    setGroupModalOpen(true);
-  };
-
-  const handleDeleteGroup = async (id: string) => {
-    const groupIndicators = indicators.filter(
-      (ind) => ind.indicatorGroupId === id
-    );
-    if (groupIndicators.length > 0) {
-      message.error("Không thể xóa nhóm có chứa chỉ tiêu");
-      return;
-    }
-    try {
-      await indicatorGroupService.delete(id);
-      message.success("Xóa nhóm thành công!");
-      fetchData();
-      onDataChange?.();
-    } catch (error: unknown) {
-      message.error(getApiErrorMessage(error, "Không thể xóa nhóm"));
-    }
-  };
-
-  const handleGroupModalOk = async (
-    data: IndicatorGroupFormData,
-    groupForm: UseFormReturn<IndicatorGroupFormData>
-  ) => {
-    try {
-      setModalLoading(true);
-
-      if (editingGroup) {
-        await indicatorGroupService.update(
-          editingGroup.id,
-          data as CreateUpdateIndicatorGroupDto
-        );
-        message.success("Cập nhật nhóm thành công!");
-      } else {
-        await indicatorGroupService.create(data as CreateUpdateIndicatorGroupDto);
-        message.success("Thêm nhóm thành công!");
-      }
-
-      setGroupModalOpen(false);
-      groupForm.reset();
-      fetchData();
-      onDataChange?.();
-    } catch (error: unknown) {
-      message.error(getApiErrorMessage(error, "Không thể lưu nhóm"));
-    } finally {
-      setModalLoading(false);
-    }
-  };
 
   // Handle Indicator CRUD
   const handleEditIndicator = (
@@ -309,7 +228,7 @@ export const useIndicatorsActions = ({
           name: data.name,
           formattedName: data.formattedName,
           isActive: data.isActive,
-          indicatorGroupId: data.indicatorGroupId,
+          indicatorGroupId: data.indicatorGroupId || null,
           laboratoryId: data.laboratoryId,
           subIndicators: (data.subIndicators || []).map((sub) => ({
             id: sub.id || undefined,
@@ -320,7 +239,7 @@ export const useIndicatorsActions = ({
         await indicatorService.updateWithSubs(editingIndicator.id, updateData);
         message.success("Cập nhật chỉ tiêu thành công!");
       } else {
-        await indicatorService.create(data as CreateIndicatorDto);
+        await indicatorService.create({ ...data, indicatorGroupId: data.indicatorGroupId || null } as CreateIndicatorDto);
         message.success("Thêm chỉ tiêu thành công!");
       }
 
@@ -369,7 +288,7 @@ export const useIndicatorsActions = ({
         });
 
       const data: CreateBulkIndicatorsDto = {
-        indicatorGroupId: values.indicatorGroupId,
+        indicatorGroupId: values.indicatorGroupId || null,
         indicators,
       };
 
@@ -423,41 +342,6 @@ export const useIndicatorsActions = ({
 
       if (result.successCount > 0) {
         message.success(`Import thành công ${result.successCount} chỉ tiêu!`);
-        fetchData();
-        onDataChange?.();
-      }
-
-      if (result.errorCount > 0) {
-        message.warning(`Có ${result.errorCount} lỗi khi import`);
-      }
-    } catch (error: unknown) {
-      message.error(getApiErrorMessage(error, "Không thể import file"));
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const handleImportGroupExcel = async () => {
-    if (groupFileList.length === 0) {
-      message.error("Vui lòng chọn file Excel");
-      return;
-    }
-
-    const file = groupFileList[0].originFileObj;
-    if (!file) {
-      message.error("File không hợp lệ");
-      return;
-    }
-
-    try {
-      setModalLoading(true);
-      const result = await indicatorGroupService.importFromExcel(file);
-      setImportGroupResult(result);
-
-      if (result.successCount > 0) {
-        message.success(
-          `Import thành công ${result.successCount} nhóm chỉ tiêu!`
-        );
         fetchData();
         onDataChange?.();
       }
@@ -630,34 +514,19 @@ export const useIndicatorsActions = ({
 
   return {
     // Modal states
-    groupModalOpen,
-    setGroupModalOpen,
     indicatorModalOpen,
     setIndicatorModalOpen,
     bulkModalOpen,
     setBulkModalOpen,
     importModalOpen,
     setImportModalOpen,
-    importGroupModalOpen,
-    setImportGroupModalOpen,
-    editingGroup,
-    setEditingGroup,
     editingIndicator,
     setEditingIndicator,
     modalLoading,
     importResult,
     setImportResult,
-    importGroupResult,
-    setImportGroupResult,
     fileList,
     setFileList,
-    groupFileList,
-    setGroupFileList,
-    // Group actions
-    handleCreateGroup,
-    handleEditGroup,
-    handleDeleteGroup,
-    handleGroupModalOk,
     // Indicator actions
     handleEditIndicator,
     handleDeleteIndicator,
@@ -672,7 +541,6 @@ export const useIndicatorsActions = ({
     handleBulkModalOk,
     // Import
     handleImportExcel,
-    handleImportGroupExcel,
     // Import nhóm chỉ tiêu mới (với preview)
     importIndicatorGroupModalOpen,
     setImportIndicatorGroupModalOpen,

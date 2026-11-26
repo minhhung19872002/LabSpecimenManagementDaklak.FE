@@ -6,9 +6,13 @@ import {
   laboratoryService,
   LaboratoryDto,
 } from "../../../../services/masterDataService";
-import { IndicatorGroupDto, IndicatorDto, GroupedIndicatorData } from "../types";
+import { IndicatorGroupDto, IndicatorDto } from "../types";
+import { UNGROUPED_ID, UNGROUPED_NAME } from "../../../../utils/indicatorGroups";
 
 const DEBOUNCE_MS = 400;
+
+/** Giá trị lọc nhóm: "all" = tất cả, UNGROUPED_ID = chỉ tiêu chưa phân nhóm, còn lại = id nhóm */
+export const ALL_GROUPS = "all";
 
 export const useIndicatorsData = () => {
   const [groups, setGroups] = useState<IndicatorGroupDto[]>([]);
@@ -17,11 +21,11 @@ export const useIndicatorsData = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+  const [groupFilter, setGroupFilterState] = useState<string>(ALL_GROUPS);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Ref data (loaded once)
   const refDataLoaded = useRef(false);
@@ -35,13 +39,28 @@ export const useIndicatorsData = () => {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // Computed options for Select
+  const setGroupFilter = useCallback((value: string) => {
+    setGroupFilterState(value);
+    setCurrentPage(1);
+  }, []);
+
+  // Options cho Select nhóm trong modal thêm/sửa chỉ tiêu (không có nhánh ảo)
   const groupOptions = useMemo(() => {
     return (groups || []).map((group) => ({
       value: group.id,
       label: group.name + (!group.isActive ? " (Ngừng)" : ""),
     }));
   }, [groups]);
+
+  // Options cho bộ lọc nhóm trên bảng
+  const groupFilterOptions = useMemo(
+    () => [
+      { value: ALL_GROUPS, label: "Tất cả nhóm" },
+      { value: UNGROUPED_ID, label: UNGROUPED_NAME },
+      ...groupOptions,
+    ],
+    [groupOptions],
+  );
 
   const laboratoryOptions = useMemo(() => {
     const VISIBLE_LABS = ["lab vi sinh", "lab hóa"];
@@ -64,13 +83,12 @@ export const useIndicatorsData = () => {
       setGroups(groupsData || []);
       setLaboratories(laboratoriesData || []);
       refDataLoaded.current = true;
-      setExpandedRowKeys((groupsData || []).map((g: IndicatorGroupDto) => g.id));
     } catch (error) {
       console.error("Failed to fetch ref data:", error);
     }
   }, []);
 
-  // Fetch all matching indicators in batches (pagination is at group level)
+  // Fetch all matching indicators in batches (lọc nhóm + phân trang ở client)
   const fetchIndicators = useCallback(async (search: string) => {
     setLoading(true);
     try {
@@ -122,28 +140,20 @@ export const useIndicatorsData = () => {
     setPageSize(size);
   }, []);
 
-  // Group indicators by group, then paginate at group level
-  const allGroupedData: GroupedIndicatorData[] = useMemo(() => {
-    return (groups || [])
-      .map((group) => {
-        const parentIndicators = (indicators || []).filter(
-          (ind) => ind.indicatorGroupId === group.id && !ind.parentIndicatorId
-        );
-        return {
-          ...group,
-          key: group.id,
-          indicators: parentIndicators,
-        };
-      })
-      .filter((group) => group.indicators.length > 0);
-  }, [groups, indicators]);
+  // Danh sách phẳng chỉ tiêu cha (chỉ tiêu phụ hiển thị qua số đếm / modal sửa)
+  const filteredIndicators: IndicatorDto[] = useMemo(() => {
+    return (indicators || []).filter((ind) => {
+      if (ind.parentIndicatorId) return false;
+      if (groupFilter === ALL_GROUPS) return true;
+      if (groupFilter === UNGROUPED_ID) return !ind.indicatorGroupId;
+      return ind.indicatorGroupId === groupFilter;
+    });
+  }, [indicators, groupFilter]);
 
-  const groupTotalCount = allGroupedData.length;
-
-  const groupedData: GroupedIndicatorData[] = useMemo(() => {
+  const pagedIndicators: IndicatorDto[] = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return allGroupedData.slice(start, start + pageSize);
-  }, [allGroupedData, currentPage, pageSize]);
+    return filteredIndicators.slice(start, start + pageSize);
+  }, [filteredIndicators, currentPage, pageSize]);
 
   return {
     groups,
@@ -151,13 +161,14 @@ export const useIndicatorsData = () => {
     laboratories,
     loading,
     searchText,
-    expandedRowKeys,
+    groupFilter,
     selectedRowKeys,
     batchLoading,
     groupOptions,
+    groupFilterOptions,
     laboratoryOptions,
-    groupedData,
-    totalCount: groupTotalCount,
+    pagedIndicators,
+    totalCount: filteredIndicators.length,
     currentPage,
     pageSize,
     setGroups,
@@ -165,7 +176,7 @@ export const useIndicatorsData = () => {
     setLaboratories,
     setLoading,
     setSearchText,
-    setExpandedRowKeys,
+    setGroupFilter,
     setSelectedRowKeys,
     setBatchLoading,
     handlePageChange,

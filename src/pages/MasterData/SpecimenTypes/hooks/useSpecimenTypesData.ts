@@ -12,6 +12,7 @@ import {
   SampleTypeCategoryDto,
 } from "../types";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
+import { groupIndicatorsByGroup } from "../../../../utils/indicatorGroups";
 
 export const useSpecimenTypesData = () => {
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
@@ -90,19 +91,11 @@ export const useSpecimenTypesData = () => {
   }, [categories]);
 
   // Group indicators by group for selection
-  const indicatorsByGroup = useMemo(() => {
-    const grouped: Record<string, IndicatorDto[]> = {};
-    indicators.forEach((indicator) => {
-      if (indicator.isActive) {
-        const groupId = indicator.indicatorGroupId;
-        if (!grouped[groupId]) {
-          grouped[groupId] = [];
-        }
-        grouped[groupId].push(indicator);
-      }
-    });
-    return grouped;
-  }, [indicators]);
+  // Chỉ tiêu không nhóm → khóa UNGROUPED_ID (nhánh "Chưa phân nhóm")
+  const indicatorsByGroup = useMemo(
+    () => groupIndicatorsByGroup(indicators.filter((indicator) => indicator.isActive)),
+    [indicators],
+  );
 
   return {
     specimenTypes,

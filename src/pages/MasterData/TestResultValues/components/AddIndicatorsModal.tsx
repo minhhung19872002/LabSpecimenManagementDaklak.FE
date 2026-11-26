@@ -4,6 +4,7 @@ import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common
 import { IndicatorDto, IndicatorGroupDto, SpecimenTypeDto } from "../../../../services/masterDataService";
 import { TestResultValueIndicatorDto } from "../../../../services/testResultValueService";
 import IndicatorName from "../../../../components/common/IndicatorName";
+import { withUngroupedGroup } from "../../../../utils/indicatorGroups";
 
 const { Text } = Typography;
 
@@ -70,7 +71,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     const indicatorsForSpecimenType = getIndicatorsBySpecimenType(currentSpecimenTypeId);
     const indicatorIdsForSpecimenType = new Set(indicatorsForSpecimenType.map(ind => ind.id));
 
-    return indicatorGroups
+    return withUngroupedGroup(indicatorGroups)
       .filter((group) => group.isActive && indicatorsByGroup[group.id]?.length > 0)
       .map((group) => {
         const availableIndicators = (indicatorsByGroup[group.id] || []).filter((ind) => {

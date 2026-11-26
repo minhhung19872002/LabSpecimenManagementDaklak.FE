@@ -156,7 +156,7 @@ export interface QuickCreateIndicatorItemInput {
 }
 
 export interface QuickCreateIndicatorsFromTestRequestInput {
-  indicatorGroupId: string;
+  indicatorGroupId?: string | null;
   laboratoryId: string;
   testRequestId?: string;
   contractNumber?: string;

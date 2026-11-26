@@ -48,6 +48,7 @@ import {
   isEcoliColiformComboMet,
   isEcoliIndicator,
 } from "../../TestRequest/TestRequestForm/constants";
+import { indicatorGroupKey, withUngroupedGroup } from "../../../utils/indicatorGroups";
 import "./QuotationIndicatorSelectionModal.css";
 
 const { Text } = Typography;
@@ -758,9 +759,9 @@ const QuotationIndicatorSelectionModal: React.FC<
 
     const result: GroupData[] = [];
 
-    indicatorGroups.forEach((group) => {
+    withUngroupedGroup(indicatorGroups).forEach((group) => {
       const groupIndicators = activeIndicators.filter(
-        (ind) => ind.indicatorGroupId === group.id,
+        (ind) => indicatorGroupKey(ind.indicatorGroupId) === group.id,
       );
       if (groupIndicators.length === 0) return;
 

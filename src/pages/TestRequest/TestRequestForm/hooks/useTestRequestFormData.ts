@@ -66,6 +66,7 @@ import { offlineQuotationService } from "../../../../services/offline/offlineSer
 import { checkActionPermission } from "../../../../hooks/useActionPermission";
 import { authService } from "../../../../services/authService";
 import { CustomIndicatorName, pickCustomIndicatorName } from "../../../../utils/indicatorName";
+import { UNGROUPED_ID, indicatorGroupKey, withUngroupedGroup } from "../../../../utils/indicatorGroups";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
@@ -1425,7 +1426,7 @@ export const useTestRequestFormData = () => {
     let filtered = indicators.filter((ind) => ind.isActive);
 
     if (selectedGroupFilter !== "all") {
-      filtered = filtered.filter((ind) => ind.indicatorGroupId === selectedGroupFilter);
+      filtered = filtered.filter((ind) => indicatorGroupKey(ind.indicatorGroupId) === selectedGroupFilter);
     }
 
     if (indicatorSearchText.trim()) {
@@ -1444,11 +1445,11 @@ export const useTestRequestFormData = () => {
   const getFilteredGroupsWithIndicators = () => {
     const searchLower = groupSearchText.toLowerCase().trim();
 
-    return indicatorGroups
+    return withUngroupedGroup(indicatorGroups)
       .map((group) => {
         const groupIndicators = indicators.filter(
           (ind) =>
-            ind.indicatorGroupId === group.id &&
+            indicatorGroupKey(ind.indicatorGroupId) === group.id &&
             ind.isActive &&
             (!searchLower ||
               ind.name.toLowerCase().includes(searchLower) ||
@@ -1464,7 +1465,8 @@ export const useTestRequestFormData = () => {
             groupIndicators.length > 0,
         };
       })
-      .filter((g) => g.matchesSearch);
+      // Nhánh "Chưa phân nhóm" chỉ hiện khi có chỉ tiêu không nhóm
+      .filter((g) => g.matchesSearch && (g.id !== UNGROUPED_ID || g.indicators.length > 0));
   };
 
   // Effects
@@ -1474,8 +1476,9 @@ export const useTestRequestFormData = () => {
 
   useEffect(() => {
     if (indicatorGroups.length > 0 && expandedGroups.length === 0) {
-      setExpandedGroups(indicatorGroups.map((g) => g.id));
-      setExpandedGroupsInSelector(indicatorGroups.map((g) => g.id));
+      const groupIds = withUngroupedGroup(indicatorGroups).map((g) => g.id);
+      setExpandedGroups(groupIds);
+      setExpandedGroupsInSelector(groupIds);
     }
   }, [indicatorGroups]);
 
@@ -1520,14 +1523,14 @@ export const useTestRequestFormData = () => {
 
   useEffect(() => {
     if (indicatorGroups.length > 0 && indicators.length > 0) {
-      const treeData = indicatorGroups
+      const treeData = withUngroupedGroup(indicatorGroups)
         .map((group) => ({
           title: group.name,
           value: `group-${group.id}`,
           key: `group-${group.id}`,
           selectable: false,
           children: indicators
-            .filter((ind) => ind.indicatorGroupId === group.id && ind.isActive)
+            .filter((ind) => indicatorGroupKey(ind.indicatorGroupId) === group.id && ind.isActive)
             .map((ind) => ({
               title: ind.name,
               value: ind.id,

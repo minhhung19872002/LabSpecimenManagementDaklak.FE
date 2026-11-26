@@ -176,10 +176,10 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
         <Form.Item
           name="indicatorGroupId"
           label="Nhóm chỉ tiêu"
-          rules={[{ required: true, message: "Vui lòng chọn nhóm" }]}
         >
           <Select
-            placeholder="Chọn nhóm cho tất cả chỉ tiêu"
+            placeholder="Không phân nhóm"
+            allowClear
             showSearch
             optionFilterProp="label"
             options={groupOptions}

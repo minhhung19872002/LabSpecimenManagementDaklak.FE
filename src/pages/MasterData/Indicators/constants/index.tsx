@@ -7,7 +7,8 @@ import {
 } from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
-import { IndicatorDto, IndicatorGroupDto, GroupedIndicatorData } from "../types";
+import { IndicatorDto } from "../types";
+import { UNGROUPED_NAME } from "../../../../utils/indicatorGroups";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
 import MasterDataHistoryButton from "../../../../components/common/MasterDataHistory/MasterDataHistoryButton";
@@ -27,6 +28,18 @@ export const getIndicatorColumns = (
         formattedName={record.formattedName}
       />
     ),
+  },
+  {
+    title: "Nhóm",
+    dataIndex: "indicatorGroupName",
+    key: "indicatorGroupName",
+    width: 200,
+    render: (groupName: string | null | undefined, record) =>
+      record.indicatorGroupId && groupName ? (
+        groupName
+      ) : (
+        <span style={{ color: "#bfbfbf" }}>{UNGROUPED_NAME}</span>
+      ),
   },
   {
     title: "Khoa phòng",
@@ -114,91 +127,6 @@ export const getIndicatorColumns = (
               </Popconfirm>
             ) : (
               <Tooltip title="Không thể xóa vì đã được sử dụng">
-                <Button
-                  type="link"
-                  size="small"
-                  disabled
-                  icon={<DeleteOutlined />}
-                />
-              </Tooltip>
-            )
-          )}
-        </Space>
-      );
-    },
-  },
-];
-
-export const getGroupColumns = (
-  handleEditGroup: (group: IndicatorGroupDto) => void,
-  handleDeleteGroup: (id: string) => void
-): ColumnsType<GroupedIndicatorData> => [
-  {
-    title: "Tên nhóm",
-    dataIndex: "name",
-    key: "name",
-    width: 250,
-  },
-  {
-    title: "Số chỉ tiêu",
-    dataIndex: "indicatorCount",
-    key: "indicatorCount",
-    width: 120,
-    render: (_, record) => record.indicators.length,
-  },
-  {
-    title: "Trạng thái",
-    dataIndex: "isActive",
-    key: "isActive",
-    width: 100,
-    render: (isActive: boolean) => (
-      <Tag color={isActive ? "green" : "red"}>
-        {isActive ? "Hoạt động" : "Ngừng"}
-      </Tag>
-    ),
-  },
-  {
-    title: "Thao tác",
-    key: "actions",
-    width: 130,
-    render: (_, record) => {
-      const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
-      const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
-
-      return (
-        <Space size="small">
-          <MasterDataHistoryButton
-            entityType="indicatorGroups"
-            entityId={record.id}
-            title={record.name}
-          />
-          {canEdit && (
-            <Tooltip title="Sửa nhóm">
-              <Button
-                type="link"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleEditGroup(record)}
-              />
-            </Tooltip>
-          )}
-          {canDelete && (
-            record.indicators.length === 0 ? (
-              <Popconfirm
-                title="Bạn có chắc chắn muốn xóa nhóm này?"
-                onConfirm={() => handleDeleteGroup(record.id)}
-                okText="Có"
-                cancelText="Không"
-              >
-                <Button
-                  type="link"
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                />
-              </Popconfirm>
-            ) : (
-              <Tooltip title="Không thể xóa nhóm có chứa chỉ tiêu">
                 <Button
                   type="link"
                   size="small"

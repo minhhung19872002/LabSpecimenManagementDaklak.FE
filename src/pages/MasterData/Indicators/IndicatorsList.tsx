@@ -3,24 +3,17 @@ import { Form } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useIndicatorsData, useIndicatorsActions } from "./hooks";
-import { getIndicatorColumns, getGroupColumns } from "./constants";
+import { getIndicatorColumns } from "./constants";
 import {
   IndicatorsTable,
-  GroupModal,
   IndicatorModal,
   BulkCreateModal,
   ImportIndicatorModal,
-  ImportGroupModal,
   ImportIndicatorGroupModal,
   AdminImportNameModal,
 } from "./components";
 import { IndicatorsTabProps, IndicatorsActions } from "./types";
-import {
-  indicatorSchema,
-  indicatorGroupSchema,
-  IndicatorFormData,
-  IndicatorGroupFormData,
-} from "./schemas/indicatorSchema";
+import { indicatorSchema, IndicatorFormData } from "./schemas/indicatorSchema";
 
 const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDataChange }, ref) => {
 
@@ -28,17 +21,18 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     indicators,
     loading,
     searchText,
-    expandedRowKeys,
+    groupFilter,
     selectedRowKeys,
     batchLoading,
     groupOptions,
+    groupFilterOptions,
     laboratoryOptions,
-    groupedData,
+    pagedIndicators,
     totalCount,
     currentPage,
     pageSize,
     setSearchText,
-    setExpandedRowKeys,
+    setGroupFilter,
     setSelectedRowKeys,
     setBatchLoading,
     handlePageChange,
@@ -47,32 +41,18 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
 
   const {
     // Modal states
-    groupModalOpen,
-    setGroupModalOpen,
     indicatorModalOpen,
     setIndicatorModalOpen,
     bulkModalOpen,
     setBulkModalOpen,
     importModalOpen,
     setImportModalOpen,
-    importGroupModalOpen,
-    setImportGroupModalOpen,
-    editingGroup,
     editingIndicator,
     modalLoading,
     importResult,
     setImportResult,
-    importGroupResult,
-    setImportGroupResult,
     fileList,
     setFileList,
-    groupFileList,
-    setGroupFileList,
-    // Group actions
-    handleCreateGroup,
-    handleEditGroup,
-    handleDeleteGroup,
-    handleGroupModalOk,
     // Indicator actions
     handleEditIndicator,
     handleDeleteIndicator,
@@ -87,7 +67,6 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handleBulkModalOk,
     // Import
     handleImportExcel,
-    handleImportGroupExcel,
     // Import nhóm chỉ tiêu mới (với preview)
     importIndicatorGroupModalOpen,
     setImportIndicatorGroupModalOpen,
@@ -110,20 +89,15 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handleConfirmAdminImport,
     handleResetAdminImport,
   } = useIndicatorsActions({
-    indicators,
     selectedRowKeys,
     setSelectedRowKeys,
     setBatchLoading,
     fetchData,
     onDataChange,
   });
-  const groupForm = useForm<IndicatorGroupFormData>({
-    resolver: yupResolver(indicatorGroupSchema) as any,
-    defaultValues: { name: "", isActive: true },
-  });
   const indicatorForm = useForm<IndicatorFormData>({
     resolver: yupResolver(indicatorSchema) as any,
-    defaultValues: { indicatorGroupId: "", laboratoryId: "", name: "", isActive: true },
+    defaultValues: { indicatorGroupId: null, laboratoryId: "", name: "", isActive: true },
   });
   const [bulkForm] = Form.useForm();
 
@@ -143,19 +117,9 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     ],
   );
 
-  const groupColumns = useMemo(
-    () =>
-      getGroupColumns(
-        (group) => handleEditGroup(group, groupForm),
-        handleDeleteGroup,
-      ),
-    [handleEditGroup, handleDeleteGroup, groupForm],
-  );
-
   // Expose actions to parent
   useImperativeHandle(ref, () => ({
     handleBulkCreate: () => handleBulkCreate(bulkForm),
-    handleCreateGroup: () => handleCreateGroup(groupForm),
     handleDownloadTemplate: handleDownloadIndicatorGroupTemplate,
     handleImport: () => setImportIndicatorGroupModalOpen(true),
     handleDownloadAdminTemplate,
@@ -164,40 +128,26 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
 
   return (
     <>
-
       <IndicatorsTable
         loading={loading}
         batchLoading={batchLoading}
-        groupedData={groupedData}
-        expandedRowKeys={expandedRowKeys}
+        dataSource={pagedIndicators}
         selectedRowKeys={selectedRowKeys}
         indicators={indicators}
-        groupColumns={groupColumns}
-        indicatorColumns={indicatorColumns}
-        onExpandedRowsChange={setExpandedRowKeys}
+        columns={indicatorColumns}
         onSelectedRowsChange={setSelectedRowKeys}
         onBatchDelete={handleBatchDelete}
         onBatchDeactivate={handleBatchDeactivate}
         onBatchActivate={handleBatchActivate}
         searchText={searchText}
         onSearchChange={setSearchText}
+        groupFilter={groupFilter}
+        groupFilterOptions={groupFilterOptions}
+        onGroupFilterChange={setGroupFilter}
         totalCount={totalCount}
         currentPage={currentPage}
         pageSize={pageSize}
         onPageChange={handlePageChange}
-      />
-
-      {/* Group Modal */}
-      <GroupModal
-        open={groupModalOpen}
-        loading={modalLoading}
-        editingGroup={editingGroup}
-        form={groupForm}
-        onOk={(data) => handleGroupModalOk(data, groupForm)}
-        onCancel={() => {
-          setGroupModalOpen(false);
-          groupForm.reset();
-        }}
       />
 
       {/* Single Indicator Modal */}
@@ -241,21 +191,6 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
           setImportModalOpen(false);
           setImportResult(null);
           setFileList([]);
-        }}
-      />
-
-      {/* Import Group Excel Modal */}
-      <ImportGroupModal
-        open={importGroupModalOpen}
-        loading={modalLoading}
-        fileList={groupFileList}
-        importResult={importGroupResult}
-        onFileListChange={setGroupFileList}
-        onOk={handleImportGroupExcel}
-        onCancel={() => {
-          setImportGroupModalOpen(false);
-          setImportGroupResult(null);
-          setGroupFileList([]);
         }}
       />
 

@@ -37,6 +37,7 @@ export const categoryPermissionMap: Record<string, string> = {
   laboratories: PERMISSIONS.Laboratories.Default,
   specimenTypes: PERMISSIONS.SpecimenTypes.Default,
   indicators: PERMISSIONS.Indicators.Default,
+  indicatorGroups: PERMISSIONS.Indicators.Default, // trước đây nhóm quản lý trong màn chỉ tiêu → giữ cùng quyền
   departments: PERMISSIONS.Departments.Default,
   testMethods: PERMISSIONS.TestMethods.Default,
   notes: PERMISSIONS.Notes.Default,
@@ -52,6 +53,7 @@ export const categoryPermissionMap: Record<string, string> = {
 
 // Sorted alphabetically by Vietnamese label (A-Z). Keep this order when adding new entries.
 export const categoryLabels: Record<string, string> = {
+  indicators: "Chỉ tiêu",
   warehouses: "Danh mục kho",
   manufacturers: "Danh mục hãng sản xuất",
   sampleTypeCategories: "Danh mục loại mẫu",
@@ -63,7 +65,7 @@ export const categoryLabels: Record<string, string> = {
   formTemplates: "Form mẫu",
   laboratories: "Khoa phòng",
   specimenTypes: "Loại mẫu",
-  indicators: "Nhóm chỉ tiêu",
+  indicatorGroups: "Nhóm chỉ tiêu",
   departments: "Phòng ban",
   testMethods: "Phương pháp thử",
   notes: "Quản lý ghi chú",
@@ -380,6 +382,8 @@ export const getStatCount = (
       return statistics.customerCount;
     case "indicators":
       return statistics.indicatorCount;
+    case "indicatorGroups":
+      return statistics.indicatorGroupCount || 0;
     case "formTemplates":
       return statistics.formTemplateCount;
     case "testResultValues":

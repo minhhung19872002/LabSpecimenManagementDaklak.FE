@@ -20,6 +20,7 @@ import ImportUnitModal, {
   type UnitImportPreviewDto,
 } from "./components/ImportUnitModal";
 import IndicatorsTab, { type IndicatorsActions } from "../Indicators";
+import IndicatorGroupsTab, { type IndicatorGroupsActions } from "../IndicatorGroups";
 import FormTemplatesTab from "../FormTemplatesTab";
 import TestMethodsTab, { type TestMethodsActions } from "../TestMethods";
 import StandardsTab, { type StandardsActions } from "../Standards";
@@ -369,6 +370,7 @@ const MasterDataList: React.FC = () => {
   const testMethodsRef = useRef<TestMethodsActions>(null);
   const standardsRef = useRef<StandardsActions>(null);
   const indicatorsRef = useRef<IndicatorsActions>(null);
+  const indicatorGroupsRef = useRef<IndicatorGroupsActions>(null);
   const testResultValuesRef = useRef<TestResultValuesActions>(null);
   const notesRef = useRef<NotesActions>(null);
   const unitsRef = useRef<UnitActions>(null);
@@ -650,12 +652,6 @@ const MasterDataList: React.FC = () => {
                     Nhập danh sách
                   </Button>
                   <Button
-                    icon={<FolderAddOutlined />}
-                    onClick={() => indicatorsRef.current?.handleCreateGroup()}
-                  >
-                    Thêm nhóm
-                  </Button>
-                  <Button
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={() => indicatorsRef.current?.handleBulkCreate()}
@@ -693,6 +689,31 @@ const MasterDataList: React.FC = () => {
                       />
                     </>
                   )}
+                </>
+              )}
+
+              {/* Indicator Groups Tab */}
+              {activeCategory === "indicatorGroups" && (
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() => indicatorGroupsRef.current?.handleDownloadTemplate()}
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => indicatorGroupsRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<FolderAddOutlined />}
+                    onClick={() => indicatorGroupsRef.current?.handleCreate()}
+                  >
+                    Thêm nhóm
+                  </Button>
                 </>
               )}
 
@@ -922,6 +943,7 @@ const MasterDataList: React.FC = () => {
 
               {/* Other tabs (departments, laboratories, etc.) - use old handleCreate */}
               {activeCategory !== "indicators" &&
+                activeCategory !== "indicatorGroups" &&
                 activeCategory !== "formTemplates" &&
                 activeCategory !== "testMethods" &&
                 activeCategory !== "standards" &&
@@ -960,6 +982,11 @@ const MasterDataList: React.FC = () => {
                 key === "indicators" ? (
                   <IndicatorsTab
                     ref={indicatorsRef}
+                    onDataChange={() => fetchStatistics()}
+                  />
+                ) : key === "indicatorGroups" ? (
+                  <IndicatorGroupsTab
+                    ref={indicatorGroupsRef}
                     onDataChange={() => fetchStatistics()}
                   />
                 ) : key === "formTemplates" ? (

@@ -325,7 +325,7 @@ const QuickCreateIndicatorModal: React.FC<QuickCreateIndicatorModalProps> = ({
       });
 
       const result = await testRequestService.quickCreateIndicators({
-        indicatorGroupId: values.indicatorGroupId,
+        indicatorGroupId: values.indicatorGroupId || null,
         laboratoryId: values.laboratoryId,
         testRequestId,
         contractNumber,
@@ -414,10 +414,10 @@ const QuickCreateIndicatorModal: React.FC<QuickCreateIndicatorModalProps> = ({
         <Form.Item
           name="indicatorGroupId"
           label="Nhóm chỉ tiêu"
-          rules={[{ required: true, message: "Vui lòng chọn nhóm chỉ tiêu" }]}
         >
           <Select
-            placeholder="Chọn nhóm cho tất cả chỉ tiêu"
+            placeholder="Không phân nhóm"
+            allowClear
             showSearch
             optionFilterProp="label"
             options={groupOptions}

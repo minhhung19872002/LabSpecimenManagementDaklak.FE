@@ -63,6 +63,7 @@ import {
   CustomIndicatorName,
   isSameIndicatorName,
 } from "../../../../utils/indicatorName";
+import { UNGROUPED_ID, indicatorGroupKey, withUngroupedGroup } from "../../../../utils/indicatorGroups";
 
 const { Text } = Typography;
 
@@ -836,7 +837,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // Auto-expand all indicator groups when modal opens
   useEffect(() => {
     if (visible && expandedGroups.length === 0) {
-      const activeGroupIds = indicatorGroups.map((g) => g.id);
+      const activeGroupIds = withUngroupedGroup(indicatorGroups).map((g) => g.id);
       setExpandedGroups(activeGroupIds);
     }
   }, [visible, indicatorGroups]);
@@ -1222,7 +1223,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     // Apply indicator group filter if selected
     if (selectedGroupFilter !== "all") {
       activeIndicators = activeIndicators.filter(
-        (ind) => ind.indicatorGroupId === selectedGroupFilter,
+        (ind) => indicatorGroupKey(ind.indicatorGroupId) === selectedGroupFilter,
       );
     }
 
@@ -1317,9 +1318,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     const groupedData: IndicatorGroupData[] = [];
 
     // Process each indicator group
-    indicatorGroups.forEach((group) => {
+    withUngroupedGroup(indicatorGroups).forEach((group) => {
       const groupIndicators = activeIndicators.filter(
-        (ind) => ind.indicatorGroupId === group.id,
+        (ind) => indicatorGroupKey(ind.indicatorGroupId) === group.id,
       );
       if (groupIndicators.length === 0) return;
 
@@ -2343,7 +2344,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         testRequestId={testRequestId}
         contractNumber={contractNumber}
         defaultIndicatorGroupId={
-          selectedGroupFilter !== "all" ? selectedGroupFilter : undefined
+          selectedGroupFilter !== "all" && selectedGroupFilter !== UNGROUPED_ID
+            ? selectedGroupFilter
+            : undefined
         }
         defaultSpecimenTypeId={currentSampleSpecimenTypeId}
         onCreated={handleQuickIndicatorCreated}

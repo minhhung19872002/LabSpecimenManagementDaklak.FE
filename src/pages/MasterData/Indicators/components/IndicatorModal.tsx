@@ -4,6 +4,7 @@ import Icon, { DeleteOutlined, PlusOutlined } from "../../../../components/commo
 import { IndicatorDto } from "../types";
 import { IndicatorFormData } from "../schemas/indicatorSchema";
 import { RichTextEditor } from "../../../../components/common";
+import { clearableSelectProps } from "../../../../utils/formHelpers";
 
 interface SelectOption {
   value: string;
@@ -59,7 +60,6 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
       <Form layout="vertical">
         <Form.Item
           label="Nhóm chỉ tiêu"
-          required
           validateStatus={errors.indicatorGroupId ? "error" : ""}
           help={errors.indicatorGroupId?.message}
         >
@@ -68,8 +68,9 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
             control={control}
             render={({ field }) => (
               <Select
-                {...field}
-                placeholder="Chọn nhóm"
+                {...clearableSelectProps(field)}
+                placeholder="Không phân nhóm"
+                allowClear
                 showSearch
                 optionFilterProp="label"
                 options={groupOptions}

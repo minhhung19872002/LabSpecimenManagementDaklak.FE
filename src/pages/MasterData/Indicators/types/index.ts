@@ -12,16 +12,10 @@ export interface IndicatorsTabProps {
 
 export interface IndicatorsActions {
   handleBulkCreate: () => void;
-  handleCreateGroup: () => void;
   handleDownloadTemplate: () => void;
   handleImport: () => void;
   handleDownloadAdminTemplate: () => Promise<void>;
   handleAdminImport: () => void;
-}
-
-export interface GroupedIndicatorData extends IndicatorGroupDto {
-  key: string;
-  indicators: IndicatorDto[];
 }
 
 export interface IndicatorsState {
@@ -29,7 +23,7 @@ export interface IndicatorsState {
   indicators: IndicatorDto[];
   loading: boolean;
   searchText: string;
-  expandedRowKeys: string[];
+  groupFilter: string;
   selectedRowKeys: string[];
   batchLoading: boolean;
 }

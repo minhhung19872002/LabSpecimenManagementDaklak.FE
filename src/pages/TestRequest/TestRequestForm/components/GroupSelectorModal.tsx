@@ -3,6 +3,7 @@ import React from "react";
 import { Modal, Button, Checkbox, Input } from "antd";
 import { Icon } from "@iconify/react";
 import { IndicatorGroupDto, IndicatorDto } from "../../../../services/masterDataService";
+import { withUngroupedGroup } from "../../../../utils/indicatorGroups";
 
 interface GroupSelectorModalProps {
   visible: boolean;
@@ -24,7 +25,7 @@ const GroupSelectorModal: React.FC<GroupSelectorModalProps> = ({
   onClose,
   groupSearchText,
   setGroupSearchText,
-  indicatorGroups,
+  indicatorGroups: masterGroups,
   expandedGroupsInSelector,
   setExpandedGroupsInSelector,
   selectedGroupFilter,
@@ -32,6 +33,9 @@ const GroupSelectorModal: React.FC<GroupSelectorModalProps> = ({
   handleGroupSelect,
   setSelectedGroupFilter,
 }) => {
+  // Gồm cả nhánh "Chưa phân nhóm" để nút mở/thu gọn tất cả đếm đúng
+  const indicatorGroups = withUngroupedGroup(masterGroups);
+
   const handleClose = () => {
     onClose();
     setGroupSearchText("");

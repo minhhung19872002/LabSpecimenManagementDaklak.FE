@@ -28,6 +28,7 @@ import {
   UPPER_OPERATORS,
 } from "../constants";
 import "./AddIndicatorsModal.css";
+import { withUngroupedGroup } from "../../../../utils/indicatorGroups";
 
 const { Text } = Typography;
 
@@ -205,7 +206,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         indicatorsForSpecimenType.map((ind) => ind.id),
       );
 
-      return indicatorGroups
+      return withUngroupedGroup(indicatorGroups)
         .filter(
           (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
         )

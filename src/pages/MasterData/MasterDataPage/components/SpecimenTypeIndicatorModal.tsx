@@ -17,6 +17,7 @@ import {
   DeleteOutlined,
 } from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
+import { groupIndicatorsByGroup, withUngroupedGroup } from "../../../../utils/indicatorGroups";
 import type { ColumnsType } from "antd/es/table";
 import {
   SpecimenTypeIndicatorDto,
@@ -92,16 +93,10 @@ const SpecimenTypeIndicatorModal: React.FC<SpecimenTypeIndicatorModalProps> = ({
 
   // Build grouped options for Select
   const buildGroupedOptions = () => {
-    // Group indicators by group
-    const indicatorsByGroup: Record<string, IndicatorDto[]> = {};
-    allIndicators.forEach((ind) => {
-      if (!indicatorsByGroup[ind.indicatorGroupId]) {
-        indicatorsByGroup[ind.indicatorGroupId] = [];
-      }
-      indicatorsByGroup[ind.indicatorGroupId].push(ind);
-    });
+    // Group indicators by group (không nhóm → nhánh "Chưa phân nhóm")
+    const indicatorsByGroup = groupIndicatorsByGroup(allIndicators);
 
-    return indicatorGroups
+    return withUngroupedGroup(indicatorGroups)
       .filter((group) => group.isActive && indicatorsByGroup[group.id]?.length > 0)
       .map((group) => {
         const availableIndicators = (indicatorsByGroup[group.id] || []).filter(

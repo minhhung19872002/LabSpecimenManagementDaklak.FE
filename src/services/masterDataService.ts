@@ -334,8 +334,8 @@ export interface IndicatorDto {
   /** Tên có định dạng HTML (bold, italic, underline, sub, sup) */
   formattedName?: string;
   isActive: boolean;
-  indicatorGroupId: string;
-  indicatorGroupName: string;
+  indicatorGroupId?: string | null;
+  indicatorGroupName?: string | null;
   laboratoryId: string;
   laboratoryName?: string;
   sortOrder: number;
@@ -356,7 +356,7 @@ export interface CreateIndicatorDto {
   /** Tên có định dạng HTML */
   formattedName?: string;
   isActive: boolean;
-  indicatorGroupId: string;
+  indicatorGroupId?: string | null;
   laboratoryId: string;
   sortOrder?: number;
 }
@@ -366,7 +366,7 @@ export interface UpdateIndicatorDto {
   /** Tên có định dạng HTML */
   formattedName?: string;
   isActive: boolean;
-  indicatorGroupId: string;
+  indicatorGroupId?: string | null;
   laboratoryId: string;
   sortOrder?: number;
 }
@@ -384,7 +384,7 @@ export interface BulkIndicatorItemDto {
 }
 
 export interface CreateBulkIndicatorsDto {
-  indicatorGroupId: string;
+  indicatorGroupId?: string | null;
   indicators: BulkIndicatorItemDto[];
 }
 
@@ -398,7 +398,7 @@ export interface UpdateIndicatorWithSubsDto {
   name: string;
   formattedName?: string;
   isActive: boolean;
-  indicatorGroupId: string;
+  indicatorGroupId?: string | null;
   laboratoryId: string;
   sortOrder?: number;
   subIndicators: UpsertSubIndicatorDto[];
@@ -426,8 +426,8 @@ export interface IndicatorWithMethodsDto {
   code: string;
   name: string;
   formattedName?: string;
-  indicatorGroupId: string;
-  indicatorGroupName: string;
+  indicatorGroupId?: string | null;
+  indicatorGroupName?: string | null;
   isActive: boolean;
   sortOrder: number;
   methods: IndicatorMethodDto[];

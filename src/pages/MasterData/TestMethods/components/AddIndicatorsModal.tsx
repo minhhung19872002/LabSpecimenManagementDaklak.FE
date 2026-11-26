@@ -18,6 +18,7 @@ import {
   SpecimenTypeDto,
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
+import { withUngroupedGroup } from "../../../../utils/indicatorGroups";
 import "./AddIndicatorsModal.css";
 
 const { Text } = Typography;
@@ -162,7 +163,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         .map(key => key.indicatorId)
     );
 
-    return indicatorGroups
+    return withUngroupedGroup(indicatorGroups)
       .filter(
         (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
       )
