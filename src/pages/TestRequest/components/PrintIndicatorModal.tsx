@@ -14,6 +14,7 @@ import {
   Col,
   Collapse,
   Card,
+  Alert,
 } from "antd";
 import {
   PrinterOutlined,
@@ -25,7 +26,7 @@ import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
 } from "../../../types/qualityManagement";
-import { ResultLanguage } from "../../../types/testRequest";
+import { ResultLanguage, TestRequestDto } from "../../../types/testRequest";
 import {
   testRequestService,
   TemplateDto,
@@ -37,7 +38,16 @@ import {
   getCachedApprovedIndicators,
   generateResultDraft,
   offlineDraftEditorUrl,
+  buildMixedHeaderExtras,
+  mapIndicators,
 } from "../../../services/offline/offlineResultService";
+import {
+  generateResultFormOffline,
+  downloadDocument,
+  getOfflineResultTemplates,
+  resultTemplateKeyOf,
+} from "../../../services/offline/offlinePrintService";
+import { getCachedEntity } from "../../../services/offline/db";
 import { isServerReachable } from "../../../services/offline/connectivity";
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
@@ -96,6 +106,8 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   const [note, setNote] = useState<string>("");
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  // OF-11: mất mạng → danh sách mẫu lấy từ mẫu đã tải về máy (BM01/BM03/BM04/BM05)
+  const [templatesOffline, setTemplatesOffline] = useState(false);
   const [indicators, setIndicators] = useState<QualityManagementIndicatorDto[]>(
     [],
   );
@@ -244,7 +256,19 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   const loadTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      const result = await qualityManagementService.getTemplates();
+      // Gọi song song để khi online không chậm thêm
+      const [reachable, online] = await Promise.all([
+        isServerReachable(),
+        qualityManagementService.getTemplates().catch((error) => {
+          console.error("Error loading templates:", error);
+          return null;
+        }),
+      ]);
+      const offline = !reachable;
+      setTemplatesOffline(offline);
+      const result: TemplateDto[] = offline
+        ? await getOfflineResultTemplates()
+        : online ?? [];
       setTemplates(result);
       // Set BM01 as default selected template (first one usually)
       if (result.length > 0) {
@@ -365,28 +389,135 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       return;
     }
 
-    // ---- Offline fallback: build the result form on-device, open offline editor ----
+    // ---- Offline fallback (OF-02): tạo phiếu KQ trên máy, giống In KQ ở QLCL ----
+    // Mỗi mẫu 1 file (tên file có mã mẫu), phần đầu phiếu lấy từ phiếu yêu cầu đã lưu trên máy.
+    // 1 file → mở trình soạn thảo như trước; nhiều file → tải về từng file.
     if (!(await isServerReachable())) {
       const selected = indicators.filter((ind) =>
         selectedIndicatorIds.includes(ind.id)
       );
+      const bySample = new Map<string, QualityManagementIndicatorDto[]>();
+      for (const leaf of selected) {
+        const key = leaf.sampleId || leaf.sampleCode || "";
+        bySample.set(key, [...(bySample.get(key) || []), leaf]);
+      }
+      const templateKeys = Array.from(
+        new Set(
+          (selectedTemplates.length ? selectedTemplates : ["BM01"]).map(
+            resultTemplateKeyOf,
+          ),
+        ),
+      );
+      const fileCount = bySample.size * templateKeys.length;
       setLoading(true);
-      const offlineTab = window.open("about:blank", "_blank");
+      const offlineTab =
+        fileCount === 1 ? window.open("about:blank", "_blank") : null;
       try {
-        const res = await generateResultDraft(
-          selected,
-          { Note: note || "" },
-          { testRequestId }
-        );
-        if (!res.success || !res.draftId) {
-          if (offlineTab) offlineTab.close();
-          message.error(res.error || "Không thể tạo phiếu kết quả offline.");
-          return;
+        const cachedTr = (await getCachedEntity("TestRequest", testRequestId))
+          ?.data as TestRequestDto | undefined;
+        if (!cachedTr) {
+          message.warning(
+            "Chưa có thông tin phiếu trên máy, bản in sẽ thiếu phần đầu",
+          );
         }
-        message.success("Đã tạo phiếu kết quả offline. Mở trình soạn thảo...");
-        const url = offlineDraftEditorUrl(res.draftId);
-        if (offlineTab) offlineTab.location.href = url;
-        else window.open(url, "_blank");
+        const selectedVp = vicePresidents.find(
+          (v) => v.id === selectedVicePresidentId,
+        );
+        const vicePresidentName = selectedVp
+          ? [selectedVp.surname, selectedVp.name].filter(Boolean).join(" ").trim() ||
+            selectedVp.displayName ||
+            selectedVp.userName
+          : "";
+
+        const files: { blob: Blob; fileName: string }[] = [];
+        let genError: string | undefined;
+        let singleDraft: {
+          leaves: QualityManagementIndicatorDto[];
+          header: Record<string, string>;
+          sampleCode: string;
+        } | null = null;
+
+        for (const sampleLeaves of bySample.values()) {
+          const firstLeaf = sampleLeaves[0];
+          const sampleKey = firstLeaf.sampleId || firstLeaf.sampleCode;
+          const parentIds = new Set(
+            sampleLeaves
+              .filter((i) => i.parentIndicatorId)
+              .map((i) => i.parentIndicatorId!),
+          );
+          const parents = indicators.filter(
+            (i) =>
+              !i.parentIndicatorId &&
+              parentIds.has(i.indicatorId) &&
+              !selectedIndicatorIds.includes(i.id) &&
+              (i.sampleId || i.sampleCode) === sampleKey,
+          );
+          const extras = await buildMixedHeaderExtras(testRequestId, sampleLeaves);
+          const header: Record<string, string> = {
+            ContractNo: cachedTr?.contractNumber || "",
+            Customer: cachedTr?.customerName || "",
+            SampleCode: firstLeaf?.sampleCode || "",
+            NameOfSample: firstLeaf?.sampleName || "",
+            Note: note || "",
+            DateOfReceiving: extras.DateOfReceiving || "",
+            DateOfIssue: extras.DateOfIssue || "",
+            TimeOfTesting: extras.TimeOfTesting || "",
+            OfficerInCharge: extras.OfficerInCharge || "",
+            VicePresident: vicePresidentName,
+            DescriptionOfSample: extras.DescriptionOfSample || "",
+            DateOfSending: extras.DateOfSending || "",
+            PlaceToSendSample: extras.PlaceToSendSample || "",
+            Standard: extras.Standard || "",
+          };
+          const leaves = [...parents, ...sampleLeaves];
+          if (fileCount === 1) {
+            singleDraft = { leaves, header, sampleCode: firstLeaf?.sampleCode || "" };
+            break;
+          }
+          const indicatorInputs = mapIndicators(leaves);
+          for (const key of templateKeys) {
+            const g = await generateResultFormOffline(header, indicatorInputs, key);
+            if (g.success && g.blob && g.fileName)
+              files.push({ blob: g.blob, fileName: g.fileName });
+            else genError = g.error;
+          }
+        }
+
+        if (singleDraft) {
+          const res = await generateResultDraft(
+            singleDraft.leaves,
+            singleDraft.header,
+            {
+              testRequestId,
+              sampleCode: singleDraft.sampleCode,
+              templateKey: templateKeys[0],
+            },
+          );
+          if (!res.success || !res.draftId) {
+            if (offlineTab) offlineTab.close();
+            message.error(res.error || "Không thể tạo phiếu kết quả offline.");
+            return;
+          }
+          message.success("Đã tạo phiếu kết quả offline. Mở trình soạn thảo...");
+          const url = offlineDraftEditorUrl(res.draftId);
+          if (offlineTab) offlineTab.location.href = url;
+          else window.open(url, "_blank");
+        } else {
+          if (files.length === 0) {
+            message.error(genError || "Không thể tạo phiếu kết quả offline.");
+            return;
+          }
+          for (let i = 0; i < files.length; i++) {
+            downloadDocument(files[i].blob, files[i].fileName);
+            if (i < files.length - 1) {
+              await new Promise((r) => setTimeout(r, 350));
+            }
+          }
+          if (genError) message.warning(genError);
+          message.success(
+            `Đã tạo ${files.length} phiếu kết quả offline. File đã được tải về.`,
+          );
+        }
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();
@@ -899,6 +1030,19 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
               <Text strong style={{ display: "block", marginBottom: 12 }}>
                 Chọn biểu mẫu báo cáo:
               </Text>
+              {templatesOffline && (
+                <Alert
+                  data-testid="offline-template-alert"
+                  type={templates.length === 0 ? "warning" : "info"}
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  message={
+                    templates.length === 0
+                      ? "Máy chưa có mẫu in để dùng khi mất mạng. Vui lòng kết nối mạng và tải lại trang để tải mẫu in."
+                      : "Đang mất mạng: chỉ in được các mẫu BM01, BM03, BM04, BM05 đã tải về máy."
+                  }
+                />
+              )}
               <Checkbox.Group
                 value={selectedTemplates}
                 onChange={(values) =>

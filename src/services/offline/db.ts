@@ -60,6 +60,8 @@ export interface SyncQueueItem {
   lastError?: string;
   createdAt: Date;
   updatedAt: Date;
+  /** OF-09: người dùng tạo/sửa offline → BE ghi người tạo = người này khi đồng bộ */
+  userId?: string;
 }
 
 /**
@@ -382,6 +384,16 @@ export async function clearSyncedItems(): Promise<void> {
 export async function getPendingSyncCount(): Promise<number> {
   const db = await getDB();
   return db.countFromIndex('syncQueue', 'by-status', 'pending');
+}
+
+/** Số item chưa lên server, chưa bị lỗi (pending + syncing) - OF-09 nhắc đăng nhập lại để đồng bộ */
+export async function getUnsyncedCount(): Promise<number> {
+  const db = await getDB();
+  const [pending, syncing] = await Promise.all([
+    db.countFromIndex('syncQueue', 'by-status', 'pending'),
+    db.countFromIndex('syncQueue', 'by-status', 'syncing'),
+  ]);
+  return pending + syncing;
 }
 
 /**

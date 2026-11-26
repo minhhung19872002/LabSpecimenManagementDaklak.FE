@@ -11,7 +11,7 @@
  */
 
 import dayjs from 'dayjs';
-import { generateResultFormOffline } from './offlinePrintService';
+import { generateResultFormOffline, SingleResultTemplate } from './offlinePrintService';
 import { saveResultDraft, cacheEntity, getCachedEntity } from './db';
 import { ResultFormHeader, ResultIndicatorInput } from './resultFormBuilder';
 import { TestRequestDto } from '../../types/testRequest';
@@ -209,12 +209,12 @@ export interface GenerateResultDraftResult {
 export async function generateResultDraft(
   indicators: ResultIndicatorLike[],
   header: ResultFormHeader = {},
-  meta?: { testRequestId?: string; sampleCode?: string }
+  meta?: { testRequestId?: string; sampleCode?: string; templateKey?: SingleResultTemplate }
 ): Promise<GenerateResultDraftResult> {
   if (!indicators || indicators.length === 0) {
     return { success: false, error: 'Không có chỉ tiêu nào để tạo phiếu.' };
   }
-  const gen = await generateResultFormOffline(header, mapIndicators(indicators));
+  const gen = await generateResultFormOffline(header, mapIndicators(indicators), meta?.templateKey);
   if (!gen.success || !gen.blob || !gen.fileName) {
     return { success: false, error: gen.error };
   }

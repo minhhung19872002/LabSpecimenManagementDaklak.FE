@@ -1,4 +1,7 @@
 import { api } from '../api';
+import { STORAGE_KEYS } from '../../constants';
+import { isServerReachable } from './connectivity';
+import { isServerMarkedDown, onServerAvailabilityChange } from './serverAvailability';
 import {
   getDB,
   addToSyncQueue,
@@ -8,6 +11,7 @@ import {
   removeSyncItem,
   clearSyncedItems,
   getPendingSyncCount,
+  getUnsyncedCount,
   setLastSyncTimestampByType,
   getDeviceId,
   SyncQueueItem,
@@ -30,6 +34,8 @@ export interface GenericSyncItemDto {
   entityType: SyncEntityType;
   clientLastModified: string;
   data: unknown;
+  /** OF-09: người tạo phiếu khi offline (BE ghi người tạo = người này, không phải người đang đăng nhập lúc đồng bộ) */
+  offlineUserId?: string;
 }
 
 export interface GenericSyncBatchRequestDto {
@@ -120,18 +126,46 @@ type SyncEventType =
   | 'pendingCountChange'
   | 'itemSynced'
   | 'itemFailed'
-  | 'itemsDiscarded';
+  | 'itemsDiscarded'
+  | 'authRequired';
 type SyncEventCallback = (data?: unknown) => void;
 
 const SYNC_LOCK_NAME = 'lab-specimen-offline-sync';
 // Không có Web Locks: item 'syncing' quá thời gian này mới coi là kẹt (tab khác có thể đang sync)
 const STUCK_SYNCING_TIMEOUT_MS = 5 * 60 * 1000;
+// OF-07: máy chủ trả 502/503 → thăm dò mỗi 10s, hoạt động lại thì tự đồng bộ
+const SERVER_DOWN_PROBE_MS = 10000;
+
+/** Payload của event 'authRequired' (OF-09) */
+export interface AuthRequiredEvent {
+  /** Số phiếu chưa đồng bộ */
+  count: number;
+}
+
+/** Câu nhắc khi hết phiên mà còn phiếu chưa đồng bộ (OF-09) */
+export const authRequiredMessage = (count: number): string =>
+  `Phiên đăng nhập hết hạn. Đăng nhập lại để đồng bộ ${count} phiếu.`;
+
+const hasSessionTokens = (): boolean =>
+  !!(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) || localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN));
+
+/** Id người dùng đang đăng nhập (lưu kèm item để BE ghi đúng người tạo) */
+const getCurrentUserId = (): string | undefined => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+    const id = raw ? JSON.parse(raw)?.id : undefined;
+    return typeof id === 'string' && id ? id : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 
 class SyncManager {
   private isOnline: boolean = navigator.onLine;
   private isSyncing: boolean = false;
   private syncInterval: number | null = null;
+  private serverProbeInterval: number | null = null;
   private eventListeners: Map<SyncEventType, Set<SyncEventCallback>> = new Map();
   private isInitialized: boolean = false;
 
@@ -143,6 +177,7 @@ class SyncManager {
     window.addEventListener('online', this.boundHandleOnline);
     window.addEventListener('offline', this.boundHandleOffline);
     this.isOnline = navigator.onLine;
+    onServerAvailabilityChange((down) => (down ? this.handleServerDown() : this.handleServerUp()));
   }
 
   async init(): Promise<void> {
@@ -157,6 +192,8 @@ class SyncManager {
     await getDB();
     if (this.isOnline) {
       this.startPeriodicSync();
+      // Mở app/đăng nhập lại khi đang có phiếu chờ → đồng bộ ngay, không đợi 30s
+      this.sync();
     }
     this.notifyPendingCountChange();
   }
@@ -183,6 +220,8 @@ class SyncManager {
 
   private async handleOnline(): Promise<void> {
     console.log('[SyncManager] Online event triggered');
+    // Mạng có lại nhưng máy chủ vẫn đang trả 502/503 → để probe (handleServerUp) quyết định
+    if (isServerMarkedDown()) return;
     this.isOnline = true;
     this.emit('statusChange', { isOnline: true });
     this.startPeriodicSync();
@@ -193,6 +232,30 @@ class SyncManager {
     this.isOnline = false;
     this.emit('statusChange', { isOnline: false });
     this.stopPeriodicSync();
+  }
+
+  /** OF-07: proxy trả 502/503 → coi như mất mạng (hiện offline, phiếu lưu tạm), thăm dò định kỳ */
+  private handleServerDown(): void {
+    console.log('[SyncManager] Server unavailable (502/503) → offline mode');
+    this.isOnline = false;
+    this.emit('statusChange', { isOnline: false });
+    this.stopPeriodicSync();
+    if (this.serverProbeInterval) return;
+    this.serverProbeInterval = window.setInterval(() => {
+      // Probe thành công gọi reportServerAvailable() → handleServerUp()
+      isServerReachable().catch(() => undefined);
+    }, SERVER_DOWN_PROBE_MS);
+  }
+
+  private handleServerUp(): void {
+    if (this.serverProbeInterval) {
+      clearInterval(this.serverProbeInterval);
+      this.serverProbeInterval = null;
+    }
+    if (navigator.onLine && !this.isOnline) {
+      console.log('[SyncManager] Server available again → sync');
+      void this.handleOnline();
+    }
   }
 
   private startPeriodicSync(): void {
@@ -231,6 +294,7 @@ class SyncManager {
       entityType,
       data,
       clientLastModified: new Date(),
+      userId: getCurrentUserId(),
     });
 
     await this.notifyPendingCountChange();
@@ -291,6 +355,12 @@ class SyncManager {
   async sync(): Promise<GenericSyncBatchResponseDto | null> {
     console.log('[SyncManager] sync() called, isOnline:', this.isOnline, 'isSyncing:', this.isSyncing);
     if (!this.isOnline || this.isSyncing) {
+      return null;
+    }
+
+    // OF-09: hết phiên (đã đăng xuất / token bị xoá) → không gửi, giữ "Chờ đồng bộ", nhắc đăng nhập lại
+    if (!hasSessionTokens()) {
+      await this.notifyAuthRequired();
       return null;
     }
 
@@ -383,6 +453,7 @@ class SyncManager {
       return result;
     } catch (error) {
       console.error('Sync failed:', error);
+      const status = (error as { response?: { status?: number } })?.response?.status;
 
       for (const item of pendingItems) {
         await updateSyncItemStatus(
@@ -394,7 +465,17 @@ class SyncManager {
       }
 
       this.emit('syncError', error);
+      if (status === 401) {
+        await this.notifyAuthRequired();
+      }
       return null;
+    }
+  }
+
+  private async notifyAuthRequired(): Promise<void> {
+    const count = await getUnsyncedCount();
+    if (count > 0) {
+      this.emit('authRequired', { count } satisfies AuthRequiredEvent);
     }
   }
 
@@ -423,6 +504,7 @@ class SyncManager {
       entityType: item.entityType,
       clientLastModified: item.clientLastModified.toISOString(),
       data: item.data,
+      offlineUserId: item.userId,
     };
   }
 

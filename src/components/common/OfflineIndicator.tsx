@@ -4,6 +4,8 @@ import { WifiOutlined, CloudSyncOutlined, SyncOutlined, WarningOutlined } from '
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import {
   syncManager,
+  authRequiredMessage,
+  type AuthRequiredEvent,
   type FailedItemEvent,
   type SyncedItemEvent,
 } from '../../services/offline/syncManager';
@@ -36,6 +38,8 @@ const getItemTitle = (entityType: SyncEntityType, data: unknown) => {
 /**
  * Thông báo kết quả đồng bộ cho người dùng (trước đây item lỗi bị bỏ qua im lặng → tưởng mất phiếu)
  */
+const AUTH_REQUIRED_KEY = 'sync-auth-required';
+
 function useSyncNotifications() {
   const { notification } = App.useApp();
 
@@ -44,6 +48,7 @@ function useSyncNotifications() {
       const event = payload as SyncedItemEvent;
       // Đồng bộ thành công thì lỗi cũ (nếu có) không còn đúng
       notification.destroy(`sync-failed-${event.clientId}`);
+      notification.destroy(AUTH_REQUIRED_KEY);
 
       if (event.serverWins) {
         notification.warning({
@@ -74,11 +79,23 @@ function useSyncNotifications() {
       });
     };
 
+    // OF-09: hết phiên → không đồng bộ, phiếu vẫn "Chờ đồng bộ" → nhắc đăng nhập lại
+    const handleAuthRequired = (payload: unknown) => {
+      const { count } = payload as AuthRequiredEvent;
+      notification.warning({
+        key: AUTH_REQUIRED_KEY,
+        message: authRequiredMessage(count),
+        duration: 0,
+      });
+    };
+
     syncManager.on('itemSynced', handleItemSynced);
     syncManager.on('itemFailed', handleItemFailed);
+    syncManager.on('authRequired', handleAuthRequired);
     return () => {
       syncManager.off('itemSynced', handleItemSynced);
       syncManager.off('itemFailed', handleItemFailed);
+      syncManager.off('authRequired', handleAuthRequired);
     };
   }, [notification]);
 }

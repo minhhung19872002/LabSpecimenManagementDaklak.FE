@@ -14,6 +14,7 @@ import {
   Col,
   Collapse,
   Card,
+  Alert,
 } from "antd";
 import {
   PrinterOutlined,
@@ -40,6 +41,7 @@ import {
   generateResultFormOffline,
   downloadDocument,
   SingleResultTemplate,
+  getOfflineResultTemplates,
 } from "../../../services/offline/offlinePrintService";
 import { IndicatorName, PrintCopyCountAlert, EllipsisTooltip } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
@@ -491,7 +493,18 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const loadTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      const result = await qualityManagementService.getTemplates();
+      // OF-11: mất mạng → chỉ các mẫu BM01/BM03/BM04/BM05 đã tải về máy
+      const [reachable, online] = await Promise.all([
+        isServerReachable(),
+        qualityManagementService.getTemplates().catch((error) => {
+          console.error("Error loading templates:", error);
+          return null;
+        }),
+      ]);
+      if (!reachable) setIsOffline(true);
+      const result: TemplateDto[] = reachable
+        ? online ?? []
+        : await getOfflineResultTemplates();
       setTemplates(result);
       // Set BM01 as default selected template
       if (result.length > 0) {
@@ -1037,7 +1050,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
             disabled={
               selectedIndicatorIds.length === 0 ||
               loadingTemplates ||
-              (!isOffline && selectedTemplates.length === 0)
+              (!isOffline && selectedTemplates.length === 0) ||
+              (isOffline && templates.length === 0)
             }
           >
             In ({selectedIndicatorIds.length} chỉ tiêu)
@@ -1327,6 +1341,19 @@ const PrintModal: React.FC<PrintModalProps> = ({
               <Text strong style={{ display: "block", marginBottom: 12 }}>
                 Chọn biểu mẫu báo cáo:
               </Text>
+              {isOffline && !loadingTemplates && (
+                <Alert
+                  data-testid="offline-template-alert"
+                  type={templates.length === 0 ? "warning" : "info"}
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  message={
+                    templates.length === 0
+                      ? "Máy chưa có mẫu in để dùng khi mất mạng. Vui lòng kết nối mạng và tải lại trang để tải mẫu in."
+                      : "Đang mất mạng: chỉ in được các mẫu BM01, BM03, BM04, BM05 đã tải về máy."
+                  }
+                />
+              )}
               <Checkbox.Group
                 value={selectedTemplates}
                 onChange={(values) =>

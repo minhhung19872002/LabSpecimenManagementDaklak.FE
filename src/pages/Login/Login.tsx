@@ -5,6 +5,9 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
 import { STORAGE_KEYS, getDefaultRouteForUser } from "../../constants";
+import { UnsyncedSessionAlert } from "../../components/common/UnsyncedSessionAlert";
+import { isServerUnavailableStatus, SERVER_UNAVAILABLE_MESSAGE } from "../../services/offline/serverAvailability";
+import { syncManager } from "../../services/offline/syncManager";
 import "./Login.css";
 
 interface LoginFormValues {
@@ -97,8 +100,10 @@ const Login: React.FC = () => {
       try {
         response = await authService.login(credentials);
       } catch (onlineErr: any) {
-        // If network error (no response), try offline login as fallback
-        if (!onlineErr.response && hasOfflineCredentials) {
+        // If network error (no response), try offline login as fallback.
+        // Proxy trả 502/503 (backend không phản hồi) cũng coi như mất mạng (OF-07).
+        const serverDown = !onlineErr.response || isServerUnavailableStatus(onlineErr.response?.status);
+        if (serverDown && hasOfflineCredentials) {
           console.log('Online login failed, attempting offline login...');
           loginMethod = 'offline';
           response = await authService.loginOffline(credentials);
@@ -138,6 +143,11 @@ const Login: React.FC = () => {
           redirectPath = getDefaultRouteForUser(response.user?.roles || []) || "/";
         }
 
+        // OF-09: đăng nhập lại (online) → đồng bộ ngay các phiếu tạo offline đang chờ
+        if (loginMethod === 'online') {
+          void syncManager.sync();
+        }
+
         // Navigate to the appropriate page based on role
         navigate(redirectPath, { replace: true });
       } else if (response.errorMessage) {
@@ -175,6 +185,8 @@ const Login: React.FC = () => {
               "Thông tin đăng nhập không hợp lệ.",
           );
         }
+      } else if (isServerUnavailableStatus(err.response?.status) || err.response?.status === 504) {
+        setError(SERVER_UNAVAILABLE_MESSAGE);
       } else if (err.response?.status === 423) {
         setError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
       } else if (!err.response) {
@@ -222,6 +234,8 @@ const Login: React.FC = () => {
             style={{ marginBottom: 16 }}
           />
         )}
+
+        <UnsyncedSessionAlert style={{ marginBottom: 16 }} />
 
         {error && (
           <Alert

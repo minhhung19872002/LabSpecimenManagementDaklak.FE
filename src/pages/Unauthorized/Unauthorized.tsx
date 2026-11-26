@@ -3,6 +3,7 @@ import { Button, Result, Space } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { getDefaultRouteForUser, STORAGE_KEYS } from '../../constants';
 import { UserInfo, authService } from '../../services/authService';
+import { UnsyncedSessionAlert } from '../../components/common/UnsyncedSessionAlert';
 
 const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
@@ -45,6 +46,8 @@ const Unauthorized: React.FC = () => {
         title="401"
         subTitle="Phiên đăng nhập đã hết hạn hoặc không hợp lệ."
         extra={
+          <Space direction="vertical" align="center">
+          <UnsyncedSessionAlert />
           <Space>
             <Button type="primary" onClick={handleGoToHome}>
               Về trang chủ
@@ -52,6 +55,7 @@ const Unauthorized: React.FC = () => {
             <Button onClick={handleLogout}>
               Đăng xuất
             </Button>
+          </Space>
           </Space>
         }
       />

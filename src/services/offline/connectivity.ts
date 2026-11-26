@@ -15,6 +15,7 @@
  */
 
 import { API_BASE_URL } from '../api';
+import { isServerMarkedDown, reportServerAvailable } from './serverAvailability';
 
 let lastCheck = { at: 0, reachable: true };
 
@@ -25,6 +26,29 @@ let lastCheck = { at: 0, reachable: true };
  */
 export async function isServerReachable(timeoutMs = 3000): Promise<boolean> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    lastCheck = { at: Date.now(), reachable: false };
+    return false;
+  }
+  if (isServerMarkedDown()) {
+    // Proxy vừa trả 502/503 (OF-07): probe no-cors không đọc được status → dùng probe CORS
+    // để biết máy chủ đã hoạt động lại chưa (status < 500).
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(`${API_BASE_URL}/health?_=${Date.now()}`, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (res.status < 500) {
+        reportServerAvailable();
+        lastCheck = { at: Date.now(), reachable: true };
+        return true;
+      }
+    } catch {
+      // Vẫn coi là máy chủ chưa phản hồi
+    }
     lastCheck = { at: Date.now(), reachable: false };
     return false;
   }

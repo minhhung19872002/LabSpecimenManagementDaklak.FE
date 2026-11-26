@@ -72,6 +72,39 @@ const SINGLE_TEMPLATE_CACHE_KEY: Record<SingleResultTemplate, string> = {
   BM05: TEMPLATE_NAMES.RESULT_FORM_BM05,
 };
 
+/** Mẫu in phiếu KQ dùng được khi mất mạng (OF-11) - cùng dạng TemplateDto của API getTemplates */
+export interface OfflineResultTemplate {
+  name: string;
+  displayName: string;
+  fileName: string;
+  hasLogo: boolean;
+}
+
+/**
+ * OF-11: danh sách mẫu phiếu KQ đã tải về máy (chỉ BM01/BM03/BM04/BM05 in được offline).
+ * Tên = tên file bỏ ".template.docx", giống tên BE trả về khi online → chọn mẫu dùng chung logic.
+ */
+export async function getOfflineResultTemplates(): Promise<OfflineResultTemplate[]> {
+  const order: SingleResultTemplate[] = ['BM05', 'BM04', 'BM01', 'BM03'];
+  const list: OfflineResultTemplate[] = [];
+  for (const key of order) {
+    const cacheKey = SINGLE_TEMPLATE_CACHE_KEY[key];
+    if (!(await hasDocumentTemplate(cacheKey))) continue;
+    const fileName = TEMPLATE_FILE_NAMES[cacheKey as keyof typeof TEMPLATE_FILE_NAMES];
+    const name = fileName.replace(/\.template\.docx$/i, '');
+    list.push({ name, displayName: name, fileName, hasLogo: true });
+  }
+  return list;
+}
+
+/** Map tên mẫu (online/offline) → mẫu phiếu KQ đơn dùng khi offline */
+export function resultTemplateKeyOf(name: string): SingleResultTemplate {
+  if (/BM05/i.test(name)) return 'BM05';
+  if (/BM04/i.test(name)) return 'BM04';
+  if (/BM03/i.test(name)) return 'BM03';
+  return 'BM01';
+}
+
 // Checkbox characters matching backend TemplateConstants
 const CHECKED_BOX = '☑';
 const UNCHECKED_BOX = '☐';
@@ -214,7 +247,8 @@ export async function generateResultFormOffline(
     const blob = await applyResultTableBorders(filled, rowCount);
 
     const safeCode = (header.SampleCode || 'OFFLINE').replace(/[\\/:*?"<>|]/g, '-');
-    const fileName = `KetQua_${safeCode}_${dayjs().format('YYYYMMDDHHmmss')}.docx`;
+    // Có mã mẫu + mẫu in để in nhiều mẫu/nhiều biểu mẫu không trùng tên file (OF-02)
+    const fileName = `KetQua_${safeCode}_${templateKey}_${dayjs().format('YYYYMMDDHHmmss')}.docx`;
     return { success: true, fileName, blob };
   } catch (error) {
     console.error('[OfflinePrint] Error generating result form:', error);

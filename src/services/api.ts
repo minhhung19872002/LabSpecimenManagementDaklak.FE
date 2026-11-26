@@ -1,5 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { STORAGE_KEYS, HTTP_STATUS } from '../constants';
+import {
+  reportServerAvailable,
+  reportServerUnavailable,
+  SERVER_TIMEOUT_MESSAGE,
+  SERVER_UNAVAILABLE_MESSAGE,
+} from './offline/serverAvailability';
 
 // API Base URL from environment variable
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:44381';
@@ -179,6 +185,9 @@ apiClient.interceptors.request.use(
 // Response interceptor - unwrap API response
 apiClient.interceptors.response.use(
   async (response: AxiosResponse) => {
+    // Máy chủ trả lời bình thường → bỏ trạng thái "máy chủ không phản hồi" (OF-07)
+    reportServerAvailable();
+
     // Skip processing for blob responses (file downloads)
     if (response.config.responseType === 'blob') {
       return response;
@@ -244,6 +253,23 @@ apiClient.interceptors.response.use(
         // Keep errors in response.data for errorHandler.ts to extract
         error.response.data = data.errors;
       }
+    }
+
+    // OF-07: proxy trả 502/503/504 (backend dừng / khởi động lại / phản hồi chậm).
+    // Body là trang HTML của proxy → không hiện "502 Bad Gateway…" mà thay bằng câu tiếng Việt.
+    // 502/503 → đánh dấu máy chủ không phản hồi (coi như mất mạng, lưu tạm, tự đồng bộ sau).
+    // 504 → chỉ báo, không lưu tạm vì request có thể đã được máy chủ xử lý (tránh tạo trùng).
+    const status = error.response?.status;
+    if (status === 502 || status === 503 || status === 504) {
+      const friendly = status === 504 ? SERVER_TIMEOUT_MESSAGE : SERVER_UNAVAILABLE_MESSAGE;
+      if (status !== 504) reportServerUnavailable();
+      const body = error.response!.data;
+      if (body == null || typeof body === 'string' || body instanceof Blob) {
+        error.response!.data = { message: friendly };
+        error.message = friendly;
+      }
+    } else if (error.response) {
+      reportServerAvailable();
     }
 
     // Handle 403 Forbidden - redirect to forbidden page (not logout)

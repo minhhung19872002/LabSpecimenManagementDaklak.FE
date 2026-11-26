@@ -11,6 +11,7 @@ import {
   getSyncedServerId,
   getUnsyncedItemsByType,
 } from './db';
+import { isServerUnavailableStatus } from './serverAvailability';
 
 export interface BaseCrudService<TDto, TCreateDto, TUpdateDto = TCreateDto, TListParams = Record<string, unknown>> {
   getList: (params: TListParams) => Promise<{ items: TDto[]; totalCount: number }>;
@@ -105,8 +106,10 @@ const defaultOptions: OfflineServiceOptions = {
  */
 export function isNetworkError(error: unknown): boolean {
   if (error && typeof error === 'object' && 'response' in error) {
-    // Axios error with a server response = server is reachable, NOT a network error
-    return (error as any).response == null;
+    // Axios error with a server response = server is reachable, NOT a network error.
+    // Ngoại lệ (OF-07): proxy trả 502/503 = backend không phản hồi → coi như mất mạng.
+    const response = (error as any).response;
+    return response == null || isServerUnavailableStatus(response.status);
   }
   // Non-axios errors or errors without response = treat as network error
   return true;
