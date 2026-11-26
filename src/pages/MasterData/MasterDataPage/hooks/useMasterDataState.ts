@@ -238,23 +238,6 @@ export const useMasterDataState = (initialCategory = "departments") => {
     loadDepartments();
   }, []);
 
-  // Load laboratories for Warehouse form (needed for "Khoa phòng quản lý" dropdown)
-  useEffect(() => {
-    const loadLaboratories = async () => {
-      if (data.laboratories.length === 0 && !loadedCategories.has("laboratories")) {
-        try {
-          const labItems = await laboratoryService.getAll();
-          setData((prev) => ({ ...prev, laboratories: labItems }));
-          setTotalCount((prev) => ({ ...prev, laboratories: labItems.length }));
-          setLoadedCategories((prev) => new Set(prev).add("laboratories"));
-        } catch (err) {
-          console.error("Failed to load laboratories:", err);
-        }
-      }
-    };
-    loadLaboratories();
-  }, []);
-
   // Load data when switching tabs (lazy load)
   useEffect(() => {
     if (!activeCategory) {

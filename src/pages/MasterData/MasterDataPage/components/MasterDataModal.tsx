@@ -4,8 +4,6 @@ import type { FormInstance } from "antd";
 import { MasterDataItem, UserLookupDto } from "../types";
 import { categoryLabels } from "../constants";
 
-const VISIBLE_LABS = ["lab vi sinh", "lab hóa"];
-
 interface MasterDataModalProps {
   open: boolean;
   loading: boolean;
@@ -15,7 +13,6 @@ interface MasterDataModalProps {
   users: UserLookupDto[];
   departments: MasterDataItem[];
   warehouses: MasterDataItem[];
-  laboratories: MasterDataItem[];
   onOk: () => void;
   onCancel: () => void;
 }
@@ -29,21 +26,10 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
   users,
   departments,
   warehouses,
-  laboratories,
   onOk,
   onCancel,
 }) => {
   const isDefaultWarehouse = activeCategory === "warehouses" && editingItem && (editingItem as any).isDefault;
-
-  const parentWarehouseId = Form.useWatch("parentWarehouseId", form);
-
-  const shouldShowLabDropdown = React.useMemo(() => {
-    if (activeCategory !== "warehouses") return false;
-    if (isDefaultWarehouse) return false;
-    if (!parentWarehouseId) return true;
-    const parent = warehouses.find((w) => w.id === parentWarehouseId) as any;
-    return parent?.isDefault === true;
-  }, [activeCategory, isDefaultWarehouse, parentWarehouseId, warehouses]);
 
   return (
     <Modal
@@ -106,41 +92,6 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
                   <Select.Option key={w.id} value={w.id}>
                     {"— ".repeat(w.level ?? 0)}
                     {w.name} (Level {w.level ?? 0})
-                  </Select.Option>
-                ))}
-            </Select>
-          </Form.Item>
-        )}
-        {shouldShowLabDropdown && (
-          <Form.Item
-            name="laboratoryId"
-            label="Khoa phòng quản lý"
-            rules={[
-              {
-                required: true,
-                message: "Vui lòng chọn khoa phòng quản lý",
-              },
-            ]}
-          >
-            <Select
-              placeholder="Chọn khoa phòng"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.children as unknown as string)
-                  ?.toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-            >
-              {laboratories
-                .filter(
-                  (l) =>
-                    l.isActive &&
-                    VISIBLE_LABS.includes(l.name.toLowerCase())
-                )
-                .map((lab) => (
-                  <Select.Option key={lab.id} value={lab.id}>
-                    {lab.name}
                   </Select.Option>
                 ))}
             </Select>

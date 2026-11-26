@@ -168,12 +168,6 @@ const ImportWarehouseModal: React.FC<ImportWarehouseModalProps> = ({
       key: "physicalLocation",
     },
     {
-      title: "Khoa phòng QL",
-      dataIndex: "laboratoryName",
-      key: "laboratoryName",
-      width: 130,
-    },
-    {
       title: "Trạng thái",
       key: "status",
       width: 80,
