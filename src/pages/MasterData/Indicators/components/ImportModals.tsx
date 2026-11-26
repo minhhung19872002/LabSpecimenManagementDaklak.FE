@@ -47,9 +47,9 @@ export const ImportIndicatorModal: React.FC<ImportIndicatorModalProps> = ({
               <li>Tải template Excel mẫu bằng nút "Template chỉ tiêu"</li>
               <li>Điền thông tin chỉ tiêu vào file Excel</li>
               <li>
-                Các cột bắt buộc: Tên chỉ tiêu, Đơn giá, Tên nhóm chỉ tiêu
+                Các cột bắt buộc: Tên chỉ tiêu, Đơn giá
               </li>
-              <li>Tên nhóm chỉ tiêu phải khớp chính xác với nhóm đã tạo</li>
+              <li>Tên nhóm chỉ tiêu có thể để trống; nếu ghi thì phải khớp chính xác với nhóm đã tạo</li>
             </ul>
           }
           type="info"

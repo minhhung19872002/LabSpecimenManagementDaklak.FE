@@ -21,6 +21,7 @@ import type {
   IndicatorGroupImportPreviewDto,
   IndicatorGroupImportPreviewItem,
 } from "../../../../services/importService";
+import { UNGROUPED_NAME } from "../../../../utils/indicatorGroups";
 
 interface ImportIndicatorGroupModalProps {
   open: boolean;
@@ -106,14 +107,18 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
       dataIndex: "indicatorGroupName",
       key: "indicatorGroupName",
       width: 200,
-      render: (text: string, record: IndicatorGroupImportPreviewItem) => (
-        <Space>
-          <span>{text}</span>
-          {record.isNewIndicatorGroup ? (
-            <Tag color="green">Mới</Tag>
-          ) : <Tag color="blue">Cập nhật</Tag>}
-        </Space>
-      ),
+      render: (text: string, record: IndicatorGroupImportPreviewItem) =>
+        // Nhóm không bắt buộc: dòng để trống nhóm → chỉ tiêu không nhóm
+        !text?.trim() ? (
+          <span style={{ color: "#999" }}>{UNGROUPED_NAME}</span>
+        ) : (
+          <Space>
+            <span>{text}</span>
+            {record.isNewIndicatorGroup ? (
+              <Tag color="green">Mới</Tag>
+            ) : <Tag color="blue">Cập nhật</Tag>}
+          </Space>
+        ),
     },
     {
       title: "Khoa phòng thực hiện",
@@ -287,7 +292,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
               <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
                 <li>Tải template Excel mẫu bằng nút "Tải template mẫu"</li>
                 <li>Điền thông tin theo các cột: Tên nhóm chỉ tiêu, Khoa phòng thực hiện, Tên chỉ tiêu</li>
-                <li>Tên nhóm chỉ tiêu và Tên chỉ tiêu là bắt buộc</li>
+                <li>Tên chỉ tiêu là bắt buộc; Tên nhóm chỉ tiêu có thể để trống (chỉ tiêu không nhóm)</li>
                 <li>Khoa phòng có thể để trống, sửa sau</li>
                 <li>Nếu nhóm/chỉ tiêu đã tồn tại sẽ được cập nhật</li>
               </ul>
